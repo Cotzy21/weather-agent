@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(java -version)",
+      "Bash(mvn -version)",
+      "Bash(gradle -version)",
+      "Bash(node -version)",
+      "Bash(mvn -q -B test)",
+      "Bash(mvn -q -B spring-boot:run)",
+      "Bash(break)"
+    ]
+  }
+}

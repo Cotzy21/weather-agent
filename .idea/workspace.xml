@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="eb8ae44f-0f88-4033-9bd5-1ee0af408f7b" name="Changes" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CopilotChats">
+    <option name="panelChat">
+      <chat>
+        <option name="activeSessionId" value="f246a0de-0f19-484f-966f-4be6af8c30d9" />
+        <option name="sessions">
+          <session>
+            <option name="chatType" value="PANEL" />
+            <option name="id" value="f246a0de-0f19-484f-966f-4be6af8c30d9" />
+            <option name="modeId" value="Agent" />
+            <option name="modelType" value="builtin_family" />
+            <option name="modelValue" value="auto" />
+            <option name="targetType" value="LOCAL" />
+          </session>
+        </option>
+        <option name="type" value="PANEL" />
+      </chat>
+    </option>
+  </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_/Users/49kotosk/weather-agent" value="3FJ4f6s0VSiE4TnZHsWPfAE6ItF" />
+    </persistenceIdMap>
+  </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="8" />
+    <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="TypeScript File" />
+      </list>
+    </option>
+  </component>
+  <component name="KubernetesApiPersistence">{}</component>
+  <component name="KubernetesApiProvider">{
+  &quot;isMigrated&quot;: true
+}</component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.602904169829014" />
+      <entry key="MS500" value="1.9656594017264752" />
+      <entry key="S2" value="3.0108743214979117" />
+      <entry key="S5" value="4.31250847569905" />
+      <entry key="S10" value="5.490950624506111" />
+      <entry key="S30" value="8.351698929916388" />
+      <entry key="S60" value="12.241712415963294" />
+      <entry key="M2" value="22.876169140634556" />
+      <entry key="M5" value="53.58478784986839" />
+      <entry key="M10" value="78.99539237744385" />
+      <entry key="M15" value="91.0781379235059" />
+      <entry key="M30" value="111.87314372406502" />
+      <entry key="H1" value="159.38951345232212" />
+      <entry key="H2" value="251.77615424085798" />
+      <entry key="H4" value="357.32980062255206" />
+      <entry key="D1" value="511.9047405089278" />
+      <entry key="W1" value="547.7040320505806" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="2.6388449735334666E-196" />
+      <entry key="S2" value="1.2745399982807103E-49" />
+      <entry key="S5" value="2.7678425899268127E-20" />
+      <entry key="S10" value="1.663683440419725E-10" />
+      <entry key="S30" value="5.499926655131808E-4" />
+      <entry key="S60" value="0.023451922426811437" />
+      <entry key="M2" value="0.1531402051285404" />
+      <entry key="M5" value="0.47210183663661237" />
+      <entry key="M10" value="0.6871170425108527" />
+      <entry key="M15" value="0.7796023881074815" />
+      <entry key="M30" value="0.9287677239499998" />
+      <entry key="H1" value="1.288987862945981" />
+      <entry key="H2" value="1.9717029229789491" />
+      <entry key="H4" value="2.708300171241158" />
+      <entry key="D1" value="3.730341826844409" />
+      <entry key="W1" value="3.9598696278664294" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="0.7976950624091307" />
+      <entry key="MS500" value="1.6462381142101759" />
+      <entry key="S2" value="2.5896008432693716" />
+      <entry key="S5" value="3.90295530494756" />
+      <entry key="S10" value="5.197868651631051" />
+      <entry key="S30" value="8.219357143393587" />
+      <entry key="S60" value="12.177929099111378" />
+      <entry key="M2" value="22.95608562582604" />
+      <entry key="M5" value="53.993206763484004" />
+      <entry key="M10" value="79.63634036148959" />
+      <entry key="M15" value="91.82239977836552" />
+      <entry key="M30" value="112.78020326020587" />
+      <entry key="H1" value="160.66284487693028" />
+      <entry key="H2" value="253.73538204687793" />
+      <entry key="H4" value="360.02923394144847" />
+      <entry key="D1" value="515.632967687312" />
+      <entry key="W1" value="551.6635785994952" />
+    </decayedShown>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3FJ4f6s0VSiE4TnZHsWPfAE6ItF" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Node.js.geocode.ts.executor&quot;: &quot;Run&quot;,
+    &quot;Node.js.index.ts.executor&quot;: &quot;Run&quot;,
+    &quot;Node.js.test.ts.executor&quot;: &quot;Run&quot;,
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;Spring Boot.WeatherAgentApplication.executor&quot;: &quot;Run&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/49kotosk/weather-agent&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;/Applications/IntelliJ IDEA.app/Contents/plugins/javascript-plugin/jsLanguageServicesImpl/external&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RunManager" selected="Spring Boot.WeatherAgentApplication">
+    <configuration name="geocode.ts" type="NodeJSConfigurationType" temporary="true" nameIsGenerated="true" path-to-js-file="$PROJECT_DIR$/geocode.ts" typescript-loader="bundled" working-dir="$PROJECT_DIR$">
+      <method v="2" />
+    </configuration>
+    <configuration name="index.ts" type="NodeJSConfigurationType" temporary="true" nameIsGenerated="true" path-to-js-file="$PROJECT_DIR$/index.ts" typescript-loader="bundled" working-dir="$PROJECT_DIR$">
+      <method v="2" />
+    </configuration>
+    <configuration name="test.ts" type="NodeJSConfigurationType" temporary="true" nameIsGenerated="true" path-to-js-file="$PROJECT_DIR$/test.ts" typescript-loader="bundled" working-dir="$PROJECT_DIR$">
+      <method v="2" />
+    </configuration>
+    <configuration name="WeatherAgentApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="weather-agent" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="no.weatheragent.WeatherAgentApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Node.js.test.ts" />
+        <item itemvalue="Node.js.geocode.ts" />
+        <item itemvalue="Node.js.index.ts" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-37e91769500f-intellij.indexing.shared.core-IU-261.25134.95" />
+        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-IU-261.25134.95" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="eb8ae44f-0f88-4033-9bd5-1ee0af408f7b" name="Changes" comment="" />
+      <created>1781779939041</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1781779939041</updated>
+      <workItem from="1781779940088" duration="12678000" />
+      <workItem from="1781797970467" duration="8222000" />
+      <workItem from="1781873812657" duration="309000" />
+      <workItem from="1781874141754" duration="4215000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+  <component name="github-copilot-workspace">
+    <instructionFileLocations>
+      <option value=".github/instructions" />
+    </instructionFileLocations>
+    <promptFileLocations>
+      <option value=".github/prompts" />
+    </promptFileLocations>
+  </component>
+</project>
