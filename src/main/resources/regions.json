@@ -1,0 +1,17 @@
+{
+  "Sunnmøre": [
+    { "name": "Ålesund",    "latitude": 62.4722, "longitude": 6.1495 },
+    { "name": "Ørsta",      "latitude": 62.1989, "longitude": 6.1306 },
+    { "name": "Volda",      "latitude": 62.1466, "longitude": 6.0717 },
+    { "name": "Stranda",    "latitude": 62.3081, "longitude": 6.9319 },
+    { "name": "Hareid",     "latitude": 62.3674, "longitude": 6.0273 },
+    { "name": "Ulsteinvik", "latitude": 62.3433, "longitude": 5.8489 },
+    { "name": "Sykkylven",  "latitude": 62.3877, "longitude": 6.5713 },
+    { "name": "Fosnavåg",   "latitude": 62.3406, "longitude": 5.6336 }
+  ],
+  "Lofoten": [
+    { "name": "Svolvær",    "latitude": 68.2348, "longitude": 14.5651 },
+    { "name": "Leknes",     "latitude": 68.1475, "longitude": 13.6116 },
+    { "name": "Reine",      "latitude": 67.9333, "longitude": 13.0889 }
+  ]
+}

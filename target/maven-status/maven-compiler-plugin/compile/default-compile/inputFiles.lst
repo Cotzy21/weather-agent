@@ -1,9 +1,0 @@
-/Users/49kotosk/weather-agent/src/main/java/no/weatheragent/DemoRunner.java
-/Users/49kotosk/weather-agent/src/main/java/no/weatheragent/WeatherAgentApplication.java
-/Users/49kotosk/weather-agent/src/main/java/no/weatheragent/geo/GeocodingResponseParser.java
-/Users/49kotosk/weather-agent/src/main/java/no/weatheragent/geo/Location.java
-/Users/49kotosk/weather-agent/src/main/java/no/weatheragent/geo/OpenMeteoGeocodingClient.java
-/Users/49kotosk/weather-agent/src/main/java/no/weatheragent/weather/Forecast.java
-/Users/49kotosk/weather-agent/src/main/java/no/weatheragent/weather/MetForecastParser.java
-/Users/49kotosk/weather-agent/src/main/java/no/weatheragent/weather/MetWeatherClient.java
-/Users/49kotosk/weather-agent/src/main/java/no/weatheragent/weather/WeatherPoint.java
