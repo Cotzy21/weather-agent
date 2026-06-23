@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import ResultMap from './ResultMap'
 import './App.css'
 
 // De fire faktorene brukeren kan vekte, og nivåene.
@@ -21,6 +22,8 @@ function summarize(place) {
   const avg = (sel) => days.reduce((sum, d) => sum + sel(d), 0) / n
   return {
     name: place.location.name,
+    lat: place.location.latitude,
+    lon: place.location.longitude,
     elevation: days[0]?.elevationMeters ?? 0,
     temp: avg((d) => d.maxTempC),
     precip: avg((d) => d.totalPrecipMm),
@@ -63,6 +66,7 @@ function Answer({ result }) {
         <span className="muted">({best.elevation.toFixed(0)} moh)</span> – snitt{' '}
         {best.temp.toFixed(1)} °C, {best.precip.toFixed(1)} mm regn/dag
       </p>
+      <ResultMap places={places} />
       <table className="ranking">
         <thead>
           <tr><th>Sted</th><th>moh</th><th>°C</th><th>mm</th><th>m/s</th><th>score</th></tr>

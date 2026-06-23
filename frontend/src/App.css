@@ -120,6 +120,17 @@ header .sub {
 .typing span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes blink { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
 
+/* Kart */
+.map {
+  height: 260px;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  z-index: 0;
+}
+
 /* Tabell */
 .ranking { width: 100%; border-collapse: collapse; font-size: 14px; }
 .ranking th, .ranking td {

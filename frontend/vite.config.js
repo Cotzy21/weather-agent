@@ -11,4 +11,10 @@ export default defineConfig({
       '/api': 'http://localhost:8080',
     },
   },
+  build: {
+    // `npm run build` legger den ferdige SPA-en rett inn i Spring sin static-mappe,
+    // så `mvn package` pakker alt i én kjørbar jar (én port i produksjon).
+    outDir: '../src/main/resources/static',
+    emptyOutDir: true,
+  },
 })

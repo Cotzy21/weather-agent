@@ -37,3 +37,6 @@ application-local.properties
 
 # Lokal prosjektkontekst / handover - ikke en del av selve kodebasen
 docs/
+
+# Bygd frontend (genereres av `npm run build` i frontend/ -> Spring static)
+src/main/resources/static/
