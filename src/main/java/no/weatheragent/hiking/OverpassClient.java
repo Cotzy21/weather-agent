@@ -84,8 +84,14 @@ public class OverpassClient {
 
         StringBuilder around = new StringBuilder();
         for (Location c : centers) {
+            // Navngitte fot-/turruter (relasjoner) OG navngitte stier (ways). Mange
+            // norske merkede turer ligger som highway=path med navn, ikke som
+            // route=hiking-relasjoner, så vi tar med begge for bedre dekning.
             around.append(String.format(Locale.ROOT,
-                    "  relation(around:%d,%f,%f)[\"route\"=\"hiking\"][\"name\"];%n",
+                    "  relation(around:%d,%f,%f)[\"route\"~\"hiking|foot\"][\"name\"];%n",
+                    radiusMeters, c.latitude(), c.longitude()));
+            around.append(String.format(Locale.ROOT,
+                    "  way(around:%d,%f,%f)[\"highway\"~\"path|footway\"][\"name\"];%n",
                     radiusMeters, c.latitude(), c.longitude()));
         }
         String query = "[out:json][timeout:90];\n(\n" + around + ");\nout center tags;\n";

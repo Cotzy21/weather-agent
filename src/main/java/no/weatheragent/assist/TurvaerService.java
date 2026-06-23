@@ -38,7 +38,7 @@ public class TurvaerService {
 
     // Hvor langt fra hvert sted vi leter etter merkede turruter, og hvor mange
     // av topp-stedene vi henter turer rundt (i én union-spørring).
-    private static final int TRAIL_RADIUS_M = 5000;
+    private static final int TRAIL_RADIUS_M = 8000;
     private static final int TRAIL_PLACES = 10;
 
     private final QueryInterpreter interpreter;
