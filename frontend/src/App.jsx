@@ -38,6 +38,7 @@ function summarize(place) {
 function Answer({ result, onSelectPlace }) {
   const { interpretation: t, ranking } = result
   const region = t.region ?? '(ukjent)'
+  const isTrail = t.target === 'TUR'
 
   const interp = (
     <p className="interp">
@@ -65,7 +66,9 @@ function Answer({ result, onSelectPlace }) {
     <div className="answer">
       {interp}
       <p className="winner">
-        <span className="medal">🏔️</span> Finest vær: <strong>{best.name}</strong>{' '}
+        <span className="medal">{isTrail ? '🥾' : '🏔️'}</span>{' '}
+        {isTrail ? 'Finest vær på turrute: ' : 'Finest vær: '}
+        <strong>{best.name}</strong>{' '}
         <span className="muted">({best.elevation.toFixed(0)} moh)</span> – snitt{' '}
         {best.temp.toFixed(1)} °C, {best.precip.toFixed(1)} mm regn/dag
       </p>
@@ -78,10 +81,10 @@ function Answer({ result, onSelectPlace }) {
         </div>
       )}
       <ResultMap places={places} trails={result.trails ?? []} />
-      <p className="table-hint">Trykk på et sted for å åpne detaljside med varsel for de neste dagene.</p>
+      <p className="table-hint">Trykk på en rad for å åpne detaljside med varsel for de neste dagene.</p>
       <table className="ranking">
         <thead>
-          <tr><th>Sted</th><th>moh</th><th>°C</th><th>mm</th><th>m/s</th><th>score</th></tr>
+          <tr><th>{isTrail ? 'Tur' : 'Sted'}</th><th>moh</th><th>°C</th><th>mm</th><th>m/s</th><th>score</th></tr>
         </thead>
         <tbody>
           {places.map((p, i) => (
@@ -101,21 +104,23 @@ function Answer({ result, onSelectPlace }) {
         </tbody>
       </table>
 
-      <div className="trails">
-        <p className="trails-title">🥾 Merkede turer i området</p>
-        {result.trails?.length > 0 ? (
-          <ul>
-            {result.trails.map((t, i) => (
-              <li key={i}>
-                {t.name}
-                {t.operator && <span className="muted"> · {t.operator}</span>}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="muted">Fant ingen merkede turer (OpenStreetMap) innen 5 km.</p>
-        )}
-      </div>
+      {!isTrail && (
+        <div className="trails">
+          <p className="trails-title">🥾 Merkede turer i området</p>
+          {result.trails?.length > 0 ? (
+            <ul>
+              {result.trails.map((t, i) => (
+                <li key={i}>
+                  {t.name}
+                  {t.operator && <span className="muted"> · {t.operator}</span>}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">Fant ingen merkede turer (OpenStreetMap) i nærheten.</p>
+          )}
+        </div>
+      )}
     </div>
   )
 }
