@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import ResultMap from './ResultMap'
 import PlaceDetail from './PlaceDetail'
+import RoutePlanner from './RoutePlanner'
+import { readError } from './api'
 import './App.css'
 
 // De fire faktorene brukeren kan vekte, og nivåene.
@@ -118,7 +120,7 @@ function Answer({ result, onSelectPlace }) {
   )
 }
 
-export default function App() {
+function VaersokView() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -148,7 +150,7 @@ export default function App() {
     try {
       const params = new URLSearchParams({ q: query, ...weights })
       const res = await fetch(`/api/turvaer?${params}`)
-      if (!res.ok) throw new Error(`Tjeneren svarte ${res.status}`)
+      if (!res.ok) throw new Error(await readError(res))
       const result = await res.json()
       setMessages((m) => [...m, { role: 'bot', result }])
     } catch (err) {
@@ -159,12 +161,7 @@ export default function App() {
   }
 
   return (
-    <div className="app">
-      <header>
-        <h1>⛰️ Turvær‑assistent</h1>
-        <p className="sub">Spør på vanlig norsk hvor i Norge det blir finest turvær.</p>
-      </header>
-
+    <>
       <section className="weights" aria-label="Vekting av faktorer">
         <span className="weights-title">Hva betyr mest for deg?</span>
         <div className="weights-grid">
@@ -219,6 +216,30 @@ export default function App() {
           </form>
         </>
       )}
+    </>
+  )
+}
+
+export default function App() {
+  const [tab, setTab] = useState('vaersok')
+
+  return (
+    <div className="app">
+      <header>
+        <h1>⛰️ Turvær‑assistent</h1>
+        <p className="sub">Finn finest turvær – eller planlegg turen.</p>
+      </header>
+
+      <nav className="tabs" aria-label="Faner">
+        <button className={`tab ${tab === 'vaersok' ? 'active' : ''}`} onClick={() => setTab('vaersok')}>
+          🔎 Værsøk
+        </button>
+        <button className={`tab ${tab === 'rute' ? 'active' : ''}`} onClick={() => setTab('rute')}>
+          🧭 Ruteplanlegger
+        </button>
+      </nav>
+
+      {tab === 'vaersok' ? <VaersokView /> : <RoutePlanner />}
     </div>
   )
 }

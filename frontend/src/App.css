@@ -157,6 +157,62 @@ header .sub {
 .day-temp { font-weight: 600; }
 .day-precip, .day-wind { color: var(--muted); text-align: right; }
 
+/* Faner */
+.tabs { display: flex; gap: 8px; margin-top: 14px; }
+.tab {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Ruteplanlegger */
+.planner { padding: 14px 0 28px; }
+.route-map { height: 360px; cursor: crosshair; }
+.wp-label {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+}
+.wp-label::before { display: none !important; }
+.planner-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; font-size: 15px; }
+.planner-row .spacer { flex: 1; }
+.planner-row button, .planner-inputs button {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.planner-row button:disabled, .planner-inputs button:disabled { opacity: 0.5; cursor: not-allowed; }
+.planner-inputs { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.planner-inputs label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.planner-inputs input {
+  width: 110px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 15px;
+}
+.planner-inputs .primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; padding: 9px 18px; }
+.estimate { margin-top: 14px; }
+.estimate-line { font-size: 16px; margin-bottom: 10px; }
+.estimate-note { font-size: 12px; margin-top: 8px; }
+
 /* Klær & utstyr */
 .gear {
   background: var(--accent-soft);
