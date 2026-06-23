@@ -3,6 +3,7 @@ package no.weatheragent.hiking;
 import com.fasterxml.jackson.databind.JsonNode;
 import no.weatheragent.geo.Location;
 import no.weatheragent.support.Retry;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -56,6 +57,7 @@ public class OverpassClient {
     }
 
     /** Alle navngitte topper i et område (fylke, kommune eller nasjonalpark), matchet på navn. */
+    @Cacheable(value = "peaks", key = "#areaName.toLowerCase()")
     public List<Peak> peaksInArea(String areaName) {
         String query = QUERY_TEMPLATE.formatted(areaName, areaName);
 
@@ -77,6 +79,7 @@ public class OverpassClient {
      * NB: koordinatene må formateres med punktum (Locale.ROOT), ellers ville
      * norsk lokal-format gi komma og ødelegge Overpass-spørringen.
      */
+    @Cacheable("trails")
     public List<Trail> trailsNear(List<Location> centers, int radiusMeters) {
         if (centers.isEmpty()) {
             return List.of();
