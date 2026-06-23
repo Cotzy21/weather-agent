@@ -11,14 +11,17 @@ import java.time.format.DateTimeParseException;
  *
  * Forventet JSON fra modellen:
  * <pre>
- * { "region": "Møre og Romsdal", "fromDate": "2026-06-27",
- *   "toDate": "2026-06-28", "tripType": "FJELLTUR" }
+ * { "region": "Møre og Romsdal", "when": "NESTE_UKE",
+ *   "fromDate": null, "toDate": null, "tripType": "FJELLTUR" }
  * </pre>
  *
- * Vi er bevisst tilgivende: små lokale modeller hopper av og til over felter
- * eller roter med datoformat. Manglende/ugyldige datoer faller tilbake til
- * {@code today}, og et omvendt intervall klemmes, slik at vi aldri sender en
- * ugyldig {@link DateRange} videre.
+ * Modellen klassifiserer bare tidsuttrykket ({@code when}); de faktiske datoene
+ * regnes ut i {@link TimeExpressionResolver}. fromDate/toDate brukes bare når
+ * brukeren nevner en konkret dato (when=KONKRET).
+ *
+ * Vi er bevisst tilgivende: små lokale modeller hopper av og til over felter.
+ * Ukjent/manglende {@code when} blir UKJENT, og resolveren gir alltid en gyldig
+ * {@link DateRange}.
  */
 public final class LlmInterpretationParser {
 
@@ -27,16 +30,15 @@ public final class LlmInterpretationParser {
 
     public static Interpretation parse(JsonNode root, LocalDate today) {
         String region = text(root, "region");
+        TimeExpression when = TimeExpression.fromString(text(root, "when"));
 
-        LocalDate from = date(root, "fromDate", today);
-        LocalDate to = date(root, "toDate", from);
-        if (to.isBefore(from)) {
-            to = from;
-        }
+        LocalDate from = dateOrNull(root, "fromDate");
+        LocalDate to = dateOrNull(root, "toDate");
+        DateRange dates = TimeExpressionResolver.resolve(when, today, from, to);
 
         TripType tripType = TripType.fromString(text(root, "tripType"));
 
-        return new Interpretation(region, new DateRange(from, to), tripType);
+        return new Interpretation(region, when, dates, tripType);
     }
 
     /** Tekstverdi for et felt, eller null hvis det mangler/er tomt/er JSON-null. */
@@ -49,16 +51,16 @@ public final class LlmInterpretationParser {
         return value.isEmpty() ? null : value;
     }
 
-    /** ISO-dato for et felt, med fallback hvis den mangler eller ikke lar seg parse. */
-    private static LocalDate date(JsonNode root, String field, LocalDate fallback) {
+    /** ISO-dato for et felt, eller null hvis det mangler eller ikke lar seg parse. */
+    private static LocalDate dateOrNull(JsonNode root, String field) {
         String raw = text(root, field);
         if (raw == null) {
-            return fallback;
+            return null;
         }
         try {
             return LocalDate.parse(raw);
         } catch (DateTimeParseException e) {
-            return fallback;
+            return null;
         }
     }
 }

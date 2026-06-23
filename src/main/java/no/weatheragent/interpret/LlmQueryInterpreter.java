@@ -50,17 +50,26 @@ public class LlmQueryInterpreter implements QueryInterpreter {
                 Felter:
                   "region"   - norsk fylke spørsmålet gjelder (f.eks. "Møre og Romsdal").
                                Bruk null hvis det ikke nevnes.
-                  "fromDate" - første aktuelle dag, ISO-format YYYY-MM-DD.
-                  "toDate"   - siste aktuelle dag, ISO-format YYYY-MM-DD.
-                  "tripType" - nøyaktig en av: FJELLTUR, LAVTUR, UANSETT.
+                  "when"     - tidsuttrykket, NØYAKTIG én av disse kodene:
+                               I_DAG, I_MORGEN, I_OVERMORGEN, HELGA, NESTE_HELG,
+                               DENNE_UKA, NESTE_UKE, KONKRET, UKJENT.
+                               IKKE regn ut datoer selv - velg bare riktig kode.
+                               (HELGA = denne helga, NESTE_HELG = helga etter.)
+                  "fromDate"/"toDate" - KUN når brukeren nevner en konkret dato
+                               (when=KONKRET), ISO YYYY-MM-DD. Ellers null.
+                  "tripType" - nøyaktig én av: FJELLTUR, LAVTUR, UANSETT.
 
-                I dag er %s (tidssone Europe/Oslo). Regn ut relative datoer ut fra dette:
-                "i helga" = nærmeste lørdag til søndag, "i morgen" = dagen etter i dag.
-                Gjelder bare én dag, sett fromDate lik toDate.
+                I dag er %s (tidssone Europe/Oslo) - bruk det bare til å fylle inn
+                årstall ved konkrete datoer.
 
-                Eksempel på svar:
-                {"region":"Møre og Romsdal","fromDate":"%s","toDate":"%s","tripType":"FJELLTUR"}
-                """.formatted(today, today, today);
+                Eksempler:
+                  "hvor blir det best vær i Rogaland neste uke"
+                    -> {"region":"Rogaland","when":"NESTE_UKE","fromDate":null,"toDate":null,"tripType":"UANSETT"}
+                  "fint fjellvær i Møre og Romsdal i helga"
+                    -> {"region":"Møre og Romsdal","when":"HELGA","fromDate":null,"toDate":null,"tripType":"FJELLTUR"}
+                  "været på Sunnmøre 3. juli"
+                    -> {"region":"Sunnmøre","when":"KONKRET","fromDate":"%s-07-03","toDate":"%s-07-03","tripType":"UANSETT"}
+                """.formatted(today, today.getYear(), today.getYear());
     }
 
     /**

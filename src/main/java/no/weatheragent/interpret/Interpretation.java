@@ -7,10 +7,11 @@ package no.weatheragent.interpret;
  * @param region   norsk fylke (admin_level 4), f.eks. "Møre og Romsdal", slik
  *                 OverpassClient/RegionRegistry forventer det. {@code null}
  *                 hvis tolkeren ikke fant en region i spørsmålet.
- * @param dates    perioden brukeren spør om.
+ * @param when     tidsuttrykket modellen klassifiserte (for innsyn/visning).
+ * @param dates    perioden, ferdig utregnet fra {@code when} (TimeExpressionResolver).
  * @param tripType ønsket turtype (fjell/lav/uansett).
  */
-public record Interpretation(String region, DateRange dates, TripType tripType) {
+public record Interpretation(String region, TimeExpression when, DateRange dates, TripType tripType) {
 
     /** True hvis vi faktisk fant en region å slå opp. */
     public boolean hasRegion() {

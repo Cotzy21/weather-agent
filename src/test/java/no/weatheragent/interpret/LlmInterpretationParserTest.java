@@ -11,31 +11,52 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Tester den rene tolkningen av modell-JSON, uten nettverk eller Spring -
- * samme mønster som GeocodingResponseParserTest.
+ * Tester den rene tolkningen av modell-JSON, uten nettverk eller Spring.
+ * today er en tirsdag, så relative tidsuttrykk har faste forventede datoer.
  */
 class LlmInterpretationParserTest {
 
     private final ObjectMapper mapper = new ObjectMapper();
-    private final LocalDate today = LocalDate.of(2026, 6, 23);
+    private final LocalDate today = LocalDate.of(2026, 6, 23); // tirsdag
 
     private Interpretation parse(String json) throws Exception {
         return LlmInterpretationParser.parse(mapper.readTree(json), today);
     }
 
     @Test
-    void parsesFullObject() throws Exception {
+    void parsesRegionWhenAndTripType() throws Exception {
         Interpretation r = parse("""
-                {"region":"Møre og Romsdal","fromDate":"2026-06-27",
-                 "toDate":"2026-06-28","tripType":"FJELLTUR"}
+                {"region":"Rogaland","when":"NESTE_UKE",
+                 "fromDate":null,"toDate":null,"tripType":"FJELLTUR"}
                 """);
 
-        assertEquals("Møre og Romsdal", r.region());
+        assertEquals("Rogaland", r.region());
         assertTrue(r.hasRegion());
+        assertEquals(TimeExpression.NESTE_UKE, r.when());
+        assertEquals(TripType.FJELLTUR, r.tripType());
+        // NESTE_UKE = mandag-søndag i uka etter
+        assertEquals(LocalDate.of(2026, 6, 29), r.dates().from());
+        assertEquals(LocalDate.of(2026, 7, 5), r.dates().to());
+    }
+
+    @Test
+    void helgaResolvesToThisWeekend() throws Exception {
+        Interpretation r = parse("{\"region\":\"Møre og Romsdal\",\"when\":\"HELGA\"}");
+
         assertEquals(LocalDate.of(2026, 6, 27), r.dates().from());
         assertEquals(LocalDate.of(2026, 6, 28), r.dates().to());
-        assertEquals(2, r.dates().days().size());
-        assertEquals(TripType.FJELLTUR, r.tripType());
+    }
+
+    @Test
+    void konkretUsesExplicitDates() throws Exception {
+        Interpretation r = parse("""
+                {"region":"Sunnmøre","when":"KONKRET",
+                 "fromDate":"2026-07-03","toDate":"2026-07-04","tripType":"UANSETT"}
+                """);
+
+        assertEquals(TimeExpression.KONKRET, r.when());
+        assertEquals(LocalDate.of(2026, 7, 3), r.dates().from());
+        assertEquals(LocalDate.of(2026, 7, 4), r.dates().to());
     }
 
     @Test
@@ -46,42 +67,33 @@ class LlmInterpretationParserTest {
     }
 
     @Test
-    void missingDatesFallBackToToday() throws Exception {
+    void missingWhenBecomesUkjentAndDefaultsToWeekend() throws Exception {
         Interpretation r = parse("{\"region\":\"Lofoten\"}");
 
-        assertEquals(today, r.dates().from());
-        assertEquals(today, r.dates().to());
+        assertEquals(TimeExpression.UKJENT, r.when());
+        // UKJENT uten datoer -> fornuftig standard: denne helga
+        assertEquals(LocalDate.of(2026, 6, 27), r.dates().from());
+        assertEquals(LocalDate.of(2026, 6, 28), r.dates().to());
     }
 
     @Test
-    void onlyFromDateGivesSingleDay() throws Exception {
-        Interpretation r = parse("{\"fromDate\":\"2026-07-01\"}");
-
-        assertEquals(LocalDate.of(2026, 7, 1), r.dates().from());
-        assertEquals(LocalDate.of(2026, 7, 1), r.dates().to());
+    void unknownWhenTokenBecomesUkjent() throws Exception {
+        assertEquals(TimeExpression.UKJENT, parse("{\"when\":\"snart\"}").when());
     }
 
     @Test
     void missingRegionLeavesHasRegionFalse() throws Exception {
-        Interpretation r = parse("{\"fromDate\":\"2026-07-01\",\"toDate\":\"2026-07-01\"}");
+        Interpretation r = parse("{\"when\":\"I_DAG\"}");
 
         assertNull(r.region());
         assertFalse(r.hasRegion());
     }
 
     @Test
-    void garbledDateFallsBackInsteadOfThrowing() throws Exception {
-        Interpretation r = parse("{\"fromDate\":\"i morgen\",\"toDate\":\"snart\"}");
+    void garbledKonkretDateFallsBackToToday() throws Exception {
+        Interpretation r = parse("{\"when\":\"KONKRET\",\"fromDate\":\"i morgen\"}");
 
         assertEquals(today, r.dates().from());
         assertEquals(today, r.dates().to());
-    }
-
-    @Test
-    void reversedDatesAreClampedSoDateRangeNeverThrows() throws Exception {
-        Interpretation r = parse("{\"fromDate\":\"2026-07-05\",\"toDate\":\"2026-07-01\"}");
-
-        assertEquals(LocalDate.of(2026, 7, 5), r.dates().from());
-        assertEquals(LocalDate.of(2026, 7, 5), r.dates().to());
     }
 }

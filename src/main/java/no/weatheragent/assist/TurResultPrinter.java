@@ -19,7 +19,8 @@ public final class TurResultPrinter {
         StringBuilder sb = new StringBuilder();
 
         sb.append("Tolket : region=").append(r.hasRegion() ? r.region() : "(ukjent)")
-          .append(", ").append(r.dates().from()).append("->").append(r.dates().to())
+          .append(", ").append(r.when())
+          .append(" (").append(r.dates().from()).append("->").append(r.dates().to()).append(")")
           .append(", ").append(r.tripType()).append('\n');
 
         if (!r.hasRegion()) {
