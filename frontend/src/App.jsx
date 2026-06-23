@@ -66,7 +66,7 @@ function Answer({ result }) {
         <span className="muted">({best.elevation.toFixed(0)} moh)</span> – snitt{' '}
         {best.temp.toFixed(1)} °C, {best.precip.toFixed(1)} mm regn/dag
       </p>
-      <ResultMap places={places} />
+      <ResultMap places={places} trails={result.trails ?? []} />
       <table className="ranking">
         <thead>
           <tr><th>Sted</th><th>moh</th><th>°C</th><th>mm</th><th>m/s</th><th>score</th></tr>
@@ -84,6 +84,22 @@ function Answer({ result }) {
           ))}
         </tbody>
       </table>
+
+      <div className="trails">
+        <p className="trails-title">🥾 Merkede turer i området</p>
+        {result.trails?.length > 0 ? (
+          <ul>
+            {result.trails.map((t, i) => (
+              <li key={i}>
+                {t.name}
+                {t.operator && <span className="muted"> · {t.operator}</span>}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="muted">Fant ingen merkede turer (OpenStreetMap) innen 5 km.</p>
+        )}
+      </div>
     </div>
   )
 }

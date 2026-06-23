@@ -4,6 +4,7 @@ import no.weatheragent.geo.Location;
 import no.weatheragent.hiking.CandidateSelector;
 import no.weatheragent.hiking.OverpassClient;
 import no.weatheragent.hiking.Peak;
+import no.weatheragent.hiking.Trail;
 import no.weatheragent.interpret.Interpretation;
 import no.weatheragent.interpret.QueryInterpreter;
 import no.weatheragent.interpret.TripType;
@@ -34,6 +35,11 @@ public class TurvaerService {
     private static final double FJELL_MIN_ELEVATION_M = 800;
     private static final double DEFAULT_MIN_ELEVATION_M = 0;
 
+    // Hvor langt fra hvert sted vi leter etter merkede turruter, og hvor mange
+    // av topp-stedene vi henter turer rundt (i én union-spørring).
+    private static final int TRAIL_RADIUS_M = 5000;
+    private static final int TRAIL_PLACES = 10;
+
     private final QueryInterpreter interpreter;
     private final OverpassClient overpassClient;
     private final BestWeatherFinder bestWeatherFinder;
@@ -54,7 +60,7 @@ public class TurvaerService {
     public TurResult finnBesteVaer(String query, ScoreWeights weights) {
         Interpretation tolkning = interpreter.interpret(query);
         if (!tolkning.hasRegion()) {
-            return new TurResult(tolkning, List.of());
+            return new TurResult(tolkning, List.of(), List.of());
         }
 
         double minElevation = tolkning.tripType() == TripType.FJELLTUR
@@ -70,6 +76,13 @@ public class TurvaerService {
         List<RankedPlaceOverPeriod> ranking =
                 bestWeatherFinder.rankOverPeriod(candidates, tolkning.dates().days(), weights);
 
-        return new TurResult(tolkning, ranking);
+        // Merkede turruter rundt topp-stedene (idé #1), i ett union-kall.
+        List<Location> topPlaces = ranking.stream()
+                .limit(TRAIL_PLACES)
+                .map(RankedPlaceOverPeriod::location)
+                .toList();
+        List<Trail> trails = overpassClient.trailsNear(topPlaces, TRAIL_RADIUS_M);
+
+        return new TurResult(tolkning, ranking, trails);
     }
 }

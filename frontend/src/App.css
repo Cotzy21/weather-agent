@@ -145,6 +145,16 @@ header .sub {
 .ranking tr.top td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
 .ranking tr.top td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
 
+/* Turer i nærheten */
+.trails {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.trails-title { font-weight: 600; margin-bottom: 6px; }
+.trails ul { margin: 0; padding-left: 18px; }
+.trails li { margin: 2px 0; }
+
 /* Composer */
 .composer {
   display: flex;

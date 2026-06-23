@@ -3,9 +3,10 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 // Viser stedene fra rangeringen på et OpenStreetMap-kart. Vinneren (første)
-// utheves i rødt, resten i blått. Vi bruker circleMarkers så vi slipper
-// Leaflet sitt kjente bundler-problem med marker-ikon-bilder.
-export default function ResultMap({ places }) {
+// utheves i rødt, resten i blått, og merkede turruter nær vinneren i grønt.
+// Vi bruker circleMarkers så vi slipper Leaflet sitt kjente bundler-problem
+// med marker-ikon-bilder.
+export default function ResultMap({ places, trails = [] }) {
   const elRef = useRef(null)
   const mapRef = useRef(null)
   const layerRef = useRef(null)
@@ -45,6 +46,21 @@ export default function ResultMap({ places }) {
       points.push([p.lat, p.lon])
     })
 
+    // Merkede turruter (grønt) nær vinneren.
+    trails.forEach((t) => {
+      if (t.latitude == null || t.longitude == null) return
+      L.circleMarker([t.latitude, t.longitude], {
+        radius: 5,
+        color: '#15803d',
+        fillColor: '#22c55e',
+        fillOpacity: 0.85,
+        weight: 2,
+      })
+        .bindPopup(`🥾 <strong>${t.name}</strong>${t.operator ? `<br/>${t.operator}` : ''}`)
+        .addTo(layer)
+      points.push([t.latitude, t.longitude])
+    })
+
     if (points.length === 1) {
       map.setView(points[0], 9)
     } else if (points.length > 1) {
@@ -52,7 +68,7 @@ export default function ResultMap({ places }) {
     }
     // Kartet ligger i en flex/animert boks; sikre riktig størrelse etter layout.
     setTimeout(() => map.invalidateSize(), 0)
-  }, [places])
+  }, [places, trails])
 
   // Rydd opp Leaflet-instansen når komponenten forsvinner.
   useEffect(() => () => {

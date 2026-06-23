@@ -1,5 +1,6 @@
 package no.weatheragent.assist;
 
+import no.weatheragent.hiking.Trail;
 import no.weatheragent.interpret.Interpretation;
 import no.weatheragent.ranking.RankedPlaceOverPeriod;
 
@@ -40,6 +41,17 @@ public final class TurResultPrinter {
         sb.append(String.format("=> Finest vær %s->%s: %s (%.0f moh, snitt %.1f°C, %.1f mm regn/dag)",
                 r.dates().from(), r.dates().to(), best.location().name(),
                 best.elevationMeters(), best.avgMaxTempC(), best.avgPrecipMm()));
+
+        List<Trail> trails = result.trails();
+        if (!trails.isEmpty()) {
+            sb.append("\n\nMerkede turer i området:");
+            trails.forEach(t -> {
+                sb.append("\n  - ").append(t.name());
+                if (!t.operator().isBlank()) {
+                    sb.append(" (").append(t.operator()).append(')');
+                }
+            });
+        }
         return sb.toString();
     }
 }
