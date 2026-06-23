@@ -59,6 +59,8 @@ public class LlmQueryInterpreter implements QueryInterpreter {
                                (HELGA = denne helga, NESTE_HELG = helga etter.)
                   "fromDate"/"toDate" - KUN når brukeren nevner en konkret dato
                                (when=KONKRET), ISO YYYY-MM-DD. Ellers null.
+                  "target"   - "TUR" hvis brukeren spør om en turrute/tur/sti/løype,
+                               ellers "STED". (F.eks. "hvilken turrute ..." -> TUR.)
                   "tripType" - nøyaktig én av: FJELLTUR, LAVTUR, UANSETT.
 
                 I dag er %s (tidssone Europe/Oslo) - bruk det bare til å fylle inn
@@ -66,11 +68,13 @@ public class LlmQueryInterpreter implements QueryInterpreter {
 
                 Eksempler:
                   "hvor blir det best vær i Rogaland neste uke"
-                    -> {"region":"Rogaland","when":"NESTE_UKE","fromDate":null,"toDate":null,"tripType":"UANSETT"}
+                    -> {"region":"Rogaland","when":"NESTE_UKE","target":"STED","fromDate":null,"toDate":null,"tripType":"UANSETT"}
+                  "hvilken turrute i Ålesund har finest vær i morgen"
+                    -> {"region":"Ålesund","when":"I_MORGEN","target":"TUR","fromDate":null,"toDate":null,"tripType":"UANSETT"}
                   "fint fjellvær i Møre og Romsdal i helga"
-                    -> {"region":"Møre og Romsdal","when":"HELGA","fromDate":null,"toDate":null,"tripType":"FJELLTUR"}
+                    -> {"region":"Møre og Romsdal","when":"HELGA","target":"STED","fromDate":null,"toDate":null,"tripType":"FJELLTUR"}
                   "været på Sunnmøre 3. juli"
-                    -> {"region":"Sunnmøre","when":"KONKRET","fromDate":"%s-07-03","toDate":"%s-07-03","tripType":"UANSETT"}
+                    -> {"region":"Sunnmøre","when":"KONKRET","target":"STED","fromDate":"%s-07-03","toDate":"%s-07-03","tripType":"UANSETT"}
                 """.formatted(today, today.getYear(), today.getYear());
     }
 

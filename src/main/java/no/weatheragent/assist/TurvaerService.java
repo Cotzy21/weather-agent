@@ -8,6 +8,7 @@ import no.weatheragent.hiking.Peak;
 import no.weatheragent.hiking.Trail;
 import no.weatheragent.interpret.Interpretation;
 import no.weatheragent.interpret.QueryInterpreter;
+import no.weatheragent.interpret.Target;
 import no.weatheragent.interpret.TripType;
 import no.weatheragent.ranking.BestWeatherFinder;
 import no.weatheragent.ranking.DayWeather;
@@ -21,7 +22,9 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Tur-assistentens kjerne: fra et fritekst-spørsmål til en rangering av steder
@@ -47,6 +50,11 @@ public class TurvaerService {
     // av topp-stedene vi henter turer rundt (i én union-spørring).
     private static final int TRAIL_RADIUS_M = 8000;
     private static final int TRAIL_PLACES = 10;
+
+    // Når vi rangerer selve turrutene: tynn ut til ett spredt utvalg så vi ikke
+    // gjør hundrevis av vær-oppslag.
+    private static final double TRAIL_CELL_DEGREES = 0.05; // ~5 km rutenett
+    private static final int MAX_TRAIL_CANDIDATES = 25;
 
     // Antall dager fram detaljsiden viser varsel for (MET dekker ~9-10 dager).
     private static final ZoneId OSLO = ZoneId.of("Europe/Oslo");
@@ -78,25 +86,23 @@ public class TurvaerService {
             return new TurResult(tolkning, List.of(), List.of(), List.of());
         }
 
-        double minElevation = tolkning.tripType() == TripType.FJELLTUR
-                ? FJELL_MIN_ELEVATION_M : DEFAULT_MIN_ELEVATION_M;
-
-        List<Peak> peaks = overpassClient.peaksInArea(tolkning.region());
-        List<Location> candidates = CandidateSelector
-                .representativePeaks(peaks, CELL_DEGREES, minElevation)
-                .stream()
-                .map(Peak::location)
-                .toList();
+        // Hva skal rangeres: selve turrutene, eller steder/topper?
+        List<Location> candidates = tolkning.target() == Target.TUR
+                ? trailCandidates(tolkning.region())
+                : peakCandidates(tolkning.region(), tolkning.tripType());
 
         List<RankedPlaceOverPeriod> ranking =
                 bestWeatherFinder.rankOverPeriod(candidates, tolkning.dates().days(), weights);
 
-        // Merkede turruter rundt topp-stedene (idé #1), i ett union-kall.
-        List<Location> topPlaces = ranking.stream()
-                .limit(TRAIL_PLACES)
-                .map(RankedPlaceOverPeriod::location)
-                .toList();
-        List<Trail> trails = overpassClient.trailsNear(topPlaces, TRAIL_RADIUS_M);
+        if (ranking.isEmpty()) {
+            return new TurResult(tolkning, List.of(), List.of(), List.of());
+        }
+
+        // I TUR-modus ER de rangerte stedene allerede turruter; ellers viser vi
+        // merkede turer nær topp-stedene (idé #1).
+        List<Trail> trails = tolkning.target() == Target.TUR
+                ? List.of()
+                : overpassClient.trailsNear(topLocations(ranking), TRAIL_RADIUS_M);
 
         // Klær/utstyr-råd basert på været hos vinneren (idé #3).
         RankedPlaceOverPeriod winner = ranking.getFirst();
@@ -104,6 +110,43 @@ public class TurvaerService {
                 winner.avgMaxTempC(), winner.avgPrecipMm(), winner.avgWindMs());
 
         return new TurResult(tolkning, ranking, trails, clothing);
+    }
+
+    /** Topper i området, redusert til et spredt kandidatsett. */
+    private List<Location> peakCandidates(String region, TripType tripType) {
+        double minElevation = tripType == TripType.FJELLTUR
+                ? FJELL_MIN_ELEVATION_M : DEFAULT_MIN_ELEVATION_M;
+        List<Peak> peaks = overpassClient.peaksInArea(region);
+        return CandidateSelector.representativePeaks(peaks, CELL_DEGREES, minElevation)
+                .stream()
+                .map(Peak::location)
+                .toList();
+    }
+
+    /** Turruter i området (rute-senterpunkt), tynnet til et spredt kandidatsett. */
+    private List<Location> trailCandidates(String region) {
+        List<Location> locations = overpassClient.trailsInArea(region).stream()
+                .map(t -> new Location(t.name(), t.latitude(), t.longitude()))
+                .toList();
+        return thinByGrid(locations, TRAIL_CELL_DEGREES, MAX_TRAIL_CANDIDATES);
+    }
+
+    private List<Location> topLocations(List<RankedPlaceOverPeriod> ranking) {
+        return ranking.stream()
+                .limit(TRAIL_PLACES)
+                .map(RankedPlaceOverPeriod::location)
+                .toList();
+    }
+
+    /** Behold ett sted per rutenett-celle, så vær-oppslagene blir få og spredte. */
+    private static List<Location> thinByGrid(List<Location> locations, double cellDegrees, int max) {
+        Map<String, Location> perCell = new LinkedHashMap<>();
+        for (Location l : locations) {
+            long latIndex = Math.round(l.latitude() / cellDegrees);
+            long lonIndex = Math.round(l.longitude() / cellDegrees);
+            perCell.putIfAbsent(latIndex + ":" + lonIndex, l);
+        }
+        return perCell.values().stream().limit(max).toList();
     }
 
     /**

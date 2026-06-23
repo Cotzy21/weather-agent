@@ -50,6 +50,26 @@ public class OverpassClient {
     /** Maks antall ruter vi returnerer (etter dedup på navn) for et helt område. */
     private static final int MAX_TRAILS = 25;
 
+    /**
+     * %s = områdenavn (to ganger). Navngitte turruter (route=hiking/foot) OG
+     * navngitte stier (highway=path/footway) innenfor et område. Rute-relasjoner
+     * hentes via recurse-up fra stiene i området (Overpass sitt area-filter virker
+     * ikke direkte på relasjoner).
+     */
+    private static final String TRAILS_IN_AREA_TEMPLATE = """
+            [out:json][timeout:120];
+            (
+              area["name"="%s"]["boundary"="administrative"]["admin_level"~"^(4|7)$"];
+              area["name"="%s"]["boundary"="national_park"];
+            )->.a;
+            way(area.a)["highway"~"path|footway"]->.w;
+            (
+              rel(bw.w)["route"~"hiking|foot"]["name"];
+              way.w["name"];
+            );
+            out center tags 600;
+            """;
+
     private final RestClient http;
 
     public OverpassClient(RestClient.Builder builder) {
@@ -112,5 +132,27 @@ public class OverpassClient {
             byName.putIfAbsent(trail.name().toLowerCase(Locale.ROOT), trail);
         }
         return byName.values().stream().limit(MAX_TRAILS).toList();
+    }
+
+    /**
+     * Alle navngitte turruter/stier innenfor et område (fylke/kommune/nasjonalpark),
+     * deduplisert på navn. Brukes når brukeren vil rangere selve turrutene etter vær.
+     */
+    @Cacheable(value = "trailsInArea", key = "#areaName.toLowerCase()")
+    public List<Trail> trailsInArea(String areaName) {
+        String query = TRAILS_IN_AREA_TEMPLATE.formatted(areaName, areaName);
+
+        JsonNode root = Retry.withRetry(MAX_ATTEMPTS, BACKOFF_MS, () -> http.post()
+                .uri(ENDPOINT)
+                .contentType(MediaType.TEXT_PLAIN)
+                .body(query)
+                .retrieve()
+                .body(JsonNode.class));
+
+        Map<String, Trail> byName = new LinkedHashMap<>();
+        for (Trail trail : OverpassTrailParser.parse(root)) {
+            byName.putIfAbsent(trail.name().toLowerCase(Locale.ROOT), trail);
+        }
+        return List.copyOf(byName.values());
     }
 }

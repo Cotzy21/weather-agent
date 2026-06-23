@@ -31,6 +31,7 @@ public final class LlmInterpretationParser {
     public static Interpretation parse(JsonNode root, LocalDate today) {
         String region = text(root, "region");
         TimeExpression when = TimeExpression.fromString(text(root, "when"));
+        Target target = Target.fromString(text(root, "target"));
 
         LocalDate from = dateOrNull(root, "fromDate");
         LocalDate to = dateOrNull(root, "toDate");
@@ -38,7 +39,7 @@ public final class LlmInterpretationParser {
 
         TripType tripType = TripType.fromString(text(root, "tripType"));
 
-        return new Interpretation(region, when, dates, tripType);
+        return new Interpretation(region, when, target, dates, tripType);
     }
 
     /** Tekstverdi for et felt, eller null hvis det mangler/er tomt/er JSON-null. */

@@ -4,6 +4,7 @@ import no.weatheragent.geo.Location;
 import no.weatheragent.hiking.Trail;
 import no.weatheragent.interpret.DateRange;
 import no.weatheragent.interpret.Interpretation;
+import no.weatheragent.interpret.Target;
 import no.weatheragent.interpret.TimeExpression;
 import no.weatheragent.interpret.TripType;
 import no.weatheragent.ranking.DayWeather;
@@ -22,7 +23,7 @@ class TurResultPrinterTest {
     @Test
     void reportsWhenNoRegionWasFound() {
         Interpretation noRegion = new Interpretation(
-                null, TimeExpression.UKJENT, DateRange.single(DAY), TripType.UANSETT);
+                null, TimeExpression.UKJENT, Target.STED, DateRange.single(DAY), TripType.UANSETT);
 
         String out = TurResultPrinter.format(new TurResult(noRegion, List.of(), List.of(), List.of()));
 
@@ -33,7 +34,7 @@ class TurResultPrinterTest {
     @Test
     void showsWinnerWithNameAndElevation() {
         Interpretation tolkning = new Interpretation(
-                "Møre og Romsdal", TimeExpression.HELGA,
+                "Møre og Romsdal", TimeExpression.HELGA, Target.STED,
                 new DateRange(DAY, DAY.plusDays(1)), TripType.FJELLTUR);
 
         RankedPlaceOverPeriod slogen = new RankedPlaceOverPeriod(
