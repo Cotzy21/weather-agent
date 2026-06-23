@@ -1,5 +1,7 @@
 package no.weatheragent.web;
 
+import no.weatheragent.advice.CalorieAdvisor;
+import no.weatheragent.advice.RouteEstimate;
 import no.weatheragent.assist.PlaceForecast;
 import no.weatheragent.assist.TurResult;
 import no.weatheragent.assist.TurvaerService;
@@ -57,5 +59,17 @@ public class TurvaerController {
             @RequestParam("lat") double lat,
             @RequestParam("lon") double lon) {
         return service.placeDetail(name, lat, lon);
+    }
+
+    /**
+     * Grovt estimat for en planlagt rute: tid, kaloriforbruk og mat/drikke.
+     * Eksempel: GET /api/rute?distanceKm=12&ascentM=600&weightKg=80
+     */
+    @GetMapping("/api/rute")
+    public RouteEstimate rute(
+            @RequestParam("distanceKm") double distanceKm,
+            @RequestParam(value = "ascentM", defaultValue = "0") double ascentM,
+            @RequestParam(value = "weightKg", defaultValue = "75") double weightKg) {
+        return CalorieAdvisor.estimate(distanceKm, ascentM, weightKg);
     }
 }
