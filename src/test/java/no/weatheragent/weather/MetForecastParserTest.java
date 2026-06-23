@@ -85,6 +85,31 @@ class MetForecastParserTest {
     }
 
     @Test
+    void fallsBackToSixHourPrecipitationFurtherOut() throws Exception {
+        // Lenger fram gir MET 6-timers steg uten next_1_hours - da skal vi bruke next_6_hours.
+        String sixHourJson = """
+                {
+                  "properties": {
+                    "timeseries": [
+                      {
+                        "time": "2026-06-29T12:00:00Z",
+                        "data": {
+                          "instant": { "details": { "air_temperature": 12.0, "wind_speed": 5.0 } },
+                          "next_6_hours": { "details": { "precipitation_amount": 4.9 } }
+                        }
+                      }
+                    ]
+                  }
+                }
+                """;
+
+        Forecast forecast = MetForecastParser.parse(
+                new Location("Nonstinden", 62.0, 6.0), mapper.readTree(sixHourJson));
+
+        assertEquals(4.9, forecast.points().getFirst().precipitationMm());
+    }
+
+    @Test
     void defaultsPrecipitationToZeroWhenMissing() throws Exception {
         Forecast forecast = MetForecastParser.parse(
                 new Location("Testby", 62.0, 6.0), mapper.readTree(SAMPLE_JSON));

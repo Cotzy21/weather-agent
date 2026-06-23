@@ -42,15 +42,29 @@ public final class MetForecastParser {
             double temperature = details.path("air_temperature").asDouble();
             double wind = details.path("wind_speed").asDouble();
 
-            // Nedbor finnes bare for tidspunkter som har en "neste time"-prognose.
-            // For de siste punktene mangler den, og da regner vi det som 0.
-            double precipitation = entry.path("data")
-                    .path("next_1_hours").path("details")
-                    .path("precipitation_amount").asDouble(0.0);
+            double precipitation = precipitationAmount(entry.path("data"));
 
             points.add(new WeatherPoint(time, temperature, precipitation, wind));
         }
 
         return new Forecast(location, elevation, points);
+    }
+
+    /**
+     * Nedbor for tidspunktet. MET legger nedbor i ulike vinduer avhengig av hvor
+     * langt fram varselet er: de forste ~2 dognene i {@code next_1_hours}, lenger
+     * fram bare i {@code next_6_hours} (og helt ut i {@code next_12_hours}). Vi tar
+     * det fineste tilgjengelige vinduet, slik at nedbor ikke feilaktig blir 0 for
+     * dager lenger fram. Vinduene overlapper ikke naar man summerer punkt for punkt:
+     * i timesomraadet har hvert punkt next_1_hours, i 6-timersomraadet next_6_hours.
+     */
+    private static double precipitationAmount(JsonNode data) {
+        for (String window : new String[]{"next_1_hours", "next_6_hours", "next_12_hours"}) {
+            JsonNode amount = data.path(window).path("details").path("precipitation_amount");
+            if (!amount.isMissingNode()) {
+                return amount.asDouble(0.0);
+            }
+        }
+        return 0.0; // helt ute i varslet kan nedbor mangle helt
     }
 }
