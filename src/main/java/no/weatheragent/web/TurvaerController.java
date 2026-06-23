@@ -1,5 +1,6 @@
 package no.weatheragent.web;
 
+import no.weatheragent.assist.PlaceForecast;
 import no.weatheragent.assist.TurResult;
 import no.weatheragent.assist.TurvaerService;
 import no.weatheragent.ranking.Impact;
@@ -44,5 +45,17 @@ public class TurvaerController {
                 Impact.fromString(elevation));
 
         return service.finnBesteVaer(query, weights);
+    }
+
+    /**
+     * Detaljside for ett sted: flerdagers varsel + turer + klær.
+     * Eksempel: GET /api/sted?name=Slogen&lat=62.18&lon=6.86
+     */
+    @GetMapping("/api/sted")
+    public PlaceForecast sted(
+            @RequestParam("name") String name,
+            @RequestParam("lat") double lat,
+            @RequestParam("lon") double lon) {
+        return service.placeDetail(name, lat, lon);
     }
 }

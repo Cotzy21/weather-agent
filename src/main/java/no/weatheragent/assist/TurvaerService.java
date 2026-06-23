@@ -10,10 +10,17 @@ import no.weatheragent.interpret.Interpretation;
 import no.weatheragent.interpret.QueryInterpreter;
 import no.weatheragent.interpret.TripType;
 import no.weatheragent.ranking.BestWeatherFinder;
+import no.weatheragent.ranking.DayWeather;
 import no.weatheragent.ranking.RankedPlaceOverPeriod;
 import no.weatheragent.ranking.ScoreWeights;
+import no.weatheragent.ranking.WeatherScorer;
+import no.weatheragent.weather.Forecast;
+import no.weatheragent.weather.MetWeatherClient;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -41,16 +48,23 @@ public class TurvaerService {
     private static final int TRAIL_RADIUS_M = 8000;
     private static final int TRAIL_PLACES = 10;
 
+    // Antall dager fram detaljsiden viser varsel for (MET dekker ~9-10 dager).
+    private static final ZoneId OSLO = ZoneId.of("Europe/Oslo");
+    private static final int FORECAST_DAYS = 9;
+
     private final QueryInterpreter interpreter;
     private final OverpassClient overpassClient;
     private final BestWeatherFinder bestWeatherFinder;
+    private final MetWeatherClient weatherClient;
 
     public TurvaerService(QueryInterpreter interpreter,
                           OverpassClient overpassClient,
-                          BestWeatherFinder bestWeatherFinder) {
+                          BestWeatherFinder bestWeatherFinder,
+                          MetWeatherClient weatherClient) {
         this.interpreter = interpreter;
         this.overpassClient = overpassClient;
         this.bestWeatherFinder = bestWeatherFinder;
+        this.weatherClient = weatherClient;
     }
 
     /** Finn beste vær med normal vekt på alle faktorer. */
@@ -90,5 +104,28 @@ public class TurvaerService {
                 winner.avgMaxTempC(), winner.avgPrecipMm(), winner.avgWindMs());
 
         return new TurResult(tolkning, ranking, trails, clothing);
+    }
+
+    /**
+     * Detaljside for ett bestemt sted: flerdagers varsel, merkede turer i
+     * nærheten og klær/utstyr-råd. Klær baseres på første dag med data (nærmest
+     * i tid). Henter ett MET-varsel (dekker hele perioden) + ett Overpass-kall.
+     */
+    public PlaceForecast placeDetail(String name, double latitude, double longitude) {
+        Location loc = new Location(name, latitude, longitude);
+        Forecast forecast = weatherClient.fetch(loc);
+
+        LocalDate today = LocalDate.now(OSLO);
+        List<DayWeather> days = new ArrayList<>();
+        for (int i = 0; i < FORECAST_DAYS; i++) {
+            WeatherScorer.summarize(forecast, today.plusDays(i)).ifPresent(days::add);
+        }
+
+        List<Trail> trails = overpassClient.trailsNear(List.of(loc), TRAIL_RADIUS_M);
+
+        List<String> clothing = days.isEmpty() ? List.of() : ClothingAdvisor.recommend(
+                days.getFirst().maxTempC(), days.getFirst().totalPrecipMm(), days.getFirst().avgWindMs());
+
+        return new PlaceForecast(name, forecast.elevationMeters(), days, trails, clothing);
     }
 }

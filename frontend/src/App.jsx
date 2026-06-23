@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import ResultMap from './ResultMap'
+import PlaceDetail from './PlaceDetail'
 import './App.css'
 
 // De fire faktorene brukeren kan vekte, og nivåene.
@@ -32,8 +33,7 @@ function summarize(place) {
   }
 }
 
-function Answer({ result }) {
-  const [selected, setSelected] = useState(null)
+function Answer({ result, onSelectPlace }) {
   const { interpretation: t, ranking } = result
   const region = t.region ?? '(ukjent)'
 
@@ -75,12 +75,8 @@ function Answer({ result }) {
           </ul>
         </div>
       )}
-      <ResultMap
-        places={places}
-        trails={result.trails ?? []}
-        selected={selected != null ? places[selected] : null}
-      />
-      <p className="table-hint">Trykk på et sted for å se det på kartet med turstier i nærheten.</p>
+      <ResultMap places={places} trails={result.trails ?? []} />
+      <p className="table-hint">Trykk på et sted for å åpne detaljside med varsel for de neste dagene.</p>
       <table className="ranking">
         <thead>
           <tr><th>Sted</th><th>moh</th><th>°C</th><th>mm</th><th>m/s</th><th>score</th></tr>
@@ -89,8 +85,8 @@ function Answer({ result }) {
           {places.map((p, i) => (
             <tr
               key={i}
-              className={`${i === 0 ? 'top' : ''} ${i === selected ? 'selected' : ''}`}
-              onClick={() => setSelected(i === selected ? null : i)}
+              className={i === 0 ? 'top' : ''}
+              onClick={() => onSelectPlace({ name: p.name, lat: p.lat, lon: p.lon })}
             >
               <td>{p.name}</td>
               <td>{p.elevation.toFixed(0)}</td>
@@ -129,6 +125,7 @@ export default function App() {
   const [weights, setWeights] = useState({
     temp: 'middels', rain: 'middels', wind: 'middels', elevation: 'middels',
   })
+  const [detail, setDetail] = useState(null) // valgt sted -> detaljside
   const endRef = useRef(null)
 
   useEffect(() => {
@@ -184,36 +181,44 @@ export default function App() {
         </div>
       </section>
 
-      <div className="chat">
-        {messages.length === 0 && (
-          <p className="hint">Prøv: «hvor er det finest fjellvær i Møre og Romsdal i helga»</p>
-        )}
-        {messages.map((m, i) =>
-          m.role === 'user' ? (
-            <div key={i} className="msg user">{m.text}</div>
-          ) : (
-            <div key={i} className="msg bot">
-              {m.error ? <p className="error">Beklager – {m.error}</p> : <Answer result={m.result} />}
-            </div>
-          )
-        )}
-        {loading && (
-          <div className="msg bot">
-            <p className="muted typing">Henter vær <span>·</span><span>·</span><span>·</span></p>
+      {detail ? (
+        <PlaceDetail place={detail} onBack={() => setDetail(null)} />
+      ) : (
+        <>
+          <div className="chat">
+            {messages.length === 0 && (
+              <p className="hint">Prøv: «hvor er det finest fjellvær i Møre og Romsdal i helga»</p>
+            )}
+            {messages.map((m, i) =>
+              m.role === 'user' ? (
+                <div key={i} className="msg user">{m.text}</div>
+              ) : (
+                <div key={i} className="msg bot">
+                  {m.error
+                    ? <p className="error">Beklager – {m.error}</p>
+                    : <Answer result={m.result} onSelectPlace={setDetail} />}
+                </div>
+              )
+            )}
+            {loading && (
+              <div className="msg bot">
+                <p className="muted typing">Henter vær <span>·</span><span>·</span><span>·</span></p>
+              </div>
+            )}
+            <div ref={endRef} />
           </div>
-        )}
-        <div ref={endRef} />
-      </div>
 
-      <form className="composer" onSubmit={ask}>
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Skriv et spørsmål …"
-          autoFocus
-        />
-        <button type="submit" disabled={loading || !input.trim()}>Send</button>
-      </form>
+          <form className="composer" onSubmit={ask}>
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Skriv et spørsmål …"
+              autoFocus
+            />
+            <button type="submit" disabled={loading || !input.trim()}>Send</button>
+          </form>
+        </>
+      )}
     </div>
   )
 }

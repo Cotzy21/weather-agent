@@ -127,6 +127,36 @@ header .sub {
 .typing span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes blink { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
 
+/* Detaljside for et sted */
+.detail { padding: 16px 0 28px; }
+.back {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 0;
+}
+.back:hover { text-decoration: underline; }
+.detail-title { font-size: 22px; margin: 8px 0 14px; }
+.detail-h3 { font-size: 16px; margin: 18px 0 8px; }
+.days { display: flex; flex-direction: column; gap: 6px; }
+.day {
+  display: grid;
+  grid-template-columns: 1.5fr 0.6fr 1fr 0.8fr;
+  gap: 8px;
+  align-items: center;
+  padding: 9px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+}
+.day-name { font-weight: 500; }
+.day-temp { font-weight: 600; }
+.day-precip, .day-wind { color: var(--muted); text-align: right; }
+
 /* Klær & utstyr */
 .gear {
   background: var(--accent-soft);
