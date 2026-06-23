@@ -2,6 +2,7 @@ package no.weatheragent.interpret;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -12,8 +13,8 @@ import java.util.Map;
 /**
  * Tynn klient mot et OpenAI-kompatibelt chat-endepunkt. Samme RestClient-mønster
  * som MET/Open-Meteo. Fungerer mot lokal LM Studio (localhost:1234) eller Ollama
- * (localhost:11434) - og senere mot sky - kun ved å bytte {@code llm.base-url}
- * i application.properties (HANDOFF §6).
+ * (localhost:11434) OG mot sky (Groq, OpenAI, OpenRouter ...) - kun ved å bytte
+ * {@code llm.base-url}/{@code llm.model} og sette {@code llm.api-key} (HANDOFF §6).
  */
 @Component
 public class OpenAiCompatibleChatClient {
@@ -24,8 +25,15 @@ public class OpenAiCompatibleChatClient {
     public OpenAiCompatibleChatClient(
             RestClient.Builder builder,
             @Value("${llm.base-url}") String baseUrl,
-            @Value("${llm.model}") String model) {
-        this.http = builder.baseUrl(baseUrl).build();
+            @Value("${llm.model}") String model,
+            @Value("${llm.api-key:}") String apiKey) {
+        RestClient.Builder configured = builder.baseUrl(baseUrl);
+        // Sky-tjenester krever en API-nøkkel; lokal LM Studio/Ollama gjør ikke.
+        // Tom nøkkel => ingen Authorization-header (så lokal kjøring er uendret).
+        if (apiKey != null && !apiKey.isBlank()) {
+            configured = configured.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey);
+        }
+        this.http = configured.build();
         this.model = model;
     }
 
