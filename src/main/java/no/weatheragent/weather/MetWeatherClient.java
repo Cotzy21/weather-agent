@@ -2,6 +2,7 @@ package no.weatheragent.weather;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import no.weatheragent.geo.Location;
+import no.weatheragent.support.Retry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,10 @@ import org.springframework.web.client.RestClient;
  */
 @Component
 public class MetWeatherClient {
+
+    // MET kalles én gang per kandidat, så vi holder pausen kort ved flyktige feil.
+    private static final int MAX_ATTEMPTS = 3;
+    private static final long BACKOFF_MS = 500;
 
     private final RestClient http;
 
@@ -36,13 +41,13 @@ public class MetWeatherClient {
         double lat = round4(location.latitude());
         double lon = round4(location.longitude());
 
-        JsonNode root = http.get()
+        JsonNode root = Retry.withRetry(MAX_ATTEMPTS, BACKOFF_MS, () -> http.get()
                 .uri(uri -> uri.path("/compact")
                         .queryParam("lat", lat)
                         .queryParam("lon", lon)
                         .build())
                 .retrieve()
-                .body(JsonNode.class);
+                .body(JsonNode.class));
 
         return MetForecastParser.parse(location, root);
     }

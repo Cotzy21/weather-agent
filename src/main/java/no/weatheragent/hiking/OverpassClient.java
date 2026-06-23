@@ -1,6 +1,7 @@
 package no.weatheragent.hiking;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import no.weatheragent.support.Retry;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -21,6 +22,10 @@ public class OverpassClient {
 
     private static final String ENDPOINT = "https://overpass-api.de/api/interpreter";
 
+    // Overpass er ofte travel og svarer 504. Prøv noen ganger med økende pause.
+    private static final int MAX_ATTEMPTS = 3;
+    private static final long BACKOFF_MS = 2000;
+
     /** %s = fylkesnavn. Henter alle navngitte natural=peak-noder i fylket. */
     private static final String QUERY_TEMPLATE = """
             [out:json][timeout:90];
@@ -39,12 +44,12 @@ public class OverpassClient {
     public List<Peak> peaksInCounty(String countyName) {
         String query = QUERY_TEMPLATE.formatted(countyName);
 
-        JsonNode root = http.post()
+        JsonNode root = Retry.withRetry(MAX_ATTEMPTS, BACKOFF_MS, () -> http.post()
                 .uri(ENDPOINT)
                 .contentType(MediaType.TEXT_PLAIN)
                 .body(query)
                 .retrieve()
-                .body(JsonNode.class);
+                .body(JsonNode.class));
 
         return OverpassPeakParser.parse(root);
     }
