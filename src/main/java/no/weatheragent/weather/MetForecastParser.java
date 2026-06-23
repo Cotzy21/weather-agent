@@ -15,6 +15,7 @@ import java.util.List;
  *
  * MET "compact"-svaret ser forenklet slik ut:
  * <pre>
+ * geometry.coordinates : [lon, lat, altitude]
  * properties.timeseries[] :
  *   time
  *   data.instant.details.air_temperature
@@ -28,6 +29,10 @@ public final class MetForecastParser {
     }
 
     public static Forecast parse(Location location, JsonNode root) {
+        // MET oppgir hoyden den la varselet til som tredje koordinat. Mangler den,
+        // behandler vi stedet som havniva (0 m).
+        double elevation = root.path("geometry").path("coordinates").path(2).asDouble(0.0);
+
         List<WeatherPoint> points = new ArrayList<>();
 
         for (JsonNode entry : root.path("properties").path("timeseries")) {
@@ -46,6 +51,6 @@ public final class MetForecastParser {
             points.add(new WeatherPoint(time, temperature, precipitation, wind));
         }
 
-        return new Forecast(location, points);
+        return new Forecast(location, elevation, points);
     }
 }

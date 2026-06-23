@@ -34,3 +34,6 @@ Thumbs.db
 # Lokale, hemmelige overstyringer (f.eks. egen kontaktinfo / nøkler)
 application-local.properties
 .env
+
+# Lokal prosjektkontekst / handover - ikke en del av selve kodebasen
+docs/

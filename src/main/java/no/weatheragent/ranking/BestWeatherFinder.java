@@ -46,4 +46,30 @@ public class BestWeatherFinder {
         return WeatherScorer.summarize(forecast, date)
                 .map(day -> new RankedPlace(day, WeatherScorer.score(day)));
     }
+
+    /**
+     * Ranger steder over en hel PERIODE, best snitt-vaer foerst. Henter varselet
+     * EN gang per sted (det dekker mange dager) og scorer paa tvers av dagene.
+     */
+    public List<RankedPlaceOverPeriod> rankOverPeriod(List<Location> places, List<LocalDate> dates) {
+        return places.stream()
+                .map(weatherClient::fetch)
+                .map(forecast -> toRankedPeriod(forecast, dates))
+                .flatMap(Optional::stream)
+                .sorted(Comparator.comparingDouble(RankedPlaceOverPeriod::score).reversed())
+                .toList();
+    }
+
+    private static Optional<RankedPlaceOverPeriod> toRankedPeriod(Forecast forecast, List<LocalDate> dates) {
+        List<DayWeather> days = dates.stream()
+                .map(date -> WeatherScorer.summarize(forecast, date))
+                .flatMap(Optional::stream)
+                .toList();
+
+        if (days.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new RankedPlaceOverPeriod(
+                forecast.location(), days, WeatherScorer.scoreOverPeriod(days)));
+    }
 }

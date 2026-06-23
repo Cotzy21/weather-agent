@@ -27,6 +27,13 @@ public final class WeatherScorer {
     private static final double PRECIP_PENALTY = 3.0;
     private static final double WIND_PENALTY = 0.5;
 
+    /**
+     * Temperaturen faller med hoyden. Vi korrigerer til havniva foer scoring,
+     * slik at steder sammenlignes paa faktisk vaerkvalitet og ikke bare paa at
+     * lavt = varmt (HANDOFF §7). ~0,65 °C per 100 m (standardatmosfaere).
+     */
+    private static final double LAPSE_RATE_C_PER_M = 0.0065;
+
     private WeatherScorer() {
     }
 
@@ -47,14 +54,29 @@ public final class WeatherScorer {
         double totalPrecip = daytime.stream().mapToDouble(WeatherPoint::precipitationMm).sum();
         double avgWind = daytime.stream().mapToDouble(WeatherPoint::windSpeedMs).average().orElse(0);
 
-        return Optional.of(new DayWeather(forecast.location(), date, maxTemp, totalPrecip, avgWind));
+        return Optional.of(new DayWeather(
+                forecast.location(), date, maxTemp, totalPrecip, avgWind, forecast.elevationMeters()));
     }
 
-    /** Hoeyere score = finere turvaer. */
+    /**
+     * Hoeyere score = finere turvaer. Temperaturen korrigeres til havniva ut fra
+     * hoyden, saa et kaldt fjell og et varmt lavland sammenlignes paa likt
+     * grunnlag (HANDOFF §7).
+     */
     public static double score(DayWeather day) {
-        return day.maxTempC()
+        double seaLevelTempC = day.maxTempC() + LAPSE_RATE_C_PER_M * day.elevationMeters();
+        return seaLevelTempC
                 - day.totalPrecipMm() * PRECIP_PENALTY
                 - day.avgWindMs() * WIND_PENALTY;
+    }
+
+    /**
+     * Samlet score for et sted over flere dager: snittet av dags-scorene.
+     * Bare dager med data sendes inn av kalleren, slik at et kortere varsel
+     * ikke trekker stedet ned. Tom liste -> 0.
+     */
+    public static double scoreOverPeriod(List<DayWeather> days) {
+        return days.stream().mapToDouble(WeatherScorer::score).average().orElse(0);
     }
 
     private static boolean isDaytime(WeatherPoint point) {

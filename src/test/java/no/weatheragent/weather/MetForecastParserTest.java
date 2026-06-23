@@ -15,6 +15,7 @@ class MetForecastParserTest {
 
     private static final String SAMPLE_JSON = """
             {
+              "geometry": { "coordinates": [6.0, 62.0, 1564.0] },
               "properties": {
                 "timeseries": [
                   {
@@ -52,6 +53,23 @@ class MetForecastParserTest {
 
         assertEquals(3, forecast.points().size());
         assertEquals(location, forecast.location());
+    }
+
+    @Test
+    void parsesElevationFromGeometry() throws Exception {
+        Forecast forecast = MetForecastParser.parse(
+                new Location("Testby", 62.0, 6.0), mapper.readTree(SAMPLE_JSON));
+
+        assertEquals(1564.0, forecast.elevationMeters());
+    }
+
+    @Test
+    void defaultsElevationToZeroWhenMissing() throws Exception {
+        Forecast forecast = MetForecastParser.parse(
+                new Location("Testby", 62.0, 6.0),
+                mapper.readTree("{ \"properties\": { \"timeseries\": [] } }"));
+
+        assertEquals(0.0, forecast.elevationMeters());
     }
 
     @Test

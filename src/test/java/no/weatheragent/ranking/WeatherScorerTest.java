@@ -58,4 +58,52 @@ class WeatherScorerTest {
         assertTrue(WeatherScorer.score(nice) > WeatherScorer.score(rainy));
         assertTrue(WeatherScorer.score(nice) > WeatherScorer.score(cold));
     }
+
+    @Test
+    void periodScoreIsAverageOfDailyScores() {
+        DayWeather day1 = new DayWeather(PLACE, DATE, 20.0, 0.0, 0.0);            // score 20
+        DayWeather day2 = new DayWeather(PLACE, DATE.plusDays(1), 10.0, 0.0, 0.0); // score 10
+
+        // snitt av 20 og 10 = 15
+        assertEquals(15.0, WeatherScorer.scoreOverPeriod(List.of(day1, day2)));
+    }
+
+    @Test
+    void steadyGoodWeekendBeatsOneGreatOneAwfulDay() {
+        // Et sted som er jevnt fint hele helga...
+        double steady = WeatherScorer.scoreOverPeriod(List.of(
+                new DayWeather(PLACE, DATE, 18.0, 0.0, 1.0),
+                new DayWeather(PLACE, DATE.plusDays(1), 18.0, 0.0, 1.0)));
+
+        // ...slår et sted med én strålende og én klissvåt dag (samme snitt-temp).
+        double swingy = WeatherScorer.scoreOverPeriod(List.of(
+                new DayWeather(PLACE, DATE, 24.0, 0.0, 1.0),
+                new DayWeather(PLACE, DATE.plusDays(1), 12.0, 12.0, 1.0)));
+
+        assertTrue(steady > swingy);
+    }
+
+    @Test
+    void emptyPeriodScoresZero() {
+        assertEquals(0.0, WeatherScorer.scoreOverPeriod(List.of()));
+    }
+
+    @Test
+    void coldHighPeakBeatsWarmMolehillAfterSeaLevelCorrection() {
+        // 84 m kystknaus paa 14°C vs ekte fjell paa 1000 m og 10°C.
+        // Havniva-korrigert: knaus ~14,5°C, fjell ~16,5°C -> fjellet vinner.
+        DayWeather molehill = new DayWeather(PLACE, DATE, 14.0, 0.0, 1.0, 84);
+        DayWeather realPeak = new DayWeather(PLACE, DATE, 10.0, 0.0, 1.0, 1000);
+
+        assertTrue(WeatherScorer.score(realPeak) > WeatherScorer.score(molehill),
+                "Hoyt fjell med litt lavere maalt temp skal vinne etter havniva-korreksjon");
+    }
+
+    @Test
+    void elevationDoesNotChangeScoreAtSeaLevel() {
+        DayWeather atSea = new DayWeather(PLACE, DATE, 18.0, 0.0, 0.0, 0);
+
+        // Ingen hoyde -> ingen korreksjon -> score == maaltemp.
+        assertEquals(18.0, WeatherScorer.score(atSea));
+    }
 }
