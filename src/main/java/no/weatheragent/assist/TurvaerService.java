@@ -1,5 +1,6 @@
 package no.weatheragent.assist;
 
+import no.weatheragent.advice.ClothingAdvisor;
 import no.weatheragent.geo.Location;
 import no.weatheragent.hiking.CandidateSelector;
 import no.weatheragent.hiking.OverpassClient;
@@ -60,7 +61,7 @@ public class TurvaerService {
     public TurResult finnBesteVaer(String query, ScoreWeights weights) {
         Interpretation tolkning = interpreter.interpret(query);
         if (!tolkning.hasRegion()) {
-            return new TurResult(tolkning, List.of(), List.of());
+            return new TurResult(tolkning, List.of(), List.of(), List.of());
         }
 
         double minElevation = tolkning.tripType() == TripType.FJELLTUR
@@ -83,6 +84,11 @@ public class TurvaerService {
                 .toList();
         List<Trail> trails = overpassClient.trailsNear(topPlaces, TRAIL_RADIUS_M);
 
-        return new TurResult(tolkning, ranking, trails);
+        // Klær/utstyr-råd basert på været hos vinneren (idé #3).
+        RankedPlaceOverPeriod winner = ranking.getFirst();
+        List<String> clothing = ClothingAdvisor.recommend(
+                winner.avgMaxTempC(), winner.avgPrecipMm(), winner.avgWindMs());
+
+        return new TurResult(tolkning, ranking, trails, clothing);
     }
 }

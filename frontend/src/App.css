@@ -120,6 +120,17 @@ header .sub {
 .typing span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes blink { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
 
+/* Klær & utstyr */
+.gear {
+  background: var(--accent-soft);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+.gear-title { font-weight: 600; font-size: 14px; }
+.gear ul { margin: 6px 0 0; padding-left: 18px; }
+.gear li { margin: 2px 0; font-size: 14px; }
+
 /* Kart */
 .map {
   height: 260px;

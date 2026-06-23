@@ -52,6 +52,12 @@ public final class TurResultPrinter {
                 }
             });
         }
+
+        List<String> clothing = result.clothing();
+        if (!clothing.isEmpty()) {
+            sb.append("\n\nKlær & utstyr:");
+            clothing.forEach(c -> sb.append("\n  - ").append(c));
+        }
         return sb.toString();
     }
 }

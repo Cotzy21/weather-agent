@@ -66,6 +66,14 @@ function Answer({ result }) {
         <span className="muted">({best.elevation.toFixed(0)} moh)</span> – snitt{' '}
         {best.temp.toFixed(1)} °C, {best.precip.toFixed(1)} mm regn/dag
       </p>
+      {result.clothing?.length > 0 && (
+        <div className="gear">
+          <span className="gear-title">🎒 Klær &amp; utstyr</span>
+          <ul>
+            {result.clothing.map((c, i) => <li key={i}>{c}</li>)}
+          </ul>
+        </div>
+      )}
       <ResultMap places={places} trails={result.trails ?? []} />
       <table className="ranking">
         <thead>
