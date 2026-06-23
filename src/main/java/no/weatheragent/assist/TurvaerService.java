@@ -66,7 +66,7 @@ public class TurvaerService {
         double minElevation = tolkning.tripType() == TripType.FJELLTUR
                 ? FJELL_MIN_ELEVATION_M : DEFAULT_MIN_ELEVATION_M;
 
-        List<Peak> peaks = overpassClient.peaksInCounty(tolkning.region());
+        List<Peak> peaks = overpassClient.peaksInArea(tolkning.region());
         List<Location> candidates = CandidateSelector
                 .representativePeaks(peaks, CELL_DEGREES, minElevation)
                 .stream()

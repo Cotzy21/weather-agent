@@ -13,11 +13,12 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Henter navngitte fjelltopper innenfor et norsk fylke fra OpenStreetMap via
+ * Henter navngitte fjelltopper innenfor et navngitt område fra OpenStreetMap via
  * Overpass-API-et. Gratis og uten API-nøkkel.
  *
- * Spørringen er parametrisert på fylkesnavn (admin_level 4), så den virker for
- * hvilket som helst fylke - "Møre og Romsdal", "Vestland", "Troms" osv.
+ * Området matches på navn og kan være et fylke (admin_level 4), en kommune
+ * (admin_level 7) eller en nasjonalpark (boundary=national_park) - f.eks.
+ * "Møre og Romsdal", "Stranda" eller "Jotunheimen nasjonalpark".
  *
  * API-dok: https://wiki.openstreetmap.org/wiki/Overpass_API
  */
@@ -30,11 +31,18 @@ public class OverpassClient {
     private static final int MAX_ATTEMPTS = 3;
     private static final long BACKOFF_MS = 2000;
 
-    /** %s = fylkesnavn. Henter alle navngitte natural=peak-noder i fylket. */
+    /**
+     * %s = områdenavn (settes inn to ganger). Matcher fylke/kommune
+     * (boundary=administrative, admin_level 4 eller 7) ELLER nasjonalpark, og
+     * henter alle navngitte natural=peak-noder i området.
+     */
     private static final String QUERY_TEMPLATE = """
             [out:json][timeout:90];
-            area["name"="%s"]["admin_level"="4"]->.fylke;
-            node(area.fylke)["natural"="peak"]["name"];
+            (
+              area["name"="%s"]["boundary"="administrative"]["admin_level"~"^(4|7)$"];
+              area["name"="%s"]["boundary"="national_park"];
+            )->.omr;
+            node(area.omr)["natural"="peak"]["name"];
             out;
             """;
 
@@ -47,9 +55,9 @@ public class OverpassClient {
         this.http = builder.build();
     }
 
-    /** Alle navngitte topper i et fylke. */
-    public List<Peak> peaksInCounty(String countyName) {
-        String query = QUERY_TEMPLATE.formatted(countyName);
+    /** Alle navngitte topper i et område (fylke, kommune eller nasjonalpark), matchet på navn. */
+    public List<Peak> peaksInArea(String areaName) {
+        String query = QUERY_TEMPLATE.formatted(areaName, areaName);
 
         JsonNode root = Retry.withRetry(MAX_ATTEMPTS, BACKOFF_MS, () -> http.post()
                 .uri(ENDPOINT)

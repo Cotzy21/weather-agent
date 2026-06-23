@@ -48,8 +48,10 @@ public class LlmQueryInterpreter implements QueryInterpreter {
                 uten forklaring og uten kodeblokk-tegn.
 
                 Felter:
-                  "region"   - norsk fylke spørsmålet gjelder (f.eks. "Møre og Romsdal").
-                               Bruk null hvis det ikke nevnes.
+                  "region"   - norsk fylke, kommune ELLER nasjonalpark spørsmålet gjelder,
+                               med offisielt navn (f.eks. "Møre og Romsdal", "Stranda",
+                               "Jotunheimen nasjonalpark"). Ta med "nasjonalpark" i navnet
+                               når det er en park. Bruk null hvis det ikke nevnes.
                   "when"     - tidsuttrykket, NØYAKTIG én av disse kodene:
                                I_DAG, I_MORGEN, I_OVERMORGEN, HELGA, NESTE_HELG,
                                DENNE_UKA, NESTE_UKE, KONKRET, UKJENT.
