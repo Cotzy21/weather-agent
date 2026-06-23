@@ -33,6 +33,7 @@ function summarize(place) {
 }
 
 function Answer({ result }) {
+  const [selected, setSelected] = useState(null)
   const { interpretation: t, ranking } = result
   const region = t.region ?? '(ukjent)'
 
@@ -74,14 +75,23 @@ function Answer({ result }) {
           </ul>
         </div>
       )}
-      <ResultMap places={places} trails={result.trails ?? []} />
+      <ResultMap
+        places={places}
+        trails={result.trails ?? []}
+        selected={selected != null ? places[selected] : null}
+      />
+      <p className="table-hint">Trykk på et sted for å se det på kartet med turstier i nærheten.</p>
       <table className="ranking">
         <thead>
           <tr><th>Sted</th><th>moh</th><th>°C</th><th>mm</th><th>m/s</th><th>score</th></tr>
         </thead>
         <tbody>
           {places.map((p, i) => (
-            <tr key={i} className={i === 0 ? 'top' : ''}>
+            <tr
+              key={i}
+              className={`${i === 0 ? 'top' : ''} ${i === selected ? 'selected' : ''}`}
+              onClick={() => setSelected(i === selected ? null : i)}
+            >
               <td>{p.name}</td>
               <td>{p.elevation.toFixed(0)}</td>
               <td>{p.temp.toFixed(1)}</td>
