@@ -47,20 +47,28 @@ public class BestWeatherFinder {
                 .map(day -> new RankedPlace(day, WeatherScorer.score(day)));
     }
 
-    /**
-     * Ranger steder over en hel PERIODE, best snitt-vaer foerst. Henter varselet
-     * EN gang per sted (det dekker mange dager) og scorer paa tvers av dagene.
-     */
+    /** Ranger steder over en periode med normal vekt paa alle faktorer. */
     public List<RankedPlaceOverPeriod> rankOverPeriod(List<Location> places, List<LocalDate> dates) {
+        return rankOverPeriod(places, dates, ScoreWeights.DEFAULT);
+    }
+
+    /**
+     * Ranger steder over en hel PERIODE, best snitt-vaer foerst, med brukerens
+     * vekter. Henter varselet EN gang per sted (det dekker mange dager) og
+     * scorer paa tvers av dagene.
+     */
+    public List<RankedPlaceOverPeriod> rankOverPeriod(List<Location> places, List<LocalDate> dates,
+                                                      ScoreWeights weights) {
         return places.stream()
                 .map(weatherClient::fetch)
-                .map(forecast -> toRankedPeriod(forecast, dates))
+                .map(forecast -> toRankedPeriod(forecast, dates, weights))
                 .flatMap(Optional::stream)
                 .sorted(Comparator.comparingDouble(RankedPlaceOverPeriod::score).reversed())
                 .toList();
     }
 
-    private static Optional<RankedPlaceOverPeriod> toRankedPeriod(Forecast forecast, List<LocalDate> dates) {
+    private static Optional<RankedPlaceOverPeriod> toRankedPeriod(Forecast forecast, List<LocalDate> dates,
+                                                                  ScoreWeights weights) {
         List<DayWeather> days = dates.stream()
                 .map(date -> WeatherScorer.summarize(forecast, date))
                 .flatMap(Optional::stream)
@@ -70,6 +78,6 @@ public class BestWeatherFinder {
             return Optional.empty();
         }
         return Optional.of(new RankedPlaceOverPeriod(
-                forecast.location(), days, WeatherScorer.scoreOverPeriod(days)));
+                forecast.location(), days, WeatherScorer.scoreOverPeriod(days, weights)));
     }
 }

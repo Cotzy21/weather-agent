@@ -12,8 +12,11 @@ import java.util.Optional;
  * Ren logikk: gjor om et varsel til et dagssammendrag, og et sammendrag
  * til en tallscore. Ingen nettverk - derfor lett aa teste.
  *
- * "Turvaer" defineres her som: varmt, lite nedbor, lite vind. Vektene under
- * kan justeres senere (eller styres av brukeren).
+ * "Turvaer" bygger paa fire faktorer: varmt, lite nedbor, lite vind og (etter
+ * smak) hoyde. Hver faktor har en basis-koeffisient under, og brukeren skrur
+ * paa dem via {@link ScoreWeights} (Lav/Middels/Hoy). Hoyde som egen, vektbar
+ * faktor erstatter den faste havniva-korreksjonen: vil du ha fjell, vekt hoyde;
+ * vil du ha varmt, vekt temperatur (HANDOFF §7 blir et brukervalg).
  */
 public final class WeatherScorer {
 
@@ -23,16 +26,11 @@ public final class WeatherScorer {
     private static final int DAY_START_HOUR = 8;
     private static final int DAY_END_HOUR = 20;
 
-    /** Hvor hardt nedbor og vind trekker ned. Hoeyere = strengere. */
-    private static final double PRECIP_PENALTY = 3.0;
-    private static final double WIND_PENALTY = 0.5;
-
-    /**
-     * Temperaturen faller med hoyden. Vi korrigerer til havniva foer scoring,
-     * slik at steder sammenlignes paa faktisk vaerkvalitet og ikke bare paa at
-     * lavt = varmt (HANDOFF §7). ~0,65 °C per 100 m (standardatmosfaere).
-     */
-    private static final double LAPSE_RATE_C_PER_M = 0.0065;
+    /** Basis-koeffisienter ved normal vekt (MIDDELS). */
+    private static final double TEMP_PER_C = 1.0;    // +1 per grad
+    private static final double PRECIP_PER_MM = 3.0; // -3 per mm nedbor
+    private static final double WIND_PER_MS = 0.5;   // -0,5 per m/s vind
+    private static final double ELEV_PER_M = 0.01;   // +0,01 per meter (1000 m -> +10)
 
     private WeatherScorer() {
     }
@@ -58,16 +56,25 @@ public final class WeatherScorer {
                 forecast.location(), date, maxTemp, totalPrecip, avgWind, forecast.elevationMeters()));
     }
 
-    /**
-     * Hoeyere score = finere turvaer. Temperaturen korrigeres til havniva ut fra
-     * hoyden, saa et kaldt fjell og et varmt lavland sammenlignes paa likt
-     * grunnlag (HANDOFF §7).
-     */
+    /** Score med normal vekt paa alle faktorer. */
     public static double score(DayWeather day) {
-        double seaLevelTempC = day.maxTempC() + LAPSE_RATE_C_PER_M * day.elevationMeters();
-        return seaLevelTempC
-                - day.totalPrecipMm() * PRECIP_PENALTY
-                - day.avgWindMs() * WIND_PENALTY;
+        return score(day, ScoreWeights.DEFAULT);
+    }
+
+    /**
+     * Hoeyere score = finere turvaer. Hver faktor vektes av brukeren: varmt og
+     * hoyt trekker opp, nedbor og vind trekker ned.
+     */
+    public static double score(DayWeather day, ScoreWeights w) {
+        return w.temperature()   * TEMP_PER_C    * day.maxTempC()
+             - w.precipitation() * PRECIP_PER_MM * day.totalPrecipMm()
+             - w.wind()          * WIND_PER_MS   * day.avgWindMs()
+             + w.elevation()     * ELEV_PER_M    * day.elevationMeters();
+    }
+
+    /** Samlet score over flere dager med normal vekt. */
+    public static double scoreOverPeriod(List<DayWeather> days) {
+        return scoreOverPeriod(days, ScoreWeights.DEFAULT);
     }
 
     /**
@@ -75,8 +82,8 @@ public final class WeatherScorer {
      * Bare dager med data sendes inn av kalleren, slik at et kortere varsel
      * ikke trekker stedet ned. Tom liste -> 0.
      */
-    public static double scoreOverPeriod(List<DayWeather> days) {
-        return days.stream().mapToDouble(WeatherScorer::score).average().orElse(0);
+    public static double scoreOverPeriod(List<DayWeather> days, ScoreWeights w) {
+        return days.stream().mapToDouble(d -> score(d, w)).average().orElse(0);
     }
 
     private static boolean isDaytime(WeatherPoint point) {

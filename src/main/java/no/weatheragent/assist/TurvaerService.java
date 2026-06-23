@@ -9,6 +9,7 @@ import no.weatheragent.interpret.QueryInterpreter;
 import no.weatheragent.interpret.TripType;
 import no.weatheragent.ranking.BestWeatherFinder;
 import no.weatheragent.ranking.RankedPlaceOverPeriod;
+import no.weatheragent.ranking.ScoreWeights;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -45,7 +46,12 @@ public class TurvaerService {
         this.bestWeatherFinder = bestWeatherFinder;
     }
 
+    /** Finn beste vær med normal vekt på alle faktorer. */
     public TurResult finnBesteVaer(String query) {
+        return finnBesteVaer(query, ScoreWeights.DEFAULT);
+    }
+
+    public TurResult finnBesteVaer(String query, ScoreWeights weights) {
         Interpretation tolkning = interpreter.interpret(query);
         if (!tolkning.hasRegion()) {
             return new TurResult(tolkning, List.of());
@@ -62,7 +68,7 @@ public class TurvaerService {
                 .toList();
 
         List<RankedPlaceOverPeriod> ranking =
-                bestWeatherFinder.rankOverPeriod(candidates, tolkning.dates().days());
+                bestWeatherFinder.rankOverPeriod(candidates, tolkning.dates().days(), weights);
 
         return new TurResult(tolkning, ranking);
     }

@@ -89,21 +89,41 @@ class WeatherScorerTest {
     }
 
     @Test
-    void coldHighPeakBeatsWarmMolehillAfterSeaLevelCorrection() {
+    void higherPeakWinsWithDefaultWeights() {
         // 84 m kystknaus paa 14°C vs ekte fjell paa 1000 m og 10°C.
-        // Havniva-korrigert: knaus ~14,5°C, fjell ~16,5°C -> fjellet vinner.
+        // Med normal hoydevekt vinner fjellet (HANDOFF §7-avveiningen).
         DayWeather molehill = new DayWeather(PLACE, DATE, 14.0, 0.0, 1.0, 84);
         DayWeather realPeak = new DayWeather(PLACE, DATE, 10.0, 0.0, 1.0, 1000);
 
-        assertTrue(WeatherScorer.score(realPeak) > WeatherScorer.score(molehill),
-                "Hoyt fjell med litt lavere maalt temp skal vinne etter havniva-korreksjon");
+        assertTrue(WeatherScorer.score(realPeak) > WeatherScorer.score(molehill));
+    }
+
+    @Test
+    void lowElevationWeightLetsWarmLowlandWin() {
+        // Bryr du deg lite om hoyde og mye om varme, skal den varme knausen vinne.
+        ScoreWeights warmth = ScoreWeights.of(Impact.HOY, Impact.MIDDELS, Impact.MIDDELS, Impact.LAV);
+
+        DayWeather molehill = new DayWeather(PLACE, DATE, 14.0, 0.0, 1.0, 84);
+        DayWeather realPeak = new DayWeather(PLACE, DATE, 10.0, 0.0, 1.0, 1000);
+
+        assertTrue(WeatherScorer.score(molehill, warmth) > WeatherScorer.score(realPeak, warmth));
+    }
+
+    @Test
+    void higherRainWeightPenalizesMore() {
+        DayWeather rainy = new DayWeather(PLACE, DATE, 15.0, 5.0, 0.0, 0);
+
+        ScoreWeights lavRain = ScoreWeights.of(Impact.MIDDELS, Impact.LAV, Impact.MIDDELS, Impact.MIDDELS);
+        ScoreWeights hoyRain = ScoreWeights.of(Impact.MIDDELS, Impact.HOY, Impact.MIDDELS, Impact.MIDDELS);
+
+        assertTrue(WeatherScorer.score(rainy, hoyRain) < WeatherScorer.score(rainy, lavRain));
     }
 
     @Test
     void elevationDoesNotChangeScoreAtSeaLevel() {
         DayWeather atSea = new DayWeather(PLACE, DATE, 18.0, 0.0, 0.0, 0);
 
-        // Ingen hoyde -> ingen korreksjon -> score == maaltemp.
+        // Ingen hoyde -> hoydeleddet er 0 -> score == maaltemp ved normal vekt.
         assertEquals(18.0, WeatherScorer.score(atSea));
     }
 }
