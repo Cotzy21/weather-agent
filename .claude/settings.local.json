@@ -7,7 +7,11 @@
       "Bash(node -version)",
       "Bash(mvn -q -B test)",
       "Bash(mvn -q -B spring-boot:run)",
-      "Bash(break)"
+      "Bash(break)",
+      "Skill(claude-api)",
+      "Skill(claude-api:*)",
+      "WebSearch",
+      "WebFetch(domain:www.kartverket.no)"
     ]
   }
 }
