@@ -1,29 +1,45 @@
 :root {
-  --text: #1f2430;
-  --muted: #6b7280;
-  --bg: #f6f7f9;
+  /* Naturpalett: skog, mose, stein, himmel. */
+  --text: #1e2a22;
+  --muted: #5c6b60;
+  --bg: #eef3ec;
   --card: #ffffff;
-  --border: #e3e6ea;
-  --accent: #2563eb;
-  --accent-soft: #eff4ff;
+  --border: #d8e2d6;
+  --accent: #2f7d4f;        /* skoggrønn */
+  --accent-strong: #225c3a;
+  --accent-soft: #e6f1e7;   /* lys mose */
+  --sky-a: #e8f1f0;         /* dis */
+  --sky-b: #eef3ec;         /* eng */
+  --banner-a: #2f7d4f;      /* skog */
+  --banner-b: #1f6b6b;      /* fjord/teal */
 
   font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
   color: var(--text);
-  background: var(--bg);
   -webkit-font-smoothing: antialiased;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #e5e7eb;
-    --muted: #9ca3af;
-    --bg: #0f1117;
-    --card: #181b22;
-    --border: #2a2e38;
-    --accent: #60a5fa;
-    --accent-soft: #1b2436;
+    --text: #e7efe7;
+    --muted: #9db2a2;
+    --bg: #0f140f;
+    --card: #18201a;
+    --border: #2a352c;
+    --accent: #5fae74;
+    --accent-strong: #7cc78e;
+    --accent-soft: #1c2a1f;
+    --sky-a: #10171a;
+    --sky-b: #0f140f;
+    --banner-a: #1f5638;
+    --banner-b: #184f4f;
   }
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; }
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background: linear-gradient(180deg, var(--sky-a) 0%, var(--sky-b) 34%);
+  background-attachment: fixed;
+}

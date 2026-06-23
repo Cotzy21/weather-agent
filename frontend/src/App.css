@@ -7,20 +7,26 @@
   padding: 0 16px;
 }
 
-/* Header */
+/* Header – naturbanner */
 header {
-  padding: 28px 4px 12px;
+  margin-top: 18px;
+  padding: 26px 22px;
   text-align: center;
+  color: #fff;
+  background: linear-gradient(135deg, var(--banner-a) 0%, var(--banner-b) 100%);
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(31, 90, 60, 0.28);
 }
 header h1 {
   margin: 0;
   font-size: 30px;
   font-weight: 700;
   letter-spacing: -0.5px;
+  color: #fff;
 }
 header .sub {
-  color: var(--muted);
   margin-top: 6px;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* Vekt-panel */
@@ -29,7 +35,8 @@ header .sub {
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 14px 16px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  margin-top: 14px;
+  box-shadow: 0 2px 10px rgba(31, 90, 60, 0.06);
 }
 .weights-title {
   display: block;
@@ -100,7 +107,7 @@ header .sub {
   background: var(--card);
   border: 1px solid var(--border);
   border-bottom-left-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 14px rgba(31, 90, 60, 0.08);
 }
 
 .interp {
