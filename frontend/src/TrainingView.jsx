@@ -45,6 +45,12 @@ function cleanSets(arr) {
     .map((s) => ({ reps: Number(s.reps), weightKg: Number(s.weightKg) || 0 }))
 }
 
+// Fra AI-forslag (tall) til byggerens redigerbare felter.
+function mapSets(arr) {
+  const out = (arr || []).map((s) => ({ reps: s.reps ?? '', weightKg: s.weightKg ?? '' }))
+  return out.length ? out : [newSet()]
+}
+
 export default function TrainingView({ session }) {
   const [type, setType] = useState('STYRKE')
   const [date, setDate] = useState(today())
@@ -59,6 +65,11 @@ export default function TrainingView({ session }) {
 
   const [progressName, setProgressName] = useState('')
   const [progress, setProgress] = useState(null)
+
+  const [aiFocus, setAiFocus] = useState('')
+  const [aiBusy, setAiBusy] = useState(false)
+  const [aiError, setAiError] = useState(null)
+  const [suggestion, setSuggestion] = useState(null)
 
   useEffect(() => {
     if (session) loadWorkouts()
@@ -136,6 +147,49 @@ export default function TrainingView({ session }) {
     } catch { setProgress([]) }
   }
 
+  async function suggest() {
+    if (!aiFocus.trim()) return
+    setAiBusy(true)
+    setAiError(null)
+    setSuggestion(null)
+    try {
+      const res = await fetch('/api/trening/forslag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({ focus: aiFocus.trim(), type: '' }),
+      })
+      if (!res.ok) throw new Error(await readError(res))
+      setSuggestion(await res.json())
+    } catch (e) {
+      setAiError(e.message)
+    } finally {
+      setAiBusy(false)
+    }
+  }
+
+  // Fyll forslaget inn i byggeren så brukeren kan finpusse og lagre.
+  function applySuggestion(s) {
+    const t = s.type || 'STYRKE'
+    setType(t)
+    setTitle(s.title || '')
+    const c = s.content || {}
+    if (t === 'STYRKE') {
+      const bs = (c.blocks || []).map((b) => {
+        if (b.kind === 'superset') {
+          return { kind: 'superset', exercises: (b.exercises || []).map((e) => ({ name: e.name || '', sets: mapSets(e.sets) })) }
+        }
+        if (b.kind === 'dropset') {
+          return { kind: 'dropset', name: b.name || '', drops: mapSets(b.drops) }
+        }
+        return { kind: 'exercise', name: b.name || '', sets: mapSets(b.sets) }
+      })
+      setBlocks(bs.length ? bs : [newExercise()])
+    } else {
+      setCardio({ distanceKm: c.distanceKm ?? '', durationMin: c.durationMin ?? '', ascentM: c.ascentM ?? '' })
+    }
+    setSuggestion(null)
+  }
+
   if (!session) {
     return (
       <div className="training">
@@ -150,6 +204,26 @@ export default function TrainingView({ session }) {
   return (
     <div className="training">
       <datalist id="exercises">{EXERCISES.map((e) => <option key={e} value={e} />)}</datalist>
+
+      <div className="ai-panel">
+        <span className="ai-title">🤖 AI-forslag</span>
+        <div className="ai-row">
+          <input placeholder="Fokus, f.eks. større bein, bedre cardio, forberede BJJ"
+                 value={aiFocus} onChange={(e) => setAiFocus(e.target.value)} />
+          <button className="primary" onClick={suggest} disabled={aiBusy || !aiFocus.trim()}>
+            {aiBusy ? 'Tenker …' : 'Foreslå økt'}
+          </button>
+        </div>
+        {aiError && <p className="error">{aiError}</p>}
+        {suggestion && (
+          <div className="ai-result">
+            <strong>{suggestion.title}</strong>{' '}
+            <span className="muted">({(TYPES.find((t) => t.v === suggestion.type)?.t) || suggestion.type})</span>
+            {suggestion.rationale && <p className="muted">{suggestion.rationale}</p>}
+            <button className="mini" onClick={() => applySuggestion(suggestion)}>Bruk i bygger ↓</button>
+          </div>
+        )}
+      </div>
 
       <h2 className="detail-title">Ny økt</h2>
       <div className="type-select">

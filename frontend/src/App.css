@@ -312,6 +312,14 @@ header .sub {
   color: var(--text); border-radius: 999px; cursor: pointer; font-size: 14px;
 }
 .type-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.ai-panel { background: var(--accent-soft); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; margin-bottom: 18px; }
+.ai-title { font-weight: 600; font-size: 14px; }
+.ai-row { display: flex; gap: 8px; margin-top: 8px; }
+.ai-row input { flex: 1; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); font-size: 15px; }
+.ai-row .primary { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 9px 16px; font-weight: 600; cursor: pointer; }
+.ai-row .primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.ai-result { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+.ai-result .mini { margin-top: 6px; }
 .log-meta { display: flex; gap: 12px; margin-bottom: 12px; }
 .log-meta label, .cardio-inputs label, .notes-label {
   display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted);
