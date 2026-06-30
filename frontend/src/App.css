@@ -47,7 +47,7 @@
   flex-direction: column;
   min-height: 100svh;
   padding: 0 24px;
-  max-width: 880px;
+  max-width: 980px;
 }
 
 @media (max-width: 640px) {
@@ -218,7 +218,14 @@ header .sub {
 
 /* Ruteplanlegger */
 .planner { padding: 14px 0 28px; }
-.route-map { height: 520px; cursor: crosshair; }
+.route-map {
+  height: 640px;
+  min-height: 320px;
+  max-height: 90vh;
+  cursor: crosshair;
+  resize: vertical;   /* brukeren kan dra nederst for å endre høyden */
+  overflow: hidden;
+}
 .wp-label {
   background: transparent !important;
   border: none !important;

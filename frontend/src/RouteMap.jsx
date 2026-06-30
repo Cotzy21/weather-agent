@@ -53,6 +53,14 @@ export default function RouteMap({ waypoints, route = [], onAdd }) {
     setTimeout(() => mapRef.current.invalidateSize(), 0)
   }, [waypoints, route])
 
+  // Når brukeren drar i kartet for å endre størrelsen, må Leaflet få vite det.
+  useEffect(() => {
+    if (!elRef.current) return undefined
+    const ro = new ResizeObserver(() => mapRef.current && mapRef.current.invalidateSize())
+    ro.observe(elRef.current)
+    return () => ro.disconnect()
+  }, [])
+
   useEffect(() => () => {
     if (mapRef.current) {
       mapRef.current.remove()
