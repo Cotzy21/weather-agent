@@ -1,11 +1,11 @@
 package no.weatheragent.web;
 
-import no.weatheragent.advice.RouteEstimate;
 import no.weatheragent.assist.PlaceForecast;
 import no.weatheragent.assist.TurResult;
 import no.weatheragent.assist.TurvaerService;
 import no.weatheragent.ranking.Impact;
 import no.weatheragent.ranking.ScoreWeights;
+import no.weatheragent.route.RoutePlan;
 import no.weatheragent.route.RoutePlannerService;
 import no.weatheragent.route.RouteRequest;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -72,7 +72,7 @@ public class TurvaerController {
      * Body: { "waypoints": [{"lat":..,"lon":..}, ...], "weightKg": 80 }
      */
     @PostMapping("/api/rute")
-    public RouteEstimate rute(@RequestBody RouteRequest request) {
+    public RoutePlan rute(@RequestBody RouteRequest request) {
         return routePlanner.plan(request);
     }
 }
