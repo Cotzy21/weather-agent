@@ -15,7 +15,6 @@ function distanceKm(a, b) {
 export default function RoutePlanner() {
   const [waypoints, setWaypoints] = useState([])
   const [weight, setWeight] = useState(75)
-  const [ascent, setAscent] = useState(0)
   const [estimate, setEstimate] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -40,16 +39,18 @@ export default function RoutePlanner() {
   }
 
   async function calc() {
-    if (totalKm <= 0) return
+    if (waypoints.length < 2) return
     setLoading(true)
     setError(null)
     try {
-      const params = new URLSearchParams({
-        distanceKm: totalKm.toFixed(2),
-        ascentM: String(ascent || 0),
-        weightKg: String(weight || 75),
+      const res = await fetch('/api/rute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          waypoints: waypoints.map((w) => ({ lat: w.lat, lon: w.lon })),
+          weightKg: weight || 75,
+        }),
       })
-      const res = await fetch(`/api/rute?${params}`)
       if (!res.ok) throw new Error(await readError(res))
       setEstimate(await res.json())
     } catch (e) {
@@ -78,11 +79,7 @@ export default function RoutePlanner() {
           <input type="number" value={weight} min="30" max="200"
                  onChange={(e) => setWeight(+e.target.value)} />
         </label>
-        <label>Stigning (m)
-          <input type="number" value={ascent} min="0" step="50"
-                 onChange={(e) => setAscent(+e.target.value)} />
-        </label>
-        <button className="primary" onClick={calc} disabled={loading || totalKm <= 0}>
+        <button className="primary" onClick={calc} disabled={loading || waypoints.length < 2}>
           {loading ? 'Beregner …' : 'Beregn'}
         </button>
       </div>
@@ -100,7 +97,8 @@ export default function RoutePlanner() {
             <ul>{estimate.snacks.map((s, i) => <li key={i}>{s}</li>)}</ul>
           </div>
           <p className="muted estimate-note">
-            Grovt estimat (~4 km/t, ~6 MET). Stigning legges inn manuelt foreløpig.
+            Grovt estimat (~4 km/t, ~6 MET). Stigning hentes automatisk fra høydeprofil;
+            distansen er rett linje mellom punktene.
           </p>
         </div>
       )}
