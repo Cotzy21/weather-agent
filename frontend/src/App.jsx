@@ -230,21 +230,21 @@ export default function App() {
 
   return (
     <div className="app">
-      <header>
-        <h1>⛰️ Turvær‑assistent</h1>
-        <p className="sub">Finn finest turvær – eller planlegg turen.</p>
-      </header>
+      <aside className="sidebar">
+        <div className="logo" title="Turvær">⛰️</div>
+        <nav className="nav" aria-label="Moduser">
+          <button className={`nav-item ${tab === 'vaersok' ? 'active' : ''}`} onClick={() => setTab('vaersok')}>
+            🔎 <span>Værsøk</span>
+          </button>
+          <button className={`nav-item ${tab === 'rute' ? 'active' : ''}`} onClick={() => setTab('rute')}>
+            🧭 <span>Ruteplanlegger</span>
+          </button>
+        </nav>
+      </aside>
 
-      <nav className="tabs" aria-label="Faner">
-        <button className={`tab ${tab === 'vaersok' ? 'active' : ''}`} onClick={() => setTab('vaersok')}>
-          🔎 Værsøk
-        </button>
-        <button className={`tab ${tab === 'rute' ? 'active' : ''}`} onClick={() => setTab('rute')}>
-          🧭 Ruteplanlegger
-        </button>
-      </nav>
-
-      {tab === 'vaersok' ? <VaersokView /> : <RoutePlanner />}
+      <main className="main">
+        {tab === 'vaersok' ? <VaersokView /> : <RoutePlanner />}
+      </main>
     </div>
   )
 }
