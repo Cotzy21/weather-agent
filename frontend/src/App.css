@@ -305,27 +305,49 @@ header .sub {
 .del:hover { color: #dc2626; }
 
 /* Trening */
-.training { padding: 16px 0 28px; max-width: 660px; }
+.training { padding: 16px 0 32px; max-width: 680px; }
+.type-select { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.type-chip {
+  padding: 8px 12px; border: 1px solid var(--border); background: var(--card);
+  color: var(--text); border-radius: 999px; cursor: pointer; font-size: 14px;
+}
+.type-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .log-meta { display: flex; gap: 12px; margin-bottom: 12px; }
-.log-meta label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.log-meta label, .cardio-inputs label, .notes-label {
+  display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted);
+}
 .log-meta .grow { flex: 1; }
-.log-meta input, .set-row input, .progress-search input {
+.log-meta input, .cardio-inputs input, .progress-search input, .block input, .notes-label textarea {
   padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px;
-  background: var(--card); color: var(--text); font-size: 15px;
+  background: var(--card); color: var(--text); font-size: 15px; font-family: inherit;
 }
-.set-head, .set-row { display: grid; grid-template-columns: 1fr 70px 80px 28px; gap: 8px; align-items: center; }
-.set-head { font-size: 12px; color: var(--muted); margin-bottom: 4px; padding: 0 2px; }
-.set-row { margin-bottom: 6px; }
-.set-row .del { margin: 0; }
-.log-actions { display: flex; gap: 8px; margin-top: 10px; }
-.log-actions button, .progress-search button {
-  padding: 9px 16px; border: 1px solid var(--border); background: var(--card); color: var(--text);
-  border-radius: 10px; cursor: pointer; font-size: 15px;
+.builder { display: flex; flex-direction: column; gap: 10px; }
+.block { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; background: var(--card); }
+.block.superset { border-color: var(--accent); }
+.block-head { display: flex; align-items: center; margin-bottom: 6px; }
+.block-tag { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.block-head .del { margin-left: auto; }
+.block > input { width: 100%; margin-bottom: 6px; }
+.set-row { display: grid; grid-template-columns: 1fr 1fr 28px; gap: 8px; align-items: center; margin-bottom: 6px; }
+.ss-exercise { border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 8px; }
+.ss-exercise:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+.ss-exercise > input { width: 100%; margin-bottom: 6px; }
+.mini { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px; font-size: 13px; color: var(--accent); cursor: pointer; }
+.builder-add { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.builder-add button { padding: 8px 12px; border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 10px; cursor: pointer; font-size: 14px; }
+.cardio-inputs { display: flex; gap: 12px; flex-wrap: wrap; }
+.cardio-inputs input { width: 130px; }
+.notes-label { margin-top: 12px; }
+.notes-label textarea { resize: vertical; }
+.log-actions { display: flex; gap: 8px; margin-top: 14px; }
+.log-actions .primary {
+  background: var(--accent); color: #fff; border: none; border-radius: 10px;
+  padding: 10px 18px; font-weight: 600; cursor: pointer; font-size: 15px;
 }
-.log-actions .primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
 .log-actions .primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .progress-search { display: flex; gap: 8px; margin-bottom: 10px; }
 .progress-search input { flex: 1; }
+.progress-search button { padding: 9px 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 10px; cursor: pointer; }
 .progress { display: flex; flex-direction: column; gap: 6px; }
 .prog-row { display: grid; grid-template-columns: 110px 1fr 70px; gap: 10px; align-items: center; font-size: 14px; }
 .prog-date { color: var(--muted); }

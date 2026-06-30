@@ -2,18 +2,57 @@ import { useState, useEffect } from 'react'
 import { authHeaders } from './supabase'
 import { readError } from './api'
 
-const COMMON = [
-  'Benkpress', 'Knebøy', 'Markløft', 'Skulderpress', 'Nedtrekk', 'Stående roing',
-  'Biceps curl', 'Triceps pushdown', 'Utfall', 'Leg press', 'Pull-ups', 'Planke',
+const TYPES = [
+  { v: 'STYRKE', t: '🏋️ Styrke' },
+  { v: 'LØPING', t: '🏃 Løping' },
+  { v: 'SVØMMING', t: '🏊 Svømming' },
+  { v: 'SYKKEL', t: '🚴 Sykkel' },
+  { v: 'BULDRING', t: '🧗 Buldring' },
+  { v: 'HIKING', t: '🥾 Hiking' },
+  { v: 'FRISTIL', t: '✨ Fristil' },
+]
+const CARDIO = ['LØPING', 'SVØMMING', 'SYKKEL']
+
+const EXERCISES = [
+  // Bryst
+  'Benkpress', 'Skråbenkpress', 'Hantelpress', 'Flies', 'Dips', 'Push-ups',
+  // Rygg
+  'Markløft', 'Rumensk markløft', 'Nedtrekk', 'Stående roing', 'Sittende roing',
+  'Pull-ups', 'Chins', 'T-bar roing', 'Face pulls',
+  // Bein
+  'Knebøy', 'Frontbøy', 'Leg press', 'Utfall', 'Bulgarske utfall', 'Leg extension',
+  'Leg curl', 'Tåhev', 'Hip thrust',
+  // Skuldre
+  'Skulderpress', 'Sidehev', 'Fronthev', 'Bakre flies', 'Arnold press', 'Opprekk',
+  // Armer
+  'Bicepscurl', 'Hammercurl', 'Konsentrasjonscurl', 'Triceps pushdown',
+  'Triceps extension', 'Skullcrushers',
+  // Mage
+  'Planke', 'Sit-ups', 'Russian twists', 'Hanging leg raise', 'Cable crunch',
+  // Helkropp
+  'Kettlebell swing', 'Clean and press', 'Thruster', 'Burpees', 'Mountain climbers',
 ]
 
 const today = () => new Date().toISOString().slice(0, 10)
-const emptyRow = () => ({ exercise: '', reps: '', weight: '' })
+const newSet = () => ({ reps: '', weightKg: '' })
+const newExercise = () => ({ kind: 'exercise', name: '', sets: [newSet()] })
+const newDropset = () => ({ kind: 'dropset', name: '', drops: [newSet()] })
+const newSuperset = () => ({ kind: 'superset', exercises: [{ name: '', sets: [newSet()] }] })
+
+function cleanSets(arr) {
+  return (arr || [])
+    .filter((s) => s.reps !== '' && s.reps != null)
+    .map((s) => ({ reps: Number(s.reps), weightKg: Number(s.weightKg) || 0 }))
+}
 
 export default function TrainingView({ session }) {
+  const [type, setType] = useState('STYRKE')
   const [date, setDate] = useState(today())
   const [title, setTitle] = useState('')
-  const [rows, setRows] = useState([emptyRow()])
+  const [notes, setNotes] = useState('')
+  const [blocks, setBlocks] = useState([newExercise()])
+  const [cardio, setCardio] = useState({ distanceKm: '', durationMin: '', ascentM: '' })
+
   const [workouts, setWorkouts] = useState([])
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -31,36 +70,48 @@ export default function TrainingView({ session }) {
     try {
       const res = await fetch('/api/treningsokter', { headers: await authHeaders() })
       if (res.ok) setWorkouts(await res.json())
-    } catch {
-      // sekundært
-    }
+    } catch { /* sekundært */ }
   }
 
-  function updateRow(i, field, value) {
-    setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, [field]: value } : r)))
+  // Dyp, immutabel redigering av blocks via en mutator på en kopi.
+  function editBlocks(mutator) {
+    setBlocks((bs) => { const copy = structuredClone(bs); mutator(copy); return copy })
   }
-  function addRow() { setRows((rs) => [...rs, emptyRow()]) }
-  function removeRow(i) { setRows((rs) => (rs.length > 1 ? rs.filter((_, idx) => idx !== i) : rs)) }
+
+  function buildContent() {
+    if (type === 'STYRKE') {
+      const out = blocks.map((b) => {
+        if (b.kind === 'superset') {
+          return {
+            kind: 'superset',
+            exercises: b.exercises
+              .filter((e) => e.name.trim())
+              .map((e) => ({ name: e.name.trim(), sets: cleanSets(e.sets) })),
+          }
+        }
+        const key = b.kind === 'dropset' ? 'drops' : 'sets'
+        return { kind: b.kind, name: b.name.trim(), [key]: cleanSets(b[key]) }
+      }).filter((b) => (b.kind === 'superset' ? b.exercises.length : b.name))
+      return { blocks: out }
+    }
+    const num = (x) => (x === '' ? undefined : Number(x))
+    if (type === 'HIKING') return { distanceKm: num(cardio.distanceKm), durationMin: num(cardio.durationMin), ascentM: num(cardio.ascentM) }
+    if (CARDIO.includes(type)) return { distanceKm: num(cardio.distanceKm), durationMin: num(cardio.durationMin) }
+    return { durationMin: num(cardio.durationMin) } // FRISTIL / BULDRING
+  }
 
   async function submit() {
-    const sets = rows
-      .filter((r) => r.exercise.trim() && r.reps)
-      .map((r) => ({ exercise: r.exercise.trim(), reps: Number(r.reps), weightKg: Number(r.weight) || 0 }))
-    if (!title.trim() || sets.length === 0) {
-      setError('Gi økta en tittel og minst ett sett.')
-      return
-    }
+    if (!title.trim()) { setError('Gi økta en tittel.'); return }
     setBusy(true)
     setError(null)
     try {
       const res = await fetch('/api/treningsokter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({ date, title: title.trim(), sets }),
+        body: JSON.stringify({ date, title: title.trim(), type, content: buildContent(), notes: notes.trim() || null }),
       })
       if (!res.ok) throw new Error(await readError(res))
-      setTitle('')
-      setRows([emptyRow()])
+      setTitle(''); setNotes(''); setBlocks([newExercise()]); setCardio({ distanceKm: '', durationMin: '', ascentM: '' })
       loadWorkouts()
     } catch (e) {
       setError(e.message)
@@ -73,9 +124,7 @@ export default function TrainingView({ session }) {
     try {
       await fetch(`/api/treningsokter/${id}`, { method: 'DELETE', headers: await authHeaders() })
       loadWorkouts()
-    } catch {
-      // ignorer
-    }
+    } catch { /* ignorer */ }
   }
 
   async function loadProgress() {
@@ -84,9 +133,7 @@ export default function TrainingView({ session }) {
       const params = new URLSearchParams({ navn: progressName.trim() })
       const res = await fetch(`/api/ovelser/progresjon?${params}`, { headers: await authHeaders() })
       if (res.ok) setProgress(await res.json())
-    } catch {
-      setProgress([])
-    }
+    } catch { setProgress([]) }
   }
 
   if (!session) {
@@ -102,32 +149,106 @@ export default function TrainingView({ session }) {
 
   return (
     <div className="training">
-      <h2 className="detail-title">Logg økt</h2>
-      <datalist id="exercises">{COMMON.map((e) => <option key={e} value={e} />)}</datalist>
+      <datalist id="exercises">{EXERCISES.map((e) => <option key={e} value={e} />)}</datalist>
+
+      <h2 className="detail-title">Ny økt</h2>
+      <div className="type-select">
+        {TYPES.map((tp) => (
+          <button key={tp.v} className={`type-chip ${type === tp.v ? 'active' : ''}`} onClick={() => setType(tp.v)}>
+            {tp.t}
+          </button>
+        ))}
+      </div>
 
       <div className="log-meta">
         <label>Dato<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
-        <label className="grow">Tittel<input placeholder="f.eks. Push A" value={title} onChange={(e) => setTitle(e.target.value)} /></label>
+        <label className="grow">Tittel<input placeholder="f.eks. Push A / Langtur" value={title} onChange={(e) => setTitle(e.target.value)} /></label>
       </div>
 
-      <div className="set-rows">
-        <div className="set-head"><span>Øvelse</span><span>Reps</span><span>Kg</span><span /></div>
-        {rows.map((r, i) => (
-          <div className="set-row" key={i}>
-            <input list="exercises" placeholder="Øvelse" value={r.exercise} onChange={(e) => updateRow(i, 'exercise', e.target.value)} />
-            <input type="number" min="1" value={r.reps} onChange={(e) => updateRow(i, 'reps', e.target.value)} />
-            <input type="number" min="0" step="2.5" value={r.weight} onChange={(e) => updateRow(i, 'weight', e.target.value)} />
-            <button className="del" onClick={() => removeRow(i)} aria-label="Fjern">✕</button>
+      {type === 'STYRKE' ? (
+        <div className="builder">
+          {blocks.map((b, bi) => (
+            <div className={`block ${b.kind}`} key={bi}>
+              <div className="block-head">
+                <span className="block-tag">{b.kind === 'dropset' ? 'Dropsett' : b.kind === 'superset' ? 'Supersett' : 'Øvelse'}</span>
+                <button className="del" onClick={() => editBlocks((c) => c.splice(bi, 1))} aria-label="Fjern">✕</button>
+              </div>
+
+              {b.kind === 'superset' ? (
+                <>
+                  {b.exercises.map((ex, ei) => (
+                    <div className="ss-exercise" key={ei}>
+                      <input list="exercises" placeholder="Øvelse" value={ex.name}
+                             onChange={(e) => editBlocks((c) => { c[bi].exercises[ei].name = e.target.value })} />
+                      {ex.sets.map((s, si) => (
+                        <div className="set-row" key={si}>
+                          <input type="number" min="1" placeholder="reps" value={s.reps}
+                                 onChange={(e) => editBlocks((c) => { c[bi].exercises[ei].sets[si].reps = e.target.value })} />
+                          <input type="number" min="0" step="2.5" placeholder="kg" value={s.weightKg}
+                                 onChange={(e) => editBlocks((c) => { c[bi].exercises[ei].sets[si].weightKg = e.target.value })} />
+                          <button className="del" onClick={() => editBlocks((c) => { if (c[bi].exercises[ei].sets.length > 1) c[bi].exercises[ei].sets.splice(si, 1) })}>✕</button>
+                        </div>
+                      ))}
+                      <button className="mini" onClick={() => editBlocks((c) => c[bi].exercises[ei].sets.push(newSet()))}>+ sett</button>
+                    </div>
+                  ))}
+                  <button className="mini" onClick={() => editBlocks((c) => c[bi].exercises.push({ name: '', sets: [newSet()] }))}>+ øvelse i supersett</button>
+                </>
+              ) : (
+                <>
+                  <input list="exercises" placeholder="Øvelse" value={b.name}
+                         onChange={(e) => editBlocks((c) => { c[bi].name = e.target.value })} />
+                  {(b.kind === 'dropset' ? b.drops : b.sets).map((s, si) => {
+                    const key = b.kind === 'dropset' ? 'drops' : 'sets'
+                    return (
+                      <div className="set-row" key={si}>
+                        <input type="number" min="1" placeholder={b.kind === 'dropset' ? 'reps (drop)' : 'reps'} value={s.reps}
+                               onChange={(e) => editBlocks((c) => { c[bi][key][si].reps = e.target.value })} />
+                        <input type="number" min="0" step="2.5" placeholder="kg" value={s.weightKg}
+                               onChange={(e) => editBlocks((c) => { c[bi][key][si].weightKg = e.target.value })} />
+                        <button className="del" onClick={() => editBlocks((c) => { if (c[bi][key].length > 1) c[bi][key].splice(si, 1) })}>✕</button>
+                      </div>
+                    )
+                  })}
+                  <button className="mini" onClick={() => editBlocks((c) => c[bi][b.kind === 'dropset' ? 'drops' : 'sets'].push(newSet()))}>
+                    {b.kind === 'dropset' ? '+ drop' : '+ sett'}
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
+
+          <div className="builder-add">
+            <button onClick={() => setBlocks((bs) => [...bs, newExercise()])}>+ Øvelse</button>
+            <button onClick={() => setBlocks((bs) => [...bs, newDropset()])}>+ Dropsett</button>
+            <button onClick={() => setBlocks((bs) => [...bs, newSuperset()])}>+ Supersett</button>
           </div>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <div className="cardio-inputs">
+          {(CARDIO.includes(type) || type === 'HIKING') && (
+            <label>Distanse (km)<input type="number" min="0" step="0.1" value={cardio.distanceKm}
+                   onChange={(e) => setCardio({ ...cardio, distanceKm: e.target.value })} /></label>
+          )}
+          <label>Varighet (min)<input type="number" min="0" value={cardio.durationMin}
+                 onChange={(e) => setCardio({ ...cardio, durationMin: e.target.value })} /></label>
+          {type === 'HIKING' && (
+            <label>Stigning (m)<input type="number" min="0" value={cardio.ascentM}
+                   onChange={(e) => setCardio({ ...cardio, ascentM: e.target.value })} /></label>
+          )}
+        </div>
+      )}
+
+      <label className="notes-label">Notater
+        <textarea rows="2" placeholder="Valgfritt" value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </label>
+
       <div className="log-actions">
-        <button onClick={addRow}>+ Sett</button>
         <button className="primary" onClick={submit} disabled={busy}>{busy ? 'Lagrer …' : 'Lagre økt'}</button>
       </div>
       {error && <p className="error">{error}</p>}
 
-      <h3 className="detail-h3">Progresjon</h3>
+      <h3 className="detail-h3">Progresjon (styrke)</h3>
       <div className="progress-search">
         <input list="exercises" placeholder="Øvelse, f.eks. Benkpress" value={progressName} onChange={(e) => setProgressName(e.target.value)} />
         <button onClick={loadProgress}>Vis</button>
@@ -155,18 +276,38 @@ export default function TrainingView({ session }) {
             <div className="workout" key={w.id}>
               <div className="workout-head">
                 <strong>{w.title}</strong>
-                <span className="muted">{w.date}</span>
+                <span className="muted">{(TYPES.find((t) => t.v === w.type)?.t) || w.type} · {w.date}</span>
                 <button className="del" onClick={() => deleteWorkout(w.id)} aria-label="Slett">✕</button>
               </div>
-              <ul>
-                {w.sets.map((s, i) => (
-                  <li key={i}>{s.exercise} – {s.reps} × {s.weightKg} kg</li>
-                ))}
-              </ul>
+              <WorkoutBody workout={w} />
             </div>
           ))}
         </div>
       )}
     </div>
   )
+}
+
+const sumSets = (arr) => (arr || []).map((s) => `${s.reps}×${s.weightKg}`).join(', ')
+
+function WorkoutBody({ workout: w }) {
+  const c = w.content || {}
+  if (w.type === 'STYRKE') {
+    return (
+      <ul>
+        {(c.blocks || []).map((b, i) => (
+          <li key={i}>
+            {b.kind === 'superset'
+              ? <>Supersett: {(b.exercises || []).map((e) => `${e.name} (${sumSets(e.sets)})`).join(' + ')}</>
+              : <>{b.name} – {b.kind === 'dropset' ? `dropsett: ${sumSets(b.drops)}` : sumSets(b.sets)}</>}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+  const bits = []
+  if (c.distanceKm != null) bits.push(`${c.distanceKm} km`)
+  if (c.durationMin != null) bits.push(`${c.durationMin} min`)
+  if (c.ascentM != null) bits.push(`${c.ascentM} m stigning`)
+  return <p className="muted">{bits.join(' · ') || '—'}{w.notes ? ` · ${w.notes}` : ''}</p>
 }
