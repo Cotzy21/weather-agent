@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Lokale miljovariabler (Supabase URL/anon key) - bruk .env.example som mal
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

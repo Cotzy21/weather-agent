@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import ResultMap from './ResultMap'
 import PlaceDetail from './PlaceDetail'
 import RoutePlanner from './RoutePlanner'
+import AuthView from './AuthView'
+import { supabase } from './supabase'
 import { readError } from './api'
 import './App.css'
 
@@ -214,6 +216,14 @@ function VaersokView() {
 
 export default function App() {
   const [tab, setTab] = useState('vaersok')
+  const [session, setSession] = useState(null)
+
+  useEffect(() => {
+    if (!supabase) return undefined
+    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    return () => sub.subscription.unsubscribe()
+  }, [])
 
   return (
     <div className="app">
@@ -227,10 +237,18 @@ export default function App() {
             🧭 <span>Ruteplanlegger</span>
           </button>
         </nav>
+        <button
+          className={`nav-item account-btn ${tab === 'konto' ? 'active' : ''}`}
+          onClick={() => setTab('konto')}
+        >
+          👤 <span>{session ? 'Min konto' : 'Logg inn'}</span>
+        </button>
       </aside>
 
       <main className="main">
-        {tab === 'vaersok' ? <VaersokView /> : <RoutePlanner />}
+        {tab === 'vaersok' && <VaersokView />}
+        {tab === 'rute' && <RoutePlanner session={session} />}
+        {tab === 'konto' && <AuthView session={session} />}
       </main>
     </div>
   )
