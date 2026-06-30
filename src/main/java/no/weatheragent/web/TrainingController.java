@@ -3,9 +3,13 @@ package no.weatheragent.web;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import jakarta.validation.Valid;
+import no.weatheragent.training.Suggestion;
 import no.weatheragent.training.WorkoutService;
+import no.weatheragent.training.WorkoutSuggester;
 import no.weatheragent.web.dto.LogWorkoutRequest;
 import no.weatheragent.web.dto.ProgressPointDto;
+import no.weatheragent.web.dto.SuggestionDto;
+import no.weatheragent.web.dto.SuggestionRequest;
 import no.weatheragent.web.dto.WorkoutDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -29,9 +33,11 @@ import java.util.UUID;
 public class TrainingController {
 
     private final WorkoutService workouts;
+    private final WorkoutSuggester suggester;
 
-    public TrainingController(WorkoutService workouts) {
+    public TrainingController(WorkoutService workouts, WorkoutSuggester suggester) {
         this.workouts = workouts;
+        this.suggester = suggester;
     }
 
     @PostMapping("/api/treningsokter")
@@ -60,5 +66,12 @@ public class TrainingController {
         return workouts.progression(UUID.fromString(jwt.getSubject()), navn).stream()
                 .map(ProgressPointDto::from)
                 .toList();
+    }
+
+    /** AI-forslag til en økt ut fra fokus + brukerens historikk. */
+    @PostMapping("/api/trening/forslag")
+    public SuggestionDto suggest(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SuggestionRequest request) {
+        Suggestion s = suggester.suggest(UUID.fromString(jwt.getSubject()), request.focus(), request.type());
+        return SuggestionDto.from(s);
     }
 }

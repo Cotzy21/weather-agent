@@ -2,6 +2,7 @@ package no.weatheragent.web;
 
 import no.weatheragent.security.SecurityConfig;
 import no.weatheragent.training.WorkoutService;
+import no.weatheragent.training.WorkoutSuggester;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -27,6 +28,9 @@ class TrainingControllerSecurityTest {
 
     @MockitoBean
     private WorkoutService workouts;
+
+    @MockitoBean
+    private WorkoutSuggester suggester;
 
     @MockitoBean
     private JwtDecoder jwtDecoder;

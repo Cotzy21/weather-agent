@@ -1,5 +1,6 @@
 package no.weatheragent.web;
 
+import no.weatheragent.training.AiSuggestionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -28,5 +29,10 @@ public class ApiExceptionHandler {
                 : "En ekstern datatjeneste (vær eller kart) er utilgjengelig akkurat nå. Prøv igjen om litt.";
 
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ApiError(message));
+    }
+
+    @ExceptionHandler(AiSuggestionException.class)
+    public ResponseEntity<ApiError> handleAi(AiSuggestionException e) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ApiError(e.getMessage()));
     }
 }
