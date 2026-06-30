@@ -1,13 +1,16 @@
 package no.weatheragent.web;
 
-import no.weatheragent.advice.CalorieAdvisor;
 import no.weatheragent.advice.RouteEstimate;
 import no.weatheragent.assist.PlaceForecast;
 import no.weatheragent.assist.TurResult;
 import no.weatheragent.assist.TurvaerService;
 import no.weatheragent.ranking.Impact;
 import no.weatheragent.ranking.ScoreWeights;
+import no.weatheragent.route.RoutePlannerService;
+import no.weatheragent.route.RouteRequest;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,9 +30,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class TurvaerController {
 
     private final TurvaerService service;
+    private final RoutePlannerService routePlanner;
 
-    public TurvaerController(TurvaerService service) {
+    public TurvaerController(TurvaerService service, RoutePlannerService routePlanner) {
         this.service = service;
+        this.routePlanner = routePlanner;
     }
 
     @GetMapping("/api/turvaer")
@@ -62,14 +67,12 @@ public class TurvaerController {
     }
 
     /**
-     * Grovt estimat for en planlagt rute: tid, kaloriforbruk og mat/drikke.
-     * Eksempel: GET /api/rute?distanceKm=12&ascentM=600&weightKg=80
+     * Estimat for en planlagt rute fra klikkede waypoints: lengde, automatisk
+     * stigning (høydeprofil), tid, kaloriforbruk og mat/drikke.
+     * Body: { "waypoints": [{"lat":..,"lon":..}, ...], "weightKg": 80 }
      */
-    @GetMapping("/api/rute")
-    public RouteEstimate rute(
-            @RequestParam("distanceKm") double distanceKm,
-            @RequestParam(value = "ascentM", defaultValue = "0") double ascentM,
-            @RequestParam(value = "weightKg", defaultValue = "75") double weightKg) {
-        return CalorieAdvisor.estimate(distanceKm, ascentM, weightKg);
+    @PostMapping("/api/rute")
+    public RouteEstimate rute(@RequestBody RouteRequest request) {
+        return routePlanner.plan(request);
     }
 }
