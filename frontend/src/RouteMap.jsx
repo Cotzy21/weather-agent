@@ -2,9 +2,10 @@ import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
-// Interaktivt kart: klikk legger til et veipunkt (via onAdd), og punktene
-// tegnes som nummererte markører bundet sammen med en linje.
-export default function RouteMap({ waypoints, onAdd }) {
+// Interaktivt kart: klikk legger til et veipunkt (via onAdd). Waypoints tegnes
+// som nummererte markører. Før beregning vises en stiplet rett linje mellom dem;
+// etter beregning vises den faktiske traséen (route) som en heltrukken linje.
+export default function RouteMap({ waypoints, route = [], onAdd }) {
   const elRef = useRef(null)
   const mapRef = useRef(null)
   const layerRef = useRef(null)
@@ -30,9 +31,12 @@ export default function RouteMap({ waypoints, onAdd }) {
     const layer = layerRef.current
     layer.clearLayers()
 
-    const pts = waypoints.map((w) => [w.lat, w.lon])
-    if (pts.length > 1) {
-      L.polyline(pts, { color: '#2f7d4f', weight: 4 }).addTo(layer)
+    const routePts = route.map((p) => [p.lat, p.lon])
+    const wpts = waypoints.map((w) => [w.lat, w.lon])
+    if (routePts.length > 1) {
+      L.polyline(routePts, { color: '#2f7d4f', weight: 4 }).addTo(layer)
+    } else if (wpts.length > 1) {
+      L.polyline(wpts, { color: '#2f7d4f', weight: 3, dashArray: '6 6', opacity: 0.7 }).addTo(layer)
     }
     waypoints.forEach((w, i) => {
       L.circleMarker([w.lat, w.lon], {
@@ -47,7 +51,7 @@ export default function RouteMap({ waypoints, onAdd }) {
     })
 
     setTimeout(() => mapRef.current.invalidateSize(), 0)
-  }, [waypoints])
+  }, [waypoints, route])
 
   useEffect(() => () => {
     if (mapRef.current) {

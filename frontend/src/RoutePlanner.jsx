@@ -15,7 +15,7 @@ function distanceKm(a, b) {
 export default function RoutePlanner() {
   const [waypoints, setWaypoints] = useState([])
   const [weight, setWeight] = useState(75)
-  const [estimate, setEstimate] = useState(null)
+  const [plan, setPlan] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -27,15 +27,15 @@ export default function RoutePlanner() {
 
   function addWaypoint(lat, lon) {
     setWaypoints((w) => [...w, { lat, lon }])
-    setEstimate(null)
+    setPlan(null)
   }
   function undo() {
     setWaypoints((w) => w.slice(0, -1))
-    setEstimate(null)
+    setPlan(null)
   }
   function clearAll() {
     setWaypoints([])
-    setEstimate(null)
+    setPlan(null)
   }
 
   async function calc() {
@@ -52,7 +52,7 @@ export default function RoutePlanner() {
         }),
       })
       if (!res.ok) throw new Error(await readError(res))
-      setEstimate(await res.json())
+      setPlan(await res.json())
     } catch (e) {
       setError(e.message)
     } finally {
@@ -65,7 +65,7 @@ export default function RoutePlanner() {
       <p className="hint">
         Klikk i kartet for å legge til punkter (start, stopp, teltplass, mål). Linja viser ruta.
       </p>
-      <RouteMap waypoints={waypoints} onAdd={addWaypoint} />
+      <RouteMap waypoints={waypoints} route={plan?.geometry ?? []} onAdd={addWaypoint} />
 
       <div className="planner-row">
         <span>{waypoints.length} punkt · <strong>{totalKm.toFixed(1)} km</strong></span>
@@ -86,19 +86,20 @@ export default function RoutePlanner() {
 
       {error && <p className="error">Beklager – {error}</p>}
 
-      {estimate && (
+      {plan && (
         <div className="estimate">
           <p className="estimate-line">
-            <strong>{estimate.distanceKm.toFixed(1)} km</strong> · {estimate.ascentM.toFixed(0)} m stigning
-            {' '}· ~{estimate.hours.toFixed(1)} t · <strong>{estimate.calories} kcal</strong>
+            <strong>{plan.estimate.distanceKm.toFixed(1)} km</strong> · {plan.estimate.ascentM.toFixed(0)} m stigning
+            {' '}· ~{plan.estimate.hours.toFixed(1)} t · <strong>{plan.estimate.calories} kcal</strong>
           </p>
           <div className="gear">
             <span className="gear-title">🍫 Mat &amp; drikke</span>
-            <ul>{estimate.snacks.map((s, i) => <li key={i}>{s}</li>)}</ul>
+            <ul>{plan.estimate.snacks.map((s, i) => <li key={i}>{s}</li>)}</ul>
           </div>
           <p className="muted estimate-note">
-            Grovt estimat (~4 km/t, ~6 MET). Stigning hentes automatisk fra høydeprofil;
-            distansen er rett linje mellom punktene.
+            {plan.snappedToTrails
+              ? 'Rute langs faktiske stier. Stigning fra høydeprofil. Grovt estimat (~4 km/t, ~6 MET).'
+              : 'Rett linje mellom punktene (sti-ruting ikke aktivert). Stigning fra høydeprofil. Grovt estimat (~4 km/t, ~6 MET).'}
           </p>
         </div>
       )}
