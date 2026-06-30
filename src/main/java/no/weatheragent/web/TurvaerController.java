@@ -1,13 +1,13 @@
 package no.weatheragent.web;
 
-import no.weatheragent.assist.PlaceForecast;
-import no.weatheragent.assist.TurResult;
 import no.weatheragent.assist.TurvaerService;
 import no.weatheragent.ranking.Impact;
 import no.weatheragent.ranking.ScoreWeights;
-import no.weatheragent.route.RoutePlan;
 import no.weatheragent.route.RoutePlannerService;
 import no.weatheragent.route.RouteRequest;
+import no.weatheragent.web.dto.PlaceForecastDto;
+import no.weatheragent.web.dto.RoutePlanDto;
+import no.weatheragent.web.dto.WeatherSearchDto;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -38,7 +38,7 @@ public class TurvaerController {
     }
 
     @GetMapping("/api/turvaer")
-    public TurResult turvaer(
+    public WeatherSearchDto turvaer(
             @RequestParam("q") String query,
             @RequestParam(value = "temp", defaultValue = "MIDDELS") String temp,
             @RequestParam(value = "rain", defaultValue = "MIDDELS") String rain,
@@ -51,7 +51,7 @@ public class TurvaerController {
                 Impact.fromString(wind),
                 Impact.fromString(elevation));
 
-        return service.finnBesteVaer(query, weights);
+        return WeatherSearchDto.from(service.finnBesteVaer(query, weights));
     }
 
     /**
@@ -59,11 +59,11 @@ public class TurvaerController {
      * Eksempel: GET /api/sted?name=Slogen&lat=62.18&lon=6.86
      */
     @GetMapping("/api/sted")
-    public PlaceForecast sted(
+    public PlaceForecastDto sted(
             @RequestParam("name") String name,
             @RequestParam("lat") double lat,
             @RequestParam("lon") double lon) {
-        return service.placeDetail(name, lat, lon);
+        return PlaceForecastDto.from(service.placeDetail(name, lat, lon));
     }
 
     /**
@@ -72,7 +72,7 @@ public class TurvaerController {
      * Body: { "waypoints": [{"lat":..,"lon":..}, ...], "weightKg": 80 }
      */
     @PostMapping("/api/rute")
-    public RoutePlan rute(@RequestBody RouteRequest request) {
-        return routePlanner.plan(request);
+    public RoutePlanDto rute(@RequestBody RouteRequest request) {
+        return RoutePlanDto.from(routePlanner.plan(request));
     }
 }

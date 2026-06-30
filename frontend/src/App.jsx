@@ -18,40 +18,28 @@ const LEVELS = [
   { v: 'hoy', t: 'Høy' },
 ]
 
-// Snitt over dagene for ett sted. Backend sender per-dag-tallene i `days`.
-function summarize(place) {
-  const days = place.days ?? []
-  const n = days.length || 1
-  const avg = (sel) => days.reduce((sum, d) => sum + sel(d), 0) / n
-  return {
-    name: place.location.name,
-    lat: place.location.latitude,
-    lon: place.location.longitude,
-    elevation: days[0]?.elevationMeters ?? 0,
-    temp: avg((d) => d.maxTempC),
-    precip: avg((d) => d.totalPrecipMm),
-    wind: avg((d) => d.avgWindMs),
-    score: place.score,
-  }
+// Tilpass et PlaceDto til formen kartet (ResultMap) forventer.
+function placeForMap(p) {
+  return { name: p.name, lat: p.lat, lon: p.lon, temp: p.avgTempC, precip: p.avgPrecipMm, elevation: p.elevationM }
 }
 
 function Answer({ result, onSelectPlace }) {
-  const { interpretation: t, ranking } = result
-  const region = t.region ?? '(ukjent)'
-  const isTrail = t.target === 'TUR'
+  const region = result.region ?? '(ukjent)'
+  const isTrail = result.target === 'TUR'
 
   const interp = (
     <p className="interp">
-      <strong>{region}</strong> · {t.when} ({t.dates.from} → {t.dates.to}) · {t.tripType}
+      <strong>{region}</strong> · {result.when} ({result.from} → {result.to}) · {result.tripType}
     </p>
   )
 
-  if (!ranking || ranking.length === 0) {
+  const places = result.places ?? []
+  if (places.length === 0) {
     return (
       <div className="answer">
         {interp}
         <p className="muted">
-          {t.region
+          {result.region
             ? 'Fant ingen værdata for perioden (kanskje for langt fram?).'
             : 'Jeg fant ingen region i spørsmålet – prøv å nevne et fylke, f.eks. «Rogaland».'}
         </p>
@@ -59,7 +47,6 @@ function Answer({ result, onSelectPlace }) {
     )
   }
 
-  const places = ranking.slice(0, 10).map(summarize)
   const best = places[0]
 
   return (
@@ -69,8 +56,8 @@ function Answer({ result, onSelectPlace }) {
         <span className="medal">{isTrail ? '🥾' : '🏔️'}</span>{' '}
         {isTrail ? 'Finest vær på turrute: ' : 'Finest vær: '}
         <strong>{best.name}</strong>{' '}
-        <span className="muted">({best.elevation.toFixed(0)} moh)</span> – snitt{' '}
-        {best.temp.toFixed(1)} °C, {best.precip.toFixed(1)} mm regn/dag
+        <span className="muted">({best.elevationM.toFixed(0)} moh)</span> – snitt{' '}
+        {best.avgTempC.toFixed(1)} °C, {best.avgPrecipMm.toFixed(1)} mm regn/dag
       </p>
       {result.clothing?.length > 0 && (
         <div className="gear">
@@ -80,7 +67,7 @@ function Answer({ result, onSelectPlace }) {
           </ul>
         </div>
       )}
-      <ResultMap places={places} trails={result.trails ?? []} />
+      <ResultMap places={places.map(placeForMap)} trails={result.trails ?? []} />
       <p className="table-hint">Trykk på en rad for å åpne detaljside med varsel for de neste dagene.</p>
       <table className="ranking">
         <thead>
@@ -94,10 +81,10 @@ function Answer({ result, onSelectPlace }) {
               onClick={() => onSelectPlace({ name: p.name, lat: p.lat, lon: p.lon })}
             >
               <td>{p.name}</td>
-              <td>{p.elevation.toFixed(0)}</td>
-              <td>{p.temp.toFixed(1)}</td>
-              <td>{p.precip.toFixed(1)}</td>
-              <td>{p.wind.toFixed(1)}</td>
+              <td>{p.elevationM.toFixed(0)}</td>
+              <td>{p.avgTempC.toFixed(1)}</td>
+              <td>{p.avgPrecipMm.toFixed(1)}</td>
+              <td>{p.avgWindMs.toFixed(1)}</td>
               <td>{p.score.toFixed(1)}</td>
             </tr>
           ))}

@@ -89,12 +89,12 @@ export default function RoutePlanner() {
       {plan && (
         <div className="estimate">
           <p className="estimate-line">
-            <strong>{plan.estimate.distanceKm.toFixed(1)} km</strong> · {plan.estimate.ascentM.toFixed(0)} m stigning
-            {' '}· ~{plan.estimate.hours.toFixed(1)} t · <strong>{plan.estimate.calories} kcal</strong>
+            <strong>{plan.distanceKm.toFixed(1)} km</strong> · {plan.ascentM.toFixed(0)} m stigning
+            {' '}· ~{plan.hours.toFixed(1)} t · <strong>{plan.calories} kcal</strong>
           </p>
           <div className="gear">
             <span className="gear-title">🍫 Mat &amp; drikke</span>
-            <ul>{plan.estimate.snacks.map((s, i) => <li key={i}>{s}</li>)}</ul>
+            <ul>{plan.snacks.map((s, i) => <li key={i}>{s}</li>)}</ul>
           </div>
           <p className="muted estimate-note">
             {plan.snappedToTrails

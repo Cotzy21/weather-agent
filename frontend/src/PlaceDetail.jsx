@@ -42,7 +42,7 @@ export default function PlaceDetail({ place, onBack }) {
       {data && (
         <>
           <h2 className="detail-title">
-            {data.name} <span className="muted">{data.elevationMeters.toFixed(0)} moh</span>
+            {data.name} <span className="muted">{data.elevationM.toFixed(0)} moh</span>
           </h2>
 
           <ResultMap
@@ -52,7 +52,7 @@ export default function PlaceDetail({ place, onBack }) {
               lon: place.lon,
               temp: data.days[0]?.maxTempC ?? 0,
               precip: data.days[0]?.totalPrecipMm ?? 0,
-              elevation: data.elevationMeters,
+              elevation: data.elevationM,
             }]}
             trails={data.trails}
           />

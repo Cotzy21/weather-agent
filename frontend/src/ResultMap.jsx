@@ -62,9 +62,9 @@ export default function ResultMap({ places, trails = [], selected = null }) {
 
     // Turruter. Hvis et sted er valgt, lyser rutene nær det opp i oransje.
     trails.forEach((tr) => {
-      if (tr.latitude == null || tr.longitude == null) return
-      const near = selected && distanceKm(selected.lat, selected.lon, tr.latitude, tr.longitude) <= NEAR_KM
-      L.circleMarker([tr.latitude, tr.longitude], {
+      if (tr.lat == null || tr.lon == null) return
+      const near = selected && distanceKm(selected.lat, selected.lon, tr.lat, tr.lon) <= NEAR_KM
+      L.circleMarker([tr.lat, tr.lon], {
         radius: near ? 7 : 5,
         color: near ? '#c2410c' : '#15803d',
         fillColor: near ? '#fb923c' : '#22c55e',
@@ -73,7 +73,7 @@ export default function ResultMap({ places, trails = [], selected = null }) {
       })
         .bindPopup(`🥾 <strong>${tr.name}</strong>${tr.operator ? `<br/>${tr.operator}` : ''}`)
         .addTo(layer)
-      points.push([tr.latitude, tr.longitude])
+      points.push([tr.lat, tr.lon])
     })
 
     if (selected) {
