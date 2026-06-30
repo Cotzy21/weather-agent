@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import ResultMap from './ResultMap'
 import PlaceDetail from './PlaceDetail'
 import RoutePlanner from './RoutePlanner'
+import TrainingView from './TrainingView'
 import AuthView from './AuthView'
 import { supabase } from './supabase'
 import { readError } from './api'
@@ -236,6 +237,9 @@ export default function App() {
           <button className={`nav-item ${tab === 'rute' ? 'active' : ''}`} onClick={() => setTab('rute')}>
             🧭 <span>Ruteplanlegger</span>
           </button>
+          <button className={`nav-item ${tab === 'trening' ? 'active' : ''}`} onClick={() => setTab('trening')}>
+            🏋️ <span>Trening</span>
+          </button>
         </nav>
         <button
           className={`nav-item account-btn ${tab === 'konto' ? 'active' : ''}`}
@@ -248,6 +252,7 @@ export default function App() {
       <main className="main">
         {tab === 'vaersok' && <VaersokView />}
         {tab === 'rute' && <RoutePlanner session={session} />}
+        {tab === 'trening' && <TrainingView session={session} />}
         {tab === 'konto' && <AuthView session={session} />}
       </main>
     </div>

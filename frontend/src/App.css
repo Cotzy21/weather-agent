@@ -304,6 +304,41 @@ header .sub {
 .del { margin-left: auto; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; }
 .del:hover { color: #dc2626; }
 
+/* Trening */
+.training { padding: 16px 0 28px; max-width: 660px; }
+.log-meta { display: flex; gap: 12px; margin-bottom: 12px; }
+.log-meta label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.log-meta .grow { flex: 1; }
+.log-meta input, .set-row input, .progress-search input {
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--card); color: var(--text); font-size: 15px;
+}
+.set-head, .set-row { display: grid; grid-template-columns: 1fr 70px 80px 28px; gap: 8px; align-items: center; }
+.set-head { font-size: 12px; color: var(--muted); margin-bottom: 4px; padding: 0 2px; }
+.set-row { margin-bottom: 6px; }
+.set-row .del { margin: 0; }
+.log-actions { display: flex; gap: 8px; margin-top: 10px; }
+.log-actions button, .progress-search button {
+  padding: 9px 16px; border: 1px solid var(--border); background: var(--card); color: var(--text);
+  border-radius: 10px; cursor: pointer; font-size: 15px;
+}
+.log-actions .primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+.log-actions .primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.progress-search { display: flex; gap: 8px; margin-bottom: 10px; }
+.progress-search input { flex: 1; }
+.progress { display: flex; flex-direction: column; gap: 6px; }
+.prog-row { display: grid; grid-template-columns: 110px 1fr 70px; gap: 10px; align-items: center; font-size: 14px; }
+.prog-date { color: var(--muted); }
+.prog-bar { background: var(--accent-soft); border-radius: 6px; height: 14px; overflow: hidden; }
+.prog-bar span { display: block; height: 100%; background: var(--accent); }
+.prog-val { text-align: right; font-weight: 600; }
+.workouts { display: flex; flex-direction: column; gap: 10px; }
+.workout { border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; background: var(--card); }
+.workout-head { display: flex; align-items: center; gap: 8px; }
+.workout-head .del { margin-left: auto; }
+.workout ul { margin: 6px 0 0; padding-left: 18px; }
+.workout li { font-size: 14px; margin: 2px 0; }
+
 /* Klær & utstyr */
 .gear {
   background: var(--accent-soft);
