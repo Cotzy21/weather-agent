@@ -1,0 +1,52 @@
+package no.weatheragent.web;
+
+import no.weatheragent.security.SecurityConfig;
+import no.weatheragent.training.WorkoutService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(TrainingController.class)
+@Import(SecurityConfig.class)
+class TrainingControllerSecurityTest {
+
+    @Autowired
+    private MockMvc mvc;
+
+    @MockitoBean
+    private WorkoutService workouts;
+
+    @MockitoBean
+    private JwtDecoder jwtDecoder;
+
+    @Test
+    void listRequiresAuthentication() throws Exception {
+        mvc.perform(get("/api/treningsokter")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void progressionRequiresAuthentication() throws Exception {
+        mvc.perform(get("/api/ovelser/progresjon").param("navn", "Benkpress"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void listWorksWhenAuthenticated() throws Exception {
+        when(workouts.listFor(any())).thenReturn(List.of());
+        mvc.perform(get("/api/treningsokter")
+                        .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
+                .andExpect(status().isOk());
+    }
+}
