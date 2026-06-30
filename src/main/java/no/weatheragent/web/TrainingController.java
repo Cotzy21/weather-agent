@@ -1,7 +1,8 @@
 package no.weatheragent.web;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import jakarta.validation.Valid;
-import no.weatheragent.training.SetInput;
 import no.weatheragent.training.WorkoutService;
 import no.weatheragent.web.dto.LogWorkoutRequest;
 import no.weatheragent.web.dto.ProgressPointDto;
@@ -21,8 +22,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Treningsassistentens første del: logg økter, se egne økter, og se progresjon
- * per øvelse over tid. Alt scopes til innlogget bruker (Supabase-JWT sub).
+ * Treningsassistenten: logg økter (ulike typer + fleksibelt JSONB-innhold), se egne
+ * økter, og se progresjon per øvelse over tid. Alt scopes til innlogget bruker.
  */
 @RestController
 public class TrainingController {
@@ -36,10 +37,9 @@ public class TrainingController {
     @PostMapping("/api/treningsokter")
     public WorkoutDto log(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody LogWorkoutRequest request) {
         UUID userId = UUID.fromString(jwt.getSubject());
-        List<SetInput> sets = request.sets().stream()
-                .map(s -> new SetInput(s.exercise(), s.reps(), s.weightKg()))
-                .toList();
-        return WorkoutDto.from(workouts.log(userId, request.date(), request.title(), sets));
+        JsonNode content = request.content() == null ? JsonNodeFactory.instance.objectNode() : request.content();
+        return WorkoutDto.from(
+                workouts.log(userId, request.date(), request.title(), request.type(), content, request.notes()));
     }
 
     @GetMapping("/api/treningsokter")
