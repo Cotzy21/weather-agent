@@ -3,6 +3,7 @@ import ResultMap from './ResultMap'
 import PlaceDetail from './PlaceDetail'
 import RoutePlanner from './RoutePlanner'
 import TrainingView from './TrainingView'
+import Dashboard from './Dashboard'
 import AuthView from './AuthView'
 import { supabase } from './supabase'
 import { readError } from './api'
@@ -216,7 +217,7 @@ function VaersokView() {
 }
 
 export default function App() {
-  const [tab, setTab] = useState('vaersok')
+  const [tab, setTab] = useState('hjem')
   const [session, setSession] = useState(null)
 
   useEffect(() => {
@@ -231,6 +232,9 @@ export default function App() {
       <aside className="sidebar">
         <div className="logo" title="Turvær">⛰️</div>
         <nav className="nav" aria-label="Moduser">
+          <button className={`nav-item ${tab === 'hjem' ? 'active' : ''}`} onClick={() => setTab('hjem')}>
+            🏠 <span>Hjem</span>
+          </button>
           <button className={`nav-item ${tab === 'vaersok' ? 'active' : ''}`} onClick={() => setTab('vaersok')}>
             🔎 <span>Værsøk</span>
           </button>
@@ -250,6 +254,7 @@ export default function App() {
       </aside>
 
       <main className="main">
+        {tab === 'hjem' && <Dashboard session={session} onNavigate={setTab} />}
         {tab === 'vaersok' && <VaersokView />}
         {tab === 'rute' && <RoutePlanner session={session} />}
         {tab === 'trening' && <TrainingView session={session} />}

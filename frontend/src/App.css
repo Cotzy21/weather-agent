@@ -320,6 +320,21 @@ header .sub {
 .ai-row .primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .ai-result { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
 .ai-result .mini { margin-top: 6px; }
+
+/* Hjem / dashboard */
+.dash { padding: 16px 0 28px; max-width: 640px; }
+.dash-stats { display: flex; gap: 12px; margin: 8px 0 16px; }
+.stat { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; text-align: center; }
+.stat-num { display: block; font-size: 28px; font-weight: 700; color: var(--accent); }
+.stat-label { font-size: 13px; color: var(--muted); }
+.dash-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.dash-actions button { padding: 10px 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 10px; cursor: pointer; font-size: 15px; }
+.dash-actions .primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+.feed { display: flex; flex-direction: column; gap: 6px; }
+.feed-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; font-size: 14px; }
+.feed-icon { font-size: 18px; }
+.feed-title { font-weight: 500; }
+.feed-item .muted { margin-left: auto; }
 .log-meta { display: flex; gap: 12px; margin-bottom: 12px; }
 .log-meta label, .cardio-inputs label, .notes-label {
   display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted);
