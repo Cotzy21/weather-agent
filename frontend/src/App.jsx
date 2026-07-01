@@ -6,7 +6,7 @@ import TrainingView from './TrainingView'
 import Dashboard from './Dashboard'
 import AuthView from './AuthView'
 import { supabase } from './supabase'
-import { readError } from './api'
+import { apiUrl, readError } from './api'
 import './App.css'
 
 // De fire faktorene brukeren kan vekte, og nivåene.
@@ -145,7 +145,7 @@ function VaersokView() {
 
     try {
       const params = new URLSearchParams({ q: query, ...weights })
-      const res = await fetch(`/api/turvaer?${params}`)
+      const res = await fetch(apiUrl(`/api/turvaer?${params}`))
       if (!res.ok) throw new Error(await readError(res))
       const result = await res.json()
       setMessages((m) => [...m, { role: 'bot', result }])

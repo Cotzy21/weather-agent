@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { authHeaders } from './supabase'
+import { apiUrl } from './api'
 
 const ICONS = { STYRKE: '🏋️', LØPING: '🏃', SVØMMING: '🏊', SYKKEL: '🚴', BULDRING: '🧗', HIKING: '🥾', FRISTIL: '✨' }
 
@@ -22,7 +23,7 @@ export default function Dashboard({ session, onNavigate }) {
 
   async function loadWorkouts() {
     try {
-      const res = await fetch('/api/treningsokter', { headers: await authHeaders() })
+      const res = await fetch(apiUrl('/api/treningsokter'), { headers: await authHeaders() })
       if (res.ok) setWorkouts(await res.json())
     } catch { /* hjem er sekundært */ }
   }

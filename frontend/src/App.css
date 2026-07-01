@@ -9,7 +9,7 @@
   flex-shrink: 0;
   border-right: 1px solid var(--border);
   background: var(--card);
-  padding: 16px 12px;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -46,7 +46,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100svh;
-  padding: 0 24px;
+  padding: 0 24px env(safe-area-inset-bottom, 0px);
   max-width: 980px;
 }
 
@@ -438,7 +438,7 @@ header .sub {
 .composer {
   display: flex;
   gap: 8px;
-  padding: 12px 0 22px;
+  padding: 12px 0 calc(22px + env(safe-area-inset-bottom, 0px));
   position: sticky;
   bottom: 0;
   background: linear-gradient(to top, var(--bg) 70%, transparent);

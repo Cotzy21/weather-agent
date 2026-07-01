@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import ResultMap from './ResultMap'
-import { readError } from './api'
+import { apiUrl, readError } from './api'
 
 // "2026-06-27" -> "Lørdag 27. jun"
 function fmtDay(iso) {
@@ -18,7 +18,7 @@ export default function PlaceDetail({ place, onBack }) {
     setData(null)
     setError(null)
     const params = new URLSearchParams({ name: place.name, lat: place.lat, lon: place.lon })
-    fetch(`/api/sted?${params}`)
+    fetch(apiUrl(`/api/sted?${params}`))
       .then(async (r) => {
         if (!r.ok) throw new Error(await readError(r))
         return r.json()

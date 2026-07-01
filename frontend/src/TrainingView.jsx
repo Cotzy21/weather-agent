@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { authHeaders } from './supabase'
-import { readError } from './api'
+import { apiUrl, readError } from './api'
 
 const TYPES = [
   { v: 'STYRKE', t: '🏋️ Styrke' },
@@ -79,7 +79,7 @@ export default function TrainingView({ session }) {
 
   async function loadWorkouts() {
     try {
-      const res = await fetch('/api/treningsokter', { headers: await authHeaders() })
+      const res = await fetch(apiUrl('/api/treningsokter'), { headers: await authHeaders() })
       if (res.ok) setWorkouts(await res.json())
     } catch { /* sekundært */ }
   }
@@ -116,7 +116,7 @@ export default function TrainingView({ session }) {
     setBusy(true)
     setError(null)
     try {
-      const res = await fetch('/api/treningsokter', {
+      const res = await fetch(apiUrl('/api/treningsokter'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ date, title: title.trim(), type, content: buildContent(), notes: notes.trim() || null }),
@@ -133,7 +133,7 @@ export default function TrainingView({ session }) {
 
   async function deleteWorkout(id) {
     try {
-      await fetch(`/api/treningsokter/${id}`, { method: 'DELETE', headers: await authHeaders() })
+      await fetch(apiUrl(`/api/treningsokter/${id}`), { method: 'DELETE', headers: await authHeaders() })
       loadWorkouts()
     } catch { /* ignorer */ }
   }
@@ -142,7 +142,7 @@ export default function TrainingView({ session }) {
     if (!progressName.trim()) return
     try {
       const params = new URLSearchParams({ navn: progressName.trim() })
-      const res = await fetch(`/api/ovelser/progresjon?${params}`, { headers: await authHeaders() })
+      const res = await fetch(apiUrl(`/api/ovelser/progresjon?${params}`), { headers: await authHeaders() })
       if (res.ok) setProgress(await res.json())
     } catch { setProgress([]) }
   }
@@ -153,7 +153,7 @@ export default function TrainingView({ session }) {
     setAiError(null)
     setSuggestion(null)
     try {
-      const res = await fetch('/api/trening/forslag', {
+      const res = await fetch(apiUrl('/api/trening/forslag'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ focus: aiFocus.trim(), type: '' }),

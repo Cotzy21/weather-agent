@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import RouteMap from './RouteMap'
-import { readError } from './api'
+import { apiUrl, readError } from './api'
 import { authHeaders } from './supabase'
 
 function distanceKm(a, b) {
@@ -41,7 +41,7 @@ export default function RoutePlanner({ session }) {
 
   async function loadSaved() {
     try {
-      const res = await fetch('/api/ruter', { headers: await authHeaders() })
+      const res = await fetch(apiUrl('/api/ruter'), { headers: await authHeaders() })
       if (res.ok) setSaved(await res.json())
     } catch {
       // ignorer – «Mine ruter» er sekundært
@@ -68,7 +68,7 @@ export default function RoutePlanner({ session }) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/rute', {
+      const res = await fetch(apiUrl('/api/rute'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -90,7 +90,7 @@ export default function RoutePlanner({ session }) {
     if (!plan || !routeName.trim()) return
     setError(null)
     try {
-      const res = await fetch('/api/ruter', {
+      const res = await fetch(apiUrl('/api/ruter'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({
@@ -110,7 +110,7 @@ export default function RoutePlanner({ session }) {
 
   async function deleteRoute(id) {
     try {
-      await fetch(`/api/ruter/${id}`, { method: 'DELETE', headers: await authHeaders() })
+      await fetch(apiUrl(`/api/ruter/${id}`), { method: 'DELETE', headers: await authHeaders() })
       loadSaved()
     } catch {
       // ignorer

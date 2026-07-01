@@ -1,0 +1,5 @@
+{
+  "appId": "no.weatheragent.turvaer",
+  "appName": "Turvær",
+  "webDir": "../src/main/resources/static"
+}
