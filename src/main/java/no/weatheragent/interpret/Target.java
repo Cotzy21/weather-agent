@@ -3,15 +3,17 @@ package no.weatheragent.interpret;
 import java.util.Locale;
 
 /**
- * Hva brukeren vil ha rangert etter vær: steder/topper, eller konkrete turruter.
- * Lar appen svare på både «hvor er det finest vær» og «hvilken turrute har finest
- * vær». LLM-en klassifiserer dette; ukjent/uoppgitt blir STED.
+ * Hva brukeren egentlig spør om: en rangering av steder/topper, en rangering av
+ * turruter, ELLER bare værvarselet for ett sted («hvordan blir været i Oslo i
+ * helga»). LLM-en klassifiserer dette; ukjent/uoppgitt blir STED.
  */
 public enum Target {
-    /** Steder/topper i området (standard). */
+    /** Steder/topper i området rangert etter vær (standard). */
     STED,
-    /** Navngitte turruter/stier i området. */
-    TUR;
+    /** Navngitte turruter/stier i området rangert etter vær. */
+    TUR,
+    /** Bare værvarselet for stedet – ingen rangering. */
+    VARSEL;
 
     public static Target fromString(String value) {
         if (value == null) {

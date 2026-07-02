@@ -32,6 +32,7 @@ function placeForMap(p) {
 function Answer({ result, onSelectPlace, onPlan }) {
   const region = result.region ?? '(ukjent)'
   const isTrail = result.target === 'TUR'
+  const isForecast = result.target === 'VARSEL'
 
   const interp = (
     <p className="interp">
@@ -59,8 +60,8 @@ function Answer({ result, onSelectPlace, onPlan }) {
     <div className="answer">
       {interp}
       <p className="winner">
-        <span className="medal">{isTrail ? '🥾' : '🏔️'}</span>{' '}
-        {isTrail ? 'Finest vær på turrute: ' : 'Finest vær: '}
+        <span className="medal">{isForecast ? '🌤️' : isTrail ? '🥾' : '🏔️'}</span>{' '}
+        {isForecast ? 'Været i ' : isTrail ? 'Finest vær på turrute: ' : 'Finest vær: '}
         <strong>{best.name}</strong>{' '}
         <span className="muted">({best.elevationM.toFixed(0)} moh)</span> – snitt{' '}
         {best.avgTempC.toFixed(1)} °C, {best.avgPrecipMm.toFixed(1)} mm regn/dag

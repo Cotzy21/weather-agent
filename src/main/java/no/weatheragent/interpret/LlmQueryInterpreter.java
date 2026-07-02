@@ -87,8 +87,15 @@ public class LlmQueryInterpreter implements QueryInterpreter {
                                (HELGA = denne helga, NESTE_HELG = helga etter.)
                   "fromDate"/"toDate" - KUN når brukeren nevner en konkret dato
                                (when=KONKRET), ISO YYYY-MM-DD. Ellers null.
-                  "target"   - "TUR" hvis brukeren spør om en turrute/tur/sti/løype,
-                               ellers "STED". (F.eks. "hvilken turrute ..." -> TUR.)
+                  "target"   - nøyaktig én av:
+                               "TUR"    hvis brukeren vil rangere turruter/stier
+                                        ("hvilken turrute ... har finest vær"),
+                               "VARSEL" hvis brukeren bare spør hvordan været BLIR
+                                        på ett sted, uten å be om beste/finest
+                                        ("hvordan blir været i Oslo i helga",
+                                        "hva slags vær får Bergen i morgen"),
+                               "STED"   ellers (rangere steder: "hvor blir det
+                                        best/finest vær ...").
                   "tripType" - nøyaktig én av: FJELLTUR, LAVTUR, UANSETT.
 
                 I dag er %s (tidssone Europe/Oslo) - bruk det bare til å fylle inn
@@ -101,6 +108,8 @@ public class LlmQueryInterpreter implements QueryInterpreter {
                     -> {"region":"Ålesund","country":"NO","when":"I_MORGEN","target":"TUR","fromDate":null,"toDate":null,"tripType":"UANSETT"}
                   "fint fjellvær i Møre og Romsdal i helga"
                     -> {"region":"Møre og Romsdal","country":"NO","when":"HELGA","target":"STED","fromDate":null,"toDate":null,"tripType":"FJELLTUR"}
+                  "hvordan blir været i Oslo i helgen"
+                    -> {"region":"Oslo","country":"NO","when":"HELGA","target":"VARSEL","fromDate":null,"toDate":null,"tripType":"UANSETT"}
                   "beste turvær i Tirol neste helg"
                     -> {"region":"Tirol","country":"AT","when":"NESTE_HELG","target":"STED","fromDate":null,"toDate":null,"tripType":"UANSETT"}
                   "været på Sunnmøre 3. juli"

@@ -2,6 +2,7 @@ package no.weatheragent.assist;
 
 import no.weatheragent.advice.ClothingAdvisor;
 import no.weatheragent.geo.Location;
+import no.weatheragent.geo.OpenMeteoGeocodingClient;
 import no.weatheragent.hiking.CandidateSelector;
 import no.weatheragent.hiking.OverpassClient;
 import no.weatheragent.hiking.Peak;
@@ -64,15 +65,18 @@ public class TurvaerService {
     private final OverpassClient overpassClient;
     private final BestWeatherFinder bestWeatherFinder;
     private final ResilientWeatherClient weatherClient;
+    private final OpenMeteoGeocodingClient geocoding;
 
     public TurvaerService(QueryInterpreter interpreter,
                           OverpassClient overpassClient,
                           BestWeatherFinder bestWeatherFinder,
-                          ResilientWeatherClient weatherClient) {
+                          ResilientWeatherClient weatherClient,
+                          OpenMeteoGeocodingClient geocoding) {
         this.interpreter = interpreter;
         this.overpassClient = overpassClient;
         this.bestWeatherFinder = bestWeatherFinder;
         this.weatherClient = weatherClient;
+        this.geocoding = geocoding;
     }
 
     /** Finn beste vær med normal vekt på alle faktorer. */
@@ -86,10 +90,14 @@ public class TurvaerService {
             return new TurResult(tolkning, List.of(), List.of(), List.of());
         }
 
-        // Hva skal rangeres: selve turrutene, eller steder/topper?
-        List<Location> candidates = tolkning.target() == Target.TUR
-                ? trailCandidates(tolkning.region(), tolkning.country())
-                : peakCandidates(tolkning.region(), tolkning.country(), tolkning.tripType());
+        // «Hvordan blir været i Oslo» er ikke et rangeringsspørsmål: slå opp
+        // stedet (geocoding) og vis varselet for akkurat det, med turer og
+        // klær-råd rundt - i stedet for å rangere topper i området.
+        List<Location> candidates = switch (tolkning.target()) {
+            case VARSEL -> geocoding.findFirst(tolkning.region()).map(List::of).orElse(List.of());
+            case TUR -> trailCandidates(tolkning.region(), tolkning.country());
+            case STED -> peakCandidates(tolkning.region(), tolkning.country(), tolkning.tripType());
+        };
 
         List<RankedPlaceOverPeriod> ranking =
                 bestWeatherFinder.rankOverPeriod(candidates, tolkning.dates().days(), weights);
@@ -99,7 +107,7 @@ public class TurvaerService {
         }
 
         // I TUR-modus ER de rangerte stedene allerede turruter; ellers viser vi
-        // merkede turer nær topp-stedene (idé #1).
+        // merkede turer nær topp-stedene (idé #1). Gjelder også VARSEL-stedet.
         List<Trail> trails = tolkning.target() == Target.TUR
                 ? List.of()
                 : overpassClient.trailsNear(topLocations(ranking), TRAIL_RADIUS_M);

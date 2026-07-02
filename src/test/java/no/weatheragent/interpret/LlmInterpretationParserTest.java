@@ -60,6 +60,12 @@ class LlmInterpretationParserTest {
     }
 
     @Test
+    void forecastTargetIsParsedAndUnknownFallsBackToSted() throws Exception {
+        assertEquals(Target.VARSEL, parse("{\"region\":\"Oslo\",\"target\":\"VARSEL\"}").target());
+        assertEquals(Target.STED, parse("{\"region\":\"Oslo\",\"target\":\"tull\"}").target());
+    }
+
+    @Test
     void countryIsUppercasedIsoCode() throws Exception {
         assertEquals("AT", parse("{\"region\":\"Tirol\",\"country\":\"at\"}").country());
         assertEquals("NO", parse("{\"region\":\"Rogaland\",\"country\":\"NO\"}").country());
