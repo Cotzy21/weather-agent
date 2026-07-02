@@ -33,7 +33,10 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
   ikke-kommersielt. Før kommersiell deploy: kjøp API-plan hos Open-Meteo
   (billig) eller bytt fallback. MET er CC-BY (kommersielt OK, krever attribusjon
   + identifiserende User-Agent — satt i `application.properties`).
-- Gjenstår: værsøk ↔ ruteplanlegger-flyt («ta med dette stedet til planleggeren»).
+- ✅ NYTT i dag: **værsøk → ruteplanlegger-flyt**: «🧭 Planlegg tur hit»-knapp på
+  vinneren og på detaljsiden. Stedet løftes til App-state (`planTarget`), tab
+  byttes, planleggeren viser banner + oransje målmarkør, sentrerer kartet og
+  foreslår rutenavn. ✕ i banneret fjerner målet.
 
 ### Ruteplanlegger — grunnmur på plass
 - ✅ Klikk-waypoints → rute (`RoutingClient`), høydeprofil (`ElevationClient`),
@@ -93,9 +96,8 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
 ## Foreslåtte neste steg (i rekkefølge)
 
 1. Verifisere 401-fiksen ende-til-ende når env-variablene er satt her.
-2. Værsøk → ruteplanlegger-overgang (send valgt sted med ett klikk).
-3. Turdetaljer i ruteplanleggeren (terreng/stigning/vanskelighetsgrad).
-4. Kosthold: matvarelogging med mengder + Matvaretabellen som kilde.
+2. Turdetaljer i ruteplanleggeren (terreng/stigning/vanskelighetsgrad).
+3. Kosthold: matvarelogging med mengder + Matvaretabellen som kilde.
 
 ## Arbeidsstil (viktig)
 

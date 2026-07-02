@@ -13,7 +13,7 @@ function distanceKm(a, b) {
   return 2 * R * Math.asin(Math.sqrt(s))
 }
 
-export default function RoutePlanner({ session }) {
+export default function RoutePlanner({ session, target, onClearTarget }) {
   const [waypoints, setWaypoints] = useState([])
   const [weight, setWeight] = useState(75)
   const [plan, setPlan] = useState(null)
@@ -38,6 +38,12 @@ export default function RoutePlanner({ session }) {
     loadSaved()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
+
+  // Sted sendt fra værsøket: foreslå det som rutenavn (uten å overskrive noe
+  // brukeren alt har skrevet). Kartet sentreres via focus-proppen på RouteMap.
+  useEffect(() => {
+    if (target) setRouteName((name) => name || `Tur til ${target.name}`)
+  }, [target])
 
   async function loadSaved() {
     try {
@@ -125,10 +131,22 @@ export default function RoutePlanner({ session }) {
 
   return (
     <div className="planner">
+      {target && (
+        <div className="plan-target">
+          🎯 Mål fra værsøket: <strong>{target.name}</strong> – klikk i kartet for å
+          tegne ruta di fram til målet.
+          <button className="del" onClick={onClearTarget} aria-label="Fjern mål">✕</button>
+        </div>
+      )}
       <p className="hint">
         Klikk i kartet for å legge til punkter (start, stopp, teltplass, mål). Linja viser ruta.
       </p>
-      <RouteMap waypoints={waypoints} route={shown ?? plan?.geometry ?? []} onAdd={addWaypoint} />
+      <RouteMap
+        waypoints={waypoints}
+        route={shown ?? plan?.geometry ?? []}
+        onAdd={addWaypoint}
+        focus={target}
+      />
 
       <div className="planner-row">
         <span>{waypoints.length} punkt · <strong>{totalKm.toFixed(1)} km</strong></span>

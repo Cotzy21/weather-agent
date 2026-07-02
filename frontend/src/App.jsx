@@ -29,7 +29,7 @@ function placeForMap(p) {
   return { name: p.name, lat: p.lat, lon: p.lon, temp: p.avgTempC, precip: p.avgPrecipMm, elevation: p.elevationM }
 }
 
-function Answer({ result, onSelectPlace }) {
+function Answer({ result, onSelectPlace, onPlan }) {
   const region = result.region ?? '(ukjent)'
   const isTrail = result.target === 'TUR'
 
@@ -64,6 +64,12 @@ function Answer({ result, onSelectPlace }) {
         <strong>{best.name}</strong>{' '}
         <span className="muted">({best.elevationM.toFixed(0)} moh)</span> – snitt{' '}
         {best.avgTempC.toFixed(1)} °C, {best.avgPrecipMm.toFixed(1)} mm regn/dag
+        <button
+          className="plan-btn"
+          onClick={() => onPlan({ name: best.name, lat: best.lat, lon: best.lon })}
+        >
+          🧭 Planlegg tur hit
+        </button>
       </p>
       {result.clothing?.length > 0 && (
         <div className="gear">
@@ -118,7 +124,7 @@ function Answer({ result, onSelectPlace }) {
   )
 }
 
-function VaersokView() {
+function VaersokView({ onPlan }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -177,7 +183,7 @@ function VaersokView() {
       </section>
 
       {detail ? (
-        <PlaceDetail place={detail} onBack={() => setDetail(null)} />
+        <PlaceDetail place={detail} onBack={() => setDetail(null)} onPlan={onPlan} />
       ) : (
         <>
           <div className="chat">
@@ -191,7 +197,7 @@ function VaersokView() {
                 <div key={i} className="msg bot">
                   {m.error
                     ? <p className="error">Beklager – {m.error}</p>
-                    : <Answer result={m.result} onSelectPlace={setDetail} />}
+                    : <Answer result={m.result} onSelectPlace={setDetail} onPlan={onPlan} />}
                 </div>
               )
             )}
@@ -222,6 +228,15 @@ export default function App() {
   const [tab, setTab] = useState('hjem')
   const [session, setSession] = useState(null)
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') ?? 'light')
+
+  // Sted valgt i værsøket som brukeren vil planlegge tur til. Ligger her (ikke
+  // i planleggeren) fordi tabbene demonteres ved bytte - staten må overleve.
+  const [planTarget, setPlanTarget] = useState(null)
+
+  function planTrip(place) {
+    setPlanTarget(place)
+    setTab('rute')
+  }
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -278,8 +293,14 @@ export default function App() {
 
       <main className="main" ref={mainRef}>
         {tab === 'hjem' && <Dashboard session={session} onNavigate={setTab} />}
-        {tab === 'vaersok' && <VaersokView />}
-        {tab === 'rute' && <RoutePlanner session={session} />}
+        {tab === 'vaersok' && <VaersokView onPlan={planTrip} />}
+        {tab === 'rute' && (
+          <RoutePlanner
+            session={session}
+            target={planTarget}
+            onClearTarget={() => setPlanTarget(null)}
+          />
+        )}
         {tab === 'trening' && <TrainingView session={session} />}
         {tab === 'kosthold' && <NutritionView />}
         {tab === 'konto' && <AuthView session={session} />}

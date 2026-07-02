@@ -9,7 +9,7 @@ function fmtDay(iso) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-export default function PlaceDetail({ place, onBack }) {
+export default function PlaceDetail({ place, onBack, onPlan }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
 
@@ -43,6 +43,14 @@ export default function PlaceDetail({ place, onBack }) {
         <>
           <h2 className="detail-title">
             {data.name} <span className="muted">{data.elevationM.toFixed(0)} moh</span>
+            {onPlan && (
+              <button
+                className="plan-btn"
+                onClick={() => onPlan({ name: data.name, lat: place.lat, lon: place.lon })}
+              >
+                🧭 Planlegg tur hit
+              </button>
+            )}
           </h2>
 
           <ResultMap

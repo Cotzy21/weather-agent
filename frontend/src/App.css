@@ -215,6 +215,34 @@ header .sub { margin-top: 6px; color: var(--muted); }
 }
 .winner { font-size: 16px; margin-bottom: 14px; line-height: 1.45; }
 .winner .medal { font-size: 18px; }
+
+/* «Planlegg tur hit»: hopp fra værsøket til ruteplanleggeren med stedet som mål */
+.plan-btn {
+  margin-left: 10px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--tint);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  vertical-align: middle;
+}
+.plan-btn:hover { background: var(--accent-soft); border-color: rgba(52, 211, 153, 0.4); transform: translateY(-1px); }
+.plan-target {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  background: var(--accent-soft);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
 .muted { color: var(--muted); }
 .error { color: var(--danger); }
 

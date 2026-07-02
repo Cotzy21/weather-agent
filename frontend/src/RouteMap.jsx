@@ -5,7 +5,9 @@ import 'leaflet/dist/leaflet.css'
 // Interaktivt kart: klikk legger til et veipunkt (via onAdd). Waypoints tegnes
 // som nummererte markører. Før beregning vises en stiplet rett linje mellom dem;
 // etter beregning vises den faktiske traséen (route) som en heltrukken linje.
-export default function RouteMap({ waypoints, route = [], onAdd }) {
+// focus (valgfri) er et mål fra værsøket: kartet sentreres dit og stedet får
+// en egen oransje målmarkør.
+export default function RouteMap({ waypoints, route = [], onAdd, focus = null }) {
   const elRef = useRef(null)
   const mapRef = useRef(null)
   const layerRef = useRef(null)
@@ -50,8 +52,27 @@ export default function RouteMap({ waypoints, route = [], onAdd }) {
         .addTo(layer)
     })
 
+    if (focus) {
+      L.circleMarker([focus.lat, focus.lon], {
+        radius: 10,
+        color: '#b45309',
+        fillColor: '#f59e0b',
+        fillOpacity: 0.95,
+        weight: 2,
+      })
+        .bindTooltip(`🎯 ${focus.name}`, { direction: 'top' })
+        .addTo(layer)
+    }
+
     setTimeout(() => mapRef.current.invalidateSize(), 0)
-  }, [waypoints, route])
+  }, [waypoints, route, focus])
+
+  // Nytt mål fra værsøket -> flytt kartet dit (én gang per mål).
+  useEffect(() => {
+    if (focus && mapRef.current) {
+      mapRef.current.setView([focus.lat, focus.lon], 12)
+    }
+  }, [focus])
 
   // Når brukeren drar i kartet for å endre størrelsen, må Leaflet få vite det.
   useEffect(() => {
