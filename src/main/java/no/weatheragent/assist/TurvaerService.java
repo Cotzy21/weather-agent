@@ -16,7 +16,7 @@ import no.weatheragent.ranking.RankedPlaceOverPeriod;
 import no.weatheragent.ranking.ScoreWeights;
 import no.weatheragent.ranking.WeatherScorer;
 import no.weatheragent.weather.Forecast;
-import no.weatheragent.weather.MetWeatherClient;
+import no.weatheragent.weather.ResilientWeatherClient;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -63,12 +63,12 @@ public class TurvaerService {
     private final QueryInterpreter interpreter;
     private final OverpassClient overpassClient;
     private final BestWeatherFinder bestWeatherFinder;
-    private final MetWeatherClient weatherClient;
+    private final ResilientWeatherClient weatherClient;
 
     public TurvaerService(QueryInterpreter interpreter,
                           OverpassClient overpassClient,
                           BestWeatherFinder bestWeatherFinder,
-                          MetWeatherClient weatherClient) {
+                          ResilientWeatherClient weatherClient) {
         this.interpreter = interpreter;
         this.overpassClient = overpassClient;
         this.bestWeatherFinder = bestWeatherFinder;

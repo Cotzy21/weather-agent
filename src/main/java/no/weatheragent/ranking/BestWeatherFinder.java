@@ -3,7 +3,7 @@ package no.weatheragent.ranking;
 import no.weatheragent.geo.Location;
 import no.weatheragent.region.Region;
 import no.weatheragent.weather.Forecast;
-import no.weatheragent.weather.MetWeatherClient;
+import no.weatheragent.weather.ResilientWeatherClient;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -21,9 +21,9 @@ import java.util.Optional;
 @Component
 public class BestWeatherFinder {
 
-    private final MetWeatherClient weatherClient;
+    private final ResilientWeatherClient weatherClient;
 
-    public BestWeatherFinder(MetWeatherClient weatherClient) {
+    public BestWeatherFinder(ResilientWeatherClient weatherClient) {
         this.weatherClient = weatherClient;
     }
 
@@ -35,7 +35,7 @@ public class BestWeatherFinder {
     /** Ranger en vilkaarlig liste steder for en gitt dato, best vaer foerst. */
     public List<RankedPlace> rank(List<Location> places, LocalDate date) {
         return places.stream()
-                .map(weatherClient::fetch)                       // sted -> varsel
+                .map(place -> weatherClient.fetch(place, date))  // sted -> varsel
                 .map(forecast -> toRankedPlace(forecast, date))  // varsel -> score
                 .flatMap(Optional::stream)                       // dropp steder uten data
                 .sorted(Comparator.comparingDouble(RankedPlace::score).reversed())
@@ -59,8 +59,11 @@ public class BestWeatherFinder {
      */
     public List<RankedPlaceOverPeriod> rankOverPeriod(List<Location> places, List<LocalDate> dates,
                                                       ScoreWeights weights) {
+        // Siste dato i perioden avgjoer om MET-varselet rekker langt nok, eller
+        // om vaerklienten maa gaa til fallback-kilden (16 dager).
+        LocalDate lastDate = dates.stream().max(LocalDate::compareTo).orElse(null);
         return places.stream()
-                .map(weatherClient::fetch)
+                .map(place -> weatherClient.fetch(place, lastDate))
                 .map(forecast -> toRankedPeriod(forecast, dates, weights))
                 .flatMap(Optional::stream)
                 .sorted(Comparator.comparingDouble(RankedPlaceOverPeriod::score).reversed())

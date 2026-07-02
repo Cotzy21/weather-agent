@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
@@ -61,7 +62,10 @@ public class SupabaseJwtConfig {
             return jwks;
         }
         log.warn("Verken SUPABASE_JWT_SECRET eller SUPABASE_JWKS_URI er satt - innlogging vil gi 401.");
-        return NimbusJwtDecoder.withJwkSetUri("").build();
+        return token -> {
+            throw new BadJwtException("Supabase JWT-validering er ikke konfigurert på serveren: "
+                    + "sett SUPABASE_JWT_SECRET eller SUPABASE_JWKS_URI (se application.properties).");
+        };
     }
 
     /** Leser {@code alg} fra JWT-headeren (første segment) uten å validere. */

@@ -1,0 +1,105 @@
+# HANDOFF — status og neste steg
+
+> Denne fila ligger i repo-rot og committes MED VILJE (den gamle lå i `docs/`
+> som er gitignored, og fulgte derfor ikke med til nye maskiner).
+> Oppdater den når en modul er ferdig eller en beslutning tas.
+
+Sist oppdatert: 2026-07-02 (på Mac-en, etter «robusthet i værsøket»-økta).
+
+## Hva appen er
+
+Turvær-/helseapp: finn hvor det blir finest turvær («hvor på Sunnmøre blir det
+best vær i helgen?»), planlegg ruta, og følg trening/kosthold/recovery.
+Java 25 / Spring Boot 3.5 (Maven) + React (Vite) i `frontend/`.
+Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
+
+## Status per område (planen ↔ koden)
+
+### Værsøk — LENGST FREMME, nettopp gjort globalt + robust
+- ✅ Hele kjeden fritekst → tolkning (LLM, fast/smart-tier) → OSM/Overpass
+  (topper/turruter i område) → kandidat-utvelgelse (rutenett) → MET-vær →
+  scoring m/vekter → ranking. REST: `GET /api/turvaer`, `/api/sted`, `/api/rute`.
+- ✅ Landsdekkende → **globalt**: tolkeren gir ISO-landkode, Overpass-søk scopes
+  til landet med globalt navnefallback (`OverpassQueries`).
+- ✅ NYTT i dag: **Overpass-failover** til speil (overpass-api.de →
+  kumi.systems → private.coffee) ved 429/5xx/timeout — adresserer den kjente
+  «Kartdata-tjenesten er midlertidig overbelastet»-feilen.
+- ✅ NYTT i dag: **vær-fallback til Open-Meteo** (`ResilientWeatherClient`):
+  MET først; Open-Meteo (16 dagers horisont) når MET feiler ELLER ikke dekker
+  siste dato i perioden. Adresserer «ingen værdata for neste helg» (MET stopper
+  på ~9–10 dager; «neste helg» spurt tidlig i uka ligger utenfor).
+- ✅ NYTT i dag: retry på geocoding-klienten (samme mønster som MET/Overpass).
+- ⚠️ Lisens-merknad: Open-Meteo (geocoding + vær-fallback) er gratis KUN
+  ikke-kommersielt. Før kommersiell deploy: kjøp API-plan hos Open-Meteo
+  (billig) eller bytt fallback. MET er CC-BY (kommersielt OK, krever attribusjon
+  + identifiserende User-Agent — satt i `application.properties`).
+- Gjenstår: værsøk ↔ ruteplanlegger-flyt («ta med dette stedet til planleggeren»).
+
+### Ruteplanlegger — grunnmur på plass
+- ✅ Klikk-waypoints → rute (`RoutingClient`), høydeprofil (`ElevationClient`),
+  kalorier (`CalorieAdvisor`), klesråd (`ClothingAdvisor`), lagring av ruter.
+- Gjenstår: terreng/vanskelighetsgrad/utfordringer per tur, highlighting av
+  populære stier rundt et valgt resultat, «fortell om turen»-tekst (LLM).
+
+### Trening — fungerer, med kjente feil (se under)
+- ✅ Logging av økter (styrke/cardio/hiking), progresjon per øvelse,
+  AI-forslag (`WorkoutSuggester`, fast/smart-tier), muskelvelger i UI.
+- Gjenstår: treningsplaner → profil, progressive overload-motor, sleep
+  score-tilpasning (krever klokke-integrasjoner), real-time tracking (sen fase).
+
+### Kosthold — påbegynt
+- ✅ Favoritt-matvarer m/tak (`NutritionFavorite*`, Flyway V4, sikret + testet).
+- Gjenstår: matvarelogging m/mengder (g/ss/ts/dl …), vitaminer/mikronæring
+  per uke (kilde: Matvaretabellen — kommersielt OK, husk kildehenvisning),
+  kaloriteller m/mål, strekkode (utsatt), egne/publiserte matvarer,
+  kobling trening ↔ kosthold (forbrente kalorier → anbefalinger).
+
+### Recovery/skadeforebygging — ikke startet
+- Plan: hardkodet/forhåndsresearchet innhold for de vanligste sportene
+  (brukeren gjør research — SPØR om verdier, f.eks. trygge volumøkninger
+  per uke, i stedet for å finne på).
+
+### Generelt — ikke startet
+- Fremside m/kosthold-sammendrag, i18n (engelsk standard, norsk +++,
+  lagres per bruker), klokke-integrasjoner (Apple Health/Garmin/Strava/Whoop),
+  prismodell. Sikkerhetsprinsipp: lagre minst mulig sensitivt, per-bruker
+  kryptering når integrasjonene kommer.
+
+## Kjente feil — status
+
+1. **401 ved lagring av økt** — DIAGNOSTISERT: skjer når backend mangler
+   `SUPABASE_JWT_SECRET`/`SUPABASE_JWKS_URI` (da feiler ALL tokenvalidering),
+   eller når brukeren ikke er innlogget/tokenet er utløpt. Backend logger nå
+   en tydelig feilmelding i stedet for kryptisk dekoder-feil, og frontend
+   viser «logg inn på nytt»-melding ved 401. Sjekk oppstartsloggen:
+   `Supabase JWT-validering konfigurert: HS256=…, JWKS=…` — står det
+   false/false, er env-variablene ikke satt.
+2. **«Kartdata-tjenesten overbelastet»** — fikset med speil-failover (i dag).
+3. **«Ingen værdata» for helg-søk** — fikset med Open-Meteo-fallback (i dag).
+4. **Vite proxy ECONNREFUSED /api/treningsokter** — ikke en bug: backend
+   kjørte ikke. Start backend før frontend (se under).
+
+## Oppsett på ny maskin (det som IKKE følger med git)
+
+1. `frontend/.env` — kopier `frontend/.env.example`, fyll inn Supabase-URL
+   og anon key (Supabase-dashboardet → Settings → API).
+2. Backend-env: `SUPABASE_JWT_SECRET` (eller `SUPABASE_JWKS_URI`),
+   `SPRING_DATASOURCE_URL/USERNAME/PASSWORD` (Supabase Postgres),
+   evt. LLM-nøkler (se `application.properties` for alle navn).
+3. Kjør: `mvn spring-boot:run` (backend, port 8080) + `npm run dev` i
+   `frontend/` (Vite proxyer `/api` → 8080).
+4. Tester: `mvn test` (124 stk, alle grønne per i dag).
+
+## Foreslåtte neste steg (i rekkefølge)
+
+1. Verifisere 401-fiksen ende-til-ende når env-variablene er satt her.
+2. Værsøk → ruteplanlegger-overgang (send valgt sted med ett klikk).
+3. Turdetaljer i ruteplanleggeren (terreng/stigning/vanskelighetsgrad).
+4. Kosthold: matvarelogging med mengder + Matvaretabellen som kilde.
+
+## Arbeidsstil (viktig)
+
+Bygg én modul om gangen, forklar flyten, verifiser med tester før neste steg.
+Ikke dump ferdig UI — dette er også et læringsprosjekt. Reduser API-kall
+(cache/hardkoding der det gir mening); brukeren gjør gjerne research selv —
+spør heller enn å gjette faktaverdier.

@@ -10,7 +10,11 @@ export function apiUrl(path) {
 // Leser en vennlig feilmelding fra responsen. Backend sender { error: "..." }
 // (se ApiExceptionHandler) ved problemer med eksterne tjenester; vi viser den.
 export async function readError(res) {
-  let msg = `Noe gikk galt (${res.status})`
+  // 401 betyr manglende/utløpt innlogging (eller at backend mangler
+  // Supabase-nøklene sine) – gi en melding brukeren kan handle på.
+  let msg = res.status === 401
+    ? 'Du er ikke innlogget, eller innloggingen er utløpt. Logg inn på nytt.'
+    : `Noe gikk galt (${res.status})`
   try {
     const body = await res.json()
     if (body?.error) msg = body.error

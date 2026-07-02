@@ -6,7 +6,11 @@ import no.weatheragent.support.Retry;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,10 +32,19 @@ import java.util.Map;
 @Component
 public class OverpassClient {
 
-    private static final String ENDPOINT = "https://overpass-api.de/api/interpreter";
+    /**
+     * Offentlige Overpass-instanser med full verdensdatabase, i prioritert
+     * rekkefølge. Hovedinstansen (overpass-api.de) er ofte overbelastet (429/504);
+     * da prøver vi neste speil i stedet for å gi opp.
+     */
+    private static final List<String> ENDPOINTS = List.of(
+            "https://overpass-api.de/api/interpreter",
+            "https://overpass.kumi.systems/api/interpreter",
+            "https://overpass.private.coffee/api/interpreter");
 
-    // Overpass er ofte travel og svarer 504. Prøv noen ganger med økende pause.
-    private static final int MAX_ATTEMPTS = 3;
+    // Overpass er ofte travel og svarer 504. Prøv et par ganger med økende pause
+    // per endepunkt før vi går videre til neste speil.
+    private static final int MAX_ATTEMPTS_PER_ENDPOINT = 2;
     private static final long BACKOFF_MS = 2000;
 
     /** Maks antall ruter vi returnerer (etter dedup på navn) for et helt område. */
@@ -58,13 +71,39 @@ public class OverpassClient {
         return peaks;
     }
 
+    /**
+     * Kjør spørringen mot instansene i tur og orden: et par forsøk med pause per
+     * instans, og ved «travelt»-feil (429/5xx/timeout) videre til neste speil.
+     * Andre 4xx betyr feil i VÅR spørring og kastes med en gang - da hjelper
+     * verken retry eller speilbytte. Kaster siste feil hvis alle speil feiler.
+     */
     private JsonNode fetch(String query) {
-        return Retry.withRetry(MAX_ATTEMPTS, BACKOFF_MS, () -> http.post()
-                .uri(ENDPOINT)
-                .contentType(MediaType.TEXT_PLAIN)
-                .body(query)
-                .retrieve()
-                .body(JsonNode.class));
+        RestClientException last = null;
+        for (String endpoint : ENDPOINTS) {
+            try {
+                return Retry.withRetry(MAX_ATTEMPTS_PER_ENDPOINT, BACKOFF_MS, () -> http.post()
+                        .uri(endpoint)
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .body(query)
+                        .retrieve()
+                        .body(JsonNode.class));
+            } catch (RestClientException e) {
+                if (!isBusy(e)) {
+                    throw e;
+                }
+                last = e;
+            }
+        }
+        throw last;
+    }
+
+    /** Overbelastet/utilgjengelig instans: 429, 5xx eller nettverks-/timeout-feil. */
+    private static boolean isBusy(RestClientException e) {
+        if (e instanceof ResourceAccessException || e instanceof HttpServerErrorException) {
+            return true;
+        }
+        return e instanceof HttpStatusCodeException status
+                && status.getStatusCode().value() == 429;
     }
 
     /**
