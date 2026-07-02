@@ -1,5 +1,6 @@
 package no.weatheragent.web;
 
+import no.weatheragent.nutrition.FavoriteLimitException;
 import no.weatheragent.training.AiSuggestionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,5 +35,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(AiSuggestionException.class)
     public ResponseEntity<ApiError> handleAi(AiSuggestionException e) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ApiError(e.getMessage()));
+    }
+
+    /** Tak på antall favoritter nådd -> 409 med en forståelig melding. */
+    @ExceptionHandler(FavoriteLimitException.class)
+    public ResponseEntity<ApiError> handleFavoriteLimit(FavoriteLimitException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError(e.getMessage()));
     }
 }

@@ -11,7 +11,9 @@
       "Skill(claude-api)",
       "Skill(claude-api:*)",
       "WebSearch",
-      "WebFetch(domain:www.kartverket.no)"
+      "WebFetch(domain:www.kartverket.no)",
+      "PowerShell(mvn -q test)",
+      "PowerShell($c = Get-Command mvn,mvn.cmd,mvnw,mvnw.cmd -ErrorAction SilentlyContinue; $c | Select-Object Name,Source; \"---\"; if \\($env:MAVEN_HOME\\) { \"MAVEN_HOME=$env:MAVEN_HOME\" }; if \\($env:M2_HOME\\) { \"M2_HOME=$env:M2_HOME\" }; \"JAVA:\"; \\(Get-Command java -ErrorAction SilentlyContinue\\).Source)"
     ]
   }
 }
