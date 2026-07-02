@@ -82,11 +82,37 @@ function MuscleShape({ shape, selected, hovered, onClick, onHover }) {
   )
 }
 
+/* Treningsfokus styrer rep-området øktene legges opp med. */
+const FOCUS = {
+  styrke: { label: 'Styrke', reps: 5, hint: 'tunge løft, ca. 5 reps per sett' },
+  volum: { label: 'Volum', reps: 10, hint: 'muskelvekst, ca. 10 reps per sett' },
+}
+
+/**
+ * Fordel øvelser rundgang mellom de valgte musklene (i valgt rekkefølge),
+ * til vi har `count` øvelser eller går tom. Med [bryst, rygg] og 4 øvelser
+ * blir det altså 2 fra hver.
+ */
+function pickExercises(selectedIds, count) {
+  const queues = selectedIds.map((id) => [...MUSCLES[id].exercises])
+  const out = []
+  let i = 0
+  while (out.length < count && queues.some((q) => q.length)) {
+    const q = queues[i % queues.length]
+    if (q.length) out.push(q.shift())
+    i++
+  }
+  return out
+}
+
 export default function MusclePicker({ onCreate }) {
   const [gender, setGender] = useState('gutt')
   const [view, setView] = useState('front')
   const [selected, setSelected] = useState([]) // rekkefølgen brukeren valgte i
   const [hovered, setHovered] = useState(null)
+  const [focus, setFocus] = useState('styrke')
+  const [exCount, setExCount] = useState(4)
+  const [setCount, setSetCount] = useState(4)
   const svgRef = useRef(null)
 
   // Kroppen "puster" svakt + glir inn ved bytte av visning/kjønn.
@@ -105,8 +131,11 @@ export default function MusclePicker({ onCreate }) {
   }
 
   function create() {
-    const names = selected.flatMap((id) => MUSCLES[id].exercises)
-    onCreate(names, selected.map((id) => MUSCLES[id].label))
+    const names = pickExercises(selected, exCount)
+    onCreate(names, selected.map((id) => MUSCLES[id].label), {
+      sets: setCount,
+      reps: FOCUS[focus].reps,
+    })
     setSelected([])
   }
 
@@ -165,8 +194,39 @@ export default function MusclePicker({ onCreate }) {
               </button>
             ))}
           </div>
+
+          <div className="mp-plan">
+            <div className="mp-plan-row">
+              <span className="mp-plan-label">Fokus</span>
+              <div className="seg">
+                {Object.entries(FOCUS).map(([key, f]) => (
+                  <button key={key} className={focus === key ? 'on' : ''} onClick={() => setFocus(key)}>
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mp-plan-row">
+              <span className="mp-plan-label">Øvelser</span>
+              <div className="stepper">
+                <button onClick={() => setExCount((n) => Math.max(1, n - 1))} aria-label="Færre øvelser">−</button>
+                <span>{exCount}</span>
+                <button onClick={() => setExCount((n) => Math.min(10, n + 1))} aria-label="Flere øvelser">+</button>
+              </div>
+            </div>
+            <div className="mp-plan-row">
+              <span className="mp-plan-label">Sett per øvelse</span>
+              <div className="stepper">
+                <button onClick={() => setSetCount((n) => Math.max(1, n - 1))} aria-label="Færre sett">−</button>
+                <span>{setCount}</span>
+                <button onClick={() => setSetCount((n) => Math.min(8, n + 1))} aria-label="Flere sett">+</button>
+              </div>
+            </div>
+            <p className="mp-hint muted">{FOCUS[focus].label}: {FOCUS[focus].hint}.</p>
+          </div>
+
           <button className="primary mp-create" disabled={!selected.length} onClick={create}>
-            ⚡ Lag økt ({selected.reduce((n, id) => n + MUSCLES[id].exercises.length, 0)} øvelser)
+            ⚡ Lag økt ({Math.min(exCount, selected.reduce((n, id) => n + MUSCLES[id].exercises.length, 0))} øvelser × {setCount} sett)
           </button>
           <p className="mp-hint muted">Musklene på {view === 'front' ? 'baksiden' : 'framsiden'} finner du under «{view === 'front' ? 'Rygg' : 'Front'}».</p>
         </div>

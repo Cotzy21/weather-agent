@@ -221,6 +221,12 @@ function VaersokView() {
 export default function App() {
   const [tab, setTab] = useState('hjem')
   const [session, setSession] = useState(null)
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') ?? 'light')
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    try { localStorage.setItem('theme', theme) } catch { /* privat modus o.l. */ }
+  }, [theme])
 
   useEffect(() => {
     if (!supabase) return undefined
@@ -256,7 +262,14 @@ export default function App() {
           </button>
         </nav>
         <button
-          className={`nav-item account-btn ${tab === 'konto' ? 'active' : ''}`}
+          className="nav-item account-btn"
+          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          title="Bytt mellom lys og mørk modus"
+        >
+          {theme === 'light' ? '🌙' : '☀️'} <span>{theme === 'light' ? 'Mørk modus' : 'Lys modus'}</span>
+        </button>
+        <button
+          className={`nav-item ${tab === 'konto' ? 'active' : ''}`}
           onClick={() => setTab('konto')}
         >
           👤 <span>{session ? 'Min konto' : 'Logg inn'}</span>

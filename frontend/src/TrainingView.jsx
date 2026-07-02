@@ -169,12 +169,16 @@ export default function TrainingView({ session }) {
     }
   }
 
-  // Fra muskel-velgeren: øvelsene inn i byggeren, klare til å fylles med sett.
-  function applyMuscles(exerciseNames, muscleLabels) {
+  // Fra muskel-velgeren: øvelsene inn i byggeren med valgt antall sett, og
+  // reps forhåndsutfylt etter fokus (styrke ~5 / volum ~10). Vekt fyller
+  // brukeren inn selv.
+  function applyMuscles(exerciseNames, muscleLabels, plan) {
     setType('STYRKE')
     if (!title.trim()) setTitle(muscleLabels.join(' + '))
     const bs = exerciseNames.map((name) => ({
-      kind: 'exercise', name, sets: [newSet(), newSet(), newSet()],
+      kind: 'exercise',
+      name,
+      sets: Array.from({ length: plan.sets }, () => ({ reps: String(plan.reps), weightKg: '' })),
     }))
     setBlocks((prev) => {
       const existing = prev.filter((b) => b.kind !== 'exercise' || b.name.trim())
