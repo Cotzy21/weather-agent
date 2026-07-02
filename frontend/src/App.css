@@ -757,6 +757,37 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .food-tag { font-size: 11px; font-weight: 700; letter-spacing: 0.3px; }
 .food-star { position: absolute; top: 6px; right: 8px; font-size: 12px; opacity: 0.9; }
 
+/* ---------- Treningsplaner ---------- */
+.plan-list { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+.plan-list ul { list-style: none; margin: 6px 0 0; padding: 0; }
+.plan-list li { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 14px; }
+
+/* ---------- Kostholdsdagbok ---------- */
+.diary {
+  background: var(--tint);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 18px;
+}
+.diary-controls { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+.diary-controls label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.diary-search { width: 100%; margin-bottom: 8px; }
+.food-results { list-style: none; margin: 0 0 10px; padding: 0; max-height: 260px; overflow-y: auto; }
+.food-results li { padding: 3px 0; }
+.diary-add { border-top: 1px solid var(--border); padding-top: 10px; margin-bottom: 10px; }
+.diary-picked { margin: 0 0 8px; }
+.diary-amount { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
+.diary-amount label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.diary-amount input { width: 90px; }
+.diary-totals { font-size: 15px; margin: 10px 0; }
+.diary-meal ul { list-style: none; margin: 4px 0 10px; padding: 0; }
+.diary-meal li { display: flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 14px; }
+.week-panel { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 8px; }
+.week-toggle { font-weight: 600; }
+.nutrient-advice { font-size: 12.5px; margin: 2px 0 8px; }
+.source-note { font-size: 12px; margin-top: 10px; }
+
 /* ---------- Klær & utstyr ---------- */
 .gear {
   background: var(--accent-soft);

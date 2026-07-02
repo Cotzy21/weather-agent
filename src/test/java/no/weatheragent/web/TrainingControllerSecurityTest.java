@@ -1,6 +1,7 @@
 package no.weatheragent.web;
 
 import no.weatheragent.security.SecurityConfig;
+import no.weatheragent.training.TrainingPlanService;
 import no.weatheragent.training.WorkoutService;
 import no.weatheragent.training.WorkoutSuggester;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,9 @@ class TrainingControllerSecurityTest {
     private WorkoutSuggester suggester;
 
     @MockitoBean
+    private TrainingPlanService plans;
+
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     @Test
@@ -50,6 +54,19 @@ class TrainingControllerSecurityTest {
     void listWorksWhenAuthenticated() throws Exception {
         when(workouts.listFor(any())).thenReturn(List.of());
         mvc.perform(get("/api/treningsokter")
+                        .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void planerRequireAuthentication() throws Exception {
+        mvc.perform(get("/api/trening/planer")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void planListWorksWhenAuthenticated() throws Exception {
+        when(plans.listFor(any())).thenReturn(List.of());
+        mvc.perform(get("/api/trening/planer")
                         .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
                 .andExpect(status().isOk());
     }

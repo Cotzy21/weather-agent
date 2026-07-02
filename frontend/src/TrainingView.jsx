@@ -73,9 +73,11 @@ export default function TrainingView({ session }) {
   const [aiError, setAiError] = useState(null)
   const [suggestion, setSuggestion] = useState(null)
 
+  const [plans, setPlans] = useState([])
+
   useEffect(() => {
-    if (session) loadWorkouts()
-    else setWorkouts([])
+    if (session) { loadWorkouts(); loadPlans() }
+    else { setWorkouts([]); setPlans([]) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
@@ -84,6 +86,37 @@ export default function TrainingView({ session }) {
       const res = await fetch(apiUrl('/api/treningsokter'), { headers: await authHeaders() })
       if (res.ok) setWorkouts(await res.json())
     } catch { /* sekundært */ }
+  }
+
+  async function loadPlans() {
+    try {
+      const res = await fetch(apiUrl('/api/trening/planer'), { headers: await authHeaders() })
+      if (res.ok) setPlans(await res.json())
+    } catch { /* sekundært */ }
+  }
+
+  // Lagre AI-forslaget i profilen så det kan gjenbrukes senere.
+  async function savePlan(s) {
+    setAiError(null)
+    try {
+      const res = await fetch(apiUrl('/api/trening/planer'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({ title: s.title, type: s.type, content: s.content, rationale: s.rationale || null }),
+      })
+      if (!res.ok) throw new Error(await readError(res))
+      setSuggestion(null)
+      loadPlans()
+    } catch (e) {
+      setAiError(e.message)
+    }
+  }
+
+  async function deletePlan(id) {
+    try {
+      await fetch(apiUrl(`/api/trening/planer/${id}`), { method: 'DELETE', headers: await authHeaders() })
+      loadPlans()
+    } catch { /* ignorer */ }
   }
 
   // Dyp, immutabel redigering av blocks via en mutator på en kopi.
@@ -247,6 +280,23 @@ export default function TrainingView({ session }) {
             <span className="muted">({(TYPES.find((t) => t.v === suggestion.type)?.t) || suggestion.type})</span>
             {suggestion.rationale && <p className="muted">{suggestion.rationale}</p>}
             <button className="mini" onClick={() => applySuggestion(suggestion)}>Bruk i bygger ↓</button>
+            <button className="mini" onClick={() => savePlan(suggestion)}>💾 Lagre som plan</button>
+          </div>
+        )}
+
+        {plans.length > 0 && (
+          <div className="plan-list">
+            <span className="ai-title">📋 Mine planer</span>
+            <ul>
+              {plans.map((p) => (
+                <li key={p.id}>
+                  <strong>{p.title}</strong>{' '}
+                  <span className="muted">({(TYPES.find((t) => t.v === p.type)?.t) || p.type})</span>
+                  <button className="mini" onClick={() => applySuggestion(p)}>Bruk i ny økt</button>
+                  <button className="del" onClick={() => deletePlan(p.id)} aria-label="Slett plan">✕</button>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>

@@ -47,15 +47,25 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
 ### Trening — fungerer, med kjente feil (se under)
 - ✅ Logging av økter (styrke/cardio/hiking), progresjon per øvelse,
   AI-forslag (`WorkoutSuggester`, fast/smart-tier), muskelvelger i UI.
-- Gjenstår: treningsplaner → profil, progressive overload-motor, sleep
+- ✅ NYTT: **treningsplaner i profilen** (`TrainingPlan*`, Flyway V6): «Lagre
+  som plan» på AI-forslag, «Mine planer»-liste, «Bruk i ny økt» fyller
+  øktbyggeren (planer har samme JSONB-form som økter/forslag). Tak på 30.
+- Gjenstår: progressive overload-motor (regelbasert, uten LLM), sleep
   score-tilpasning (krever klokke-integrasjoner), real-time tracking (sen fase).
 
-### Kosthold — påbegynt
+### Kosthold — kjernen på plass
 - ✅ Favoritt-matvarer m/tak (`NutritionFavorite*`, Flyway V4, sikret + testet).
-- Gjenstår: matvarelogging m/mengder (g/ss/ts/dl …), vitaminer/mikronæring
-  per uke (kilde: Matvaretabellen — kommersielt OK, husk kildehenvisning),
-  kaloriteller m/mål, strekkode (utsatt), egne/publiserte matvarer,
-  kobling trening ↔ kosthold (forbrente kalorier → anbefalinger).
+- ✅ NYTT: **kostholdsdagbok** (`MealEntry*`, Flyway V5): søk i hele
+  Matvaretabellen (~2100 varer, hentes ÉN gang og caches — null API-kall per
+  søk), logg med gram ELLER varens egne porsjoner (glass/skive/dl …),
+  dagstotaler (kcal/protein/karbo/fett, snapshot ved logging), og
+  **ukesoversikt for 16 vitaminer/mineraler** mot NNR 2023-referanser med
+  hardkodede råd når inntaket er lavt (`NutrientReference`).
+  Kilde-attribusjon til Matvaretabellen/Mattilsynet vises i UI (NLOD-lisens,
+  kommersiell bruk OK med henvisning).
+- Gjenstår: kaloriteller m/vektmål, strekkode (utsatt), egne/publiserte
+  matvarer, kobling trening ↔ kosthold (forbrente kalorier → anbefalinger),
+  fremside-sammendrag, habit tracker.
 
 ### Recovery/skadeforebygging — ikke startet
 - Plan: hardkodet/forhåndsresearchet innhold for de vanligste sportene
@@ -95,9 +105,11 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
 
 ## Foreslåtte neste steg (i rekkefølge)
 
-1. Verifisere 401-fiksen ende-til-ende når env-variablene er satt her.
-2. Turdetaljer i ruteplanleggeren (terreng/stigning/vanskelighetsgrad).
-3. Kosthold: matvarelogging med mengder + Matvaretabellen som kilde.
+1. Verifisere 401-fiksen + dagboka ende-til-ende når env-variablene er satt
+   her (migrasjonene V5/V6 kjøres automatisk av Flyway ved oppstart).
+2. Kaloriteller med vektmål i kosthold (daglig kcal-mål ut fra mål/tempo).
+3. Kobling trening ↔ kosthold (forbrente kalorier inn i dagstotalen).
+4. Turdetaljer i ruteplanleggeren (terreng/stigning/vanskelighetsgrad).
 
 ## Arbeidsstil (viktig)
 

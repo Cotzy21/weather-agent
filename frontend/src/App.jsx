@@ -302,7 +302,7 @@ export default function App() {
           />
         )}
         {tab === 'trening' && <TrainingView session={session} />}
-        {tab === 'kosthold' && <NutritionView />}
+        {tab === 'kosthold' && <NutritionView session={session} />}
         {tab === 'konto' && <AuthView session={session} />}
       </main>
     </div>

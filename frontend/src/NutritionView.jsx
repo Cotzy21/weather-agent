@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
+import MealDiary from './MealDiary'
 import { useReveal, pop } from './anim'
 
 /**
@@ -85,7 +86,7 @@ function loadFavs() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? [] } catch { return [] }
 }
 
-export default function NutritionView() {
+export default function NutritionView({ session }) {
   const [open, setOpen] = useState(null) // åpen familie-id
   const [favs, setFavs] = useState(loadFavs)
   const rootRef = useReveal([])
@@ -130,6 +131,9 @@ export default function NutritionView() {
   return (
     <div className="nutrition" ref={rootRef}>
       <h2 className="detail-title" data-reveal>🥗 Kosthold</h2>
+
+      <MealDiary session={session} />
+
       <p className="muted" data-reveal>
         Utforsk matfamiliene og merk favorittene dine – så ser du hva tallerkenen din er bygget av.
       </p>

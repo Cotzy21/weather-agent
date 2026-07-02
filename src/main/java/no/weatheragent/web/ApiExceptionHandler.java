@@ -1,6 +1,7 @@
 package no.weatheragent.web;
 
 import no.weatheragent.nutrition.FavoriteLimitException;
+import no.weatheragent.nutrition.UnknownFoodException;
 import no.weatheragent.training.AiSuggestionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,5 +42,17 @@ public class ApiExceptionHandler {
     @ExceptionHandler(FavoriteLimitException.class)
     public ResponseEntity<ApiError> handleFavoriteLimit(FavoriteLimitException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError(e.getMessage()));
+    }
+
+    /** Logging mot en matvare som ikke finnes (utdatert id) -> 404. */
+    @ExceptionHandler(UnknownFoodException.class)
+    public ResponseEntity<ApiError> handleUnknownFood(UnknownFoodException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError(e.getMessage()));
+    }
+
+    /** Ugyldige verdier fra klienten (f.eks. ukjent måltid) -> 400. */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiError> handleBadInput(IllegalArgumentException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(e.getMessage()));
     }
 }
