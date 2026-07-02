@@ -139,6 +139,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
 
 /* ---------- Vekt-panel ---------- */
 .weights {
+  box-shadow: var(--elev);
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -198,6 +199,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
   box-shadow: 0 4px 18px rgba(52, 211, 153, 0.2);
 }
 .msg.bot {
+  box-shadow: var(--elev);
   align-self: stretch;
   background: var(--card);
   border: 1px solid var(--border);
@@ -267,6 +269,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .detail-h3 { font-size: 16px; margin: 22px 0 10px; font-weight: 650; }
 .days { display: flex; flex-direction: column; gap: 6px; }
 .day {
+  box-shadow: var(--elev);
   display: grid;
   grid-template-columns: 1.5fr 0.6fr 1fr 0.8fr;
   gap: 8px;
@@ -383,6 +386,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
   box-shadow: 0 0 14px rgba(52, 211, 153, 0.18);
 }
 .ai-panel {
+  box-shadow: var(--elev);
   background: linear-gradient(135deg, rgba(167, 139, 250, 0.1), rgba(34, 211, 238, 0.07)), var(--card);
   border: 1px solid var(--border);
   border-radius: 16px; padding: 14px 16px; margin-bottom: 18px;
@@ -402,6 +406,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
 
 /* ---------- Muskel-velger ---------- */
 .muscle-picker {
+  box-shadow: var(--elev);
   background: linear-gradient(160deg, rgba(34, 211, 238, 0.07), rgba(52, 211, 153, 0.05)), var(--card);
   border: 1px solid var(--border);
   border-radius: 18px;
@@ -528,6 +533,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .hero-sub { font-size: 18px; margin: 0 0 26px; }
 .dash-stats { display: flex; gap: 12px; margin: 8px 0 18px; }
 .stat {
+  box-shadow: var(--elev);
   flex: 1;
   background: var(--card);
   border: 1px solid var(--border);
@@ -562,6 +568,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .dash-actions button:hover { border-color: var(--border-strong); transform: translateY(-1px); }
 .feed { display: flex; flex-direction: column; gap: 6px; }
 .feed-item {
+  box-shadow: var(--elev);
   display: flex; align-items: center; gap: 10px; padding: 11px 13px;
   background: var(--card); border: 1px solid var(--border); border-radius: 12px;
   font-size: 14px;
@@ -589,13 +596,29 @@ header .sub { margin-top: 6px; color: var(--muted); }
 }
 .builder { display: flex; flex-direction: column; gap: 10px; }
 .block {
+  box-shadow: var(--elev);
   border: 1px solid var(--border); border-radius: 14px; padding: 12px 13px;
   background: var(--card);
   animation: pop 0.25s ease-out;
 }
 .block.superset { border-color: rgba(167, 139, 250, 0.45); box-shadow: 0 0 16px rgba(167, 139, 250, 0.08); }
 .block.dropset { border-color: rgba(34, 211, 238, 0.4); }
-.block-head { display: flex; align-items: center; margin-bottom: 6px; }
+.block-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.block-move { display: inline-flex; gap: 2px; margin-left: auto; }
+.block-move .move {
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--accent);
+  border-radius: 7px;
+  width: 26px;
+  height: 22px;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.block-move .move:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+.block-move .move:disabled { opacity: 0.3; cursor: default; }
 .block-tag {
   font-size: 11px; font-weight: 700; color: var(--muted);
   text-transform: uppercase; letter-spacing: 1px;
@@ -646,6 +669,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .prog-val { text-align: right; font-weight: 700; }
 .workouts { display: flex; flex-direction: column; gap: 10px; }
 .workout {
+  box-shadow: var(--elev);
   border: 1px solid var(--border); border-radius: 14px; padding: 11px 15px;
   background: var(--card);
   transition: border-color 0.2s, transform 0.15s;
@@ -659,6 +683,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
 /* ---------- Kosthold ---------- */
 .nutrition { padding: 16px 0 32px; max-width: 720px; }
 .fav-shelf {
+  box-shadow: var(--elev);
   background: linear-gradient(135deg, rgba(250, 204, 21, 0.08), rgba(52, 211, 153, 0.06)), var(--card);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -677,6 +702,66 @@ header .sub { margin-top: 6px; color: var(--muted); }
   transition: all 0.2s;
 }
 .fav-chip:hover { border-color: var(--danger); background: rgba(251, 113, 133, 0.1); }
+/* Stablet makrofordeling (protein/karbo/fett) */
+.macro-split { display: flex; flex-direction: column; gap: 4px; min-width: 0; width: 100%; }
+.macro-split-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--tint);
+  width: 100%;
+}
+.macro-split-bar span { display: block; height: 100%; }
+.macro-split-legend {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  font-weight: 700;
+}
+.fav-profile { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+
+/* Måltidsbygger */
+.meal-start { border-radius: 12px; padding: 10px 16px; margin-top: 12px; font-size: 14px; }
+.meal-builder { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+.fav-chip.add { border-color: var(--border-strong); background: var(--bg-2); }
+.fav-chip.add:hover { border-color: var(--accent); background: var(--accent-soft); }
+.ingredient-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.4fr) 72px 14px 1fr 26px;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 14px;
+}
+.ingredient-row input {
+  padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg-2); color: var(--text); font-size: 14px;
+}
+.ingredient-name { font-weight: 600; }
+.meal-total { margin: 10px 0 0; font-size: 14px; }
+.meal-actions { display: flex; gap: 8px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+.meal-actions input {
+  flex: 1; min-width: 180px; padding: 9px 12px; border: 1px solid var(--border);
+  border-radius: 10px; background: var(--bg-2); color: var(--text); font-size: 14px;
+}
+.meal-actions .primary { border-radius: 10px; padding: 9px 14px; font-size: 14px; }
+
+/* Lagrede måltider */
+.meal-list { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 4px; }
+.meal-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 11px 14px;
+  background: var(--card);
+  box-shadow: var(--elev);
+}
+.meal-head { display: flex; align-items: center; gap: 10px; }
+.meal-head .del { margin-left: auto; }
+.meal-ingredients { font-size: 13px; margin: 4px 0 8px; }
+.food-kcal { font-size: 11px; }
+
 .macro-bars { margin-top: 12px; display: flex; flex-direction: column; gap: 5px; }
 .macro-row { display: grid; grid-template-columns: 84px 1fr 26px; gap: 10px; align-items: center; font-size: 13px; }
 .macro-label { color: var(--muted); }
@@ -690,6 +775,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
   margin-top: 16px;
 }
 .family-card {
+  box-shadow: var(--elev);
   --family-hue: var(--accent);
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   padding: 18px 10px 14px;
@@ -722,6 +808,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .family-name { font-weight: 700; font-size: 15px; }
 .family-count { font-size: 12px; }
 .food-panel {
+  box-shadow: var(--elev);
   margin-top: 14px;
   border: 1px solid color-mix(in srgb, var(--family-hue) 35%, transparent);
   border-radius: 16px;

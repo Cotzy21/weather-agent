@@ -42,7 +42,14 @@ export default function MealDiary({ session }) {
       try {
         const params = new URLSearchParams({ sok: query.trim() })
         const res = await fetch(apiUrl(`/api/kosthold/matvarer?${params}`), { headers: await authHeaders() })
-        if (res.ok) setResults(await res.json())
+        if (res.ok) {
+          setError(null)
+          setResults(await res.json())
+        } else {
+          // Ikke svelg feilen - et søk som «bare ikke virker» er umulig å forstå.
+          setResults([])
+          setError(await readError(res))
+        }
       } catch { /* nettverksglipp – behold forrige liste */ }
     }, 300)
     return () => clearTimeout(t)
