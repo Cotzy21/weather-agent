@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { authHeaders } from './supabase'
 import { apiUrl, readError } from './api'
+import MusclePicker from './MusclePicker'
+import { useReveal } from './anim'
 
 const TYPES = [
   { v: 'STYRKE', t: '🏋️ Styrke' },
@@ -167,6 +169,19 @@ export default function TrainingView({ session }) {
     }
   }
 
+  // Fra muskel-velgeren: øvelsene inn i byggeren, klare til å fylles med sett.
+  function applyMuscles(exerciseNames, muscleLabels) {
+    setType('STYRKE')
+    if (!title.trim()) setTitle(muscleLabels.join(' + '))
+    const bs = exerciseNames.map((name) => ({
+      kind: 'exercise', name, sets: [newSet(), newSet(), newSet()],
+    }))
+    setBlocks((prev) => {
+      const existing = prev.filter((b) => b.kind !== 'exercise' || b.name.trim())
+      return [...existing, ...bs]
+    })
+  }
+
   // Fyll forslaget inn i byggeren så brukeren kan finpusse og lagre.
   function applySuggestion(s) {
     const t = s.type || 'STYRKE'
@@ -190,11 +205,16 @@ export default function TrainingView({ session }) {
     setSuggestion(null)
   }
 
+  const revealRef = useReveal([session])
+
   if (!session) {
     return (
-      <div className="training">
-        <h2 className="detail-title">Trening</h2>
-        <p className="muted">Logg inn for å bruke treningsdagboka.</p>
+      <div className="training" ref={revealRef}>
+        <h2 className="detail-title" data-reveal>Trening</h2>
+        <p className="muted" data-reveal>
+          Logg inn for å lagre økter, se progresjon og få AI-forslag – men prøv gjerne kroppsmodellen:
+        </p>
+        <MusclePicker onCreate={() => {}} />
       </div>
     )
   }
@@ -202,10 +222,12 @@ export default function TrainingView({ session }) {
   const maxW = progress && progress.length ? Math.max(...progress.map((p) => p.maxWeight)) : 0
 
   return (
-    <div className="training">
+    <div className="training" ref={revealRef}>
       <datalist id="exercises">{EXERCISES.map((e) => <option key={e} value={e} />)}</datalist>
 
-      <div className="ai-panel">
+      <MusclePicker onCreate={applyMuscles} />
+
+      <div className="ai-panel" data-reveal>
         <span className="ai-title">🤖 AI-forslag</span>
         <div className="ai-row">
           <input placeholder="Fokus, f.eks. større bein, bedre cardio, forberede BJJ"
@@ -225,8 +247,8 @@ export default function TrainingView({ session }) {
         )}
       </div>
 
-      <h2 className="detail-title">Ny økt</h2>
-      <div className="type-select">
+      <h2 className="detail-title" data-reveal>Ny økt</h2>
+      <div className="type-select" data-reveal>
         {TYPES.map((tp) => (
           <button key={tp.v} className={`type-chip ${type === tp.v ? 'active' : ''}`} onClick={() => setType(tp.v)}>
             {tp.t}

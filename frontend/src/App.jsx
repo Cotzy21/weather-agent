@@ -3,10 +3,12 @@ import ResultMap from './ResultMap'
 import PlaceDetail from './PlaceDetail'
 import RoutePlanner from './RoutePlanner'
 import TrainingView from './TrainingView'
+import NutritionView from './NutritionView'
 import Dashboard from './Dashboard'
 import AuthView from './AuthView'
 import { supabase } from './supabase'
 import { apiUrl, readError } from './api'
+import { useTabTransition } from './anim'
 import './App.css'
 
 // De fire faktorene brukeren kan vekte, og nivåene.
@@ -227,10 +229,15 @@ export default function App() {
     return () => sub.subscription.unsubscribe()
   }, [])
 
+  const mainRef = useTabTransition(tab)
+
   return (
     <div className="app">
       <aside className="sidebar">
-        <div className="logo" title="Turvær">⛰️</div>
+        <div className="brand" title="Turvær">
+          <span className="brand-icon">⛰️</span>
+          <span className="brand-name">Turvær</span>
+        </div>
         <nav className="nav" aria-label="Moduser">
           <button className={`nav-item ${tab === 'hjem' ? 'active' : ''}`} onClick={() => setTab('hjem')}>
             🏠 <span>Hjem</span>
@@ -244,6 +251,9 @@ export default function App() {
           <button className={`nav-item ${tab === 'trening' ? 'active' : ''}`} onClick={() => setTab('trening')}>
             🏋️ <span>Trening</span>
           </button>
+          <button className={`nav-item ${tab === 'kosthold' ? 'active' : ''}`} onClick={() => setTab('kosthold')}>
+            🥗 <span>Kosthold</span>
+          </button>
         </nav>
         <button
           className={`nav-item account-btn ${tab === 'konto' ? 'active' : ''}`}
@@ -253,11 +263,12 @@ export default function App() {
         </button>
       </aside>
 
-      <main className="main">
+      <main className="main" ref={mainRef}>
         {tab === 'hjem' && <Dashboard session={session} onNavigate={setTab} />}
         {tab === 'vaersok' && <VaersokView />}
         {tab === 'rute' && <RoutePlanner session={session} />}
         {tab === 'trening' && <TrainingView session={session} />}
+        {tab === 'kosthold' && <NutritionView />}
         {tab === 'konto' && <AuthView session={session} />}
       </main>
     </div>
