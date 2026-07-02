@@ -15,17 +15,23 @@ import java.util.Map;
  * som MET/Open-Meteo. Fungerer mot lokal LM Studio (localhost:1234) eller Ollama
  * (localhost:11434) OG mot sky (Groq, OpenAI, OpenRouter ...) - kun ved å bytte
  * {@code llm.base-url}/{@code llm.model} og sette {@code llm.api-key} (HANDOFF §6).
+ *
+ * Modell-ruting ({@link LlmTier}): hvert kall oppgir om det trenger den billige
+ * ({@code llm.model.fast}) eller den smarte ({@code llm.model.smart}) modellen.
+ * Begge faller tilbake til {@code llm.model}, så ett-modells-oppsett er uendret.
  */
 @Component
 public class OpenAiCompatibleChatClient {
 
     private final RestClient http;
-    private final String model;
+    private final String fastModel;
+    private final String smartModel;
 
     public OpenAiCompatibleChatClient(
             RestClient.Builder builder,
             @Value("${llm.base-url}") String baseUrl,
-            @Value("${llm.model}") String model,
+            @Value("${llm.model.fast:${llm.model}}") String fastModel,
+            @Value("${llm.model.smart:${llm.model}}") String smartModel,
             @Value("${llm.api-key:}") String apiKey) {
         RestClient.Builder configured = builder.baseUrl(baseUrl);
         // Sky-tjenester krever en API-nøkkel; lokal LM Studio/Ollama gjør ikke.
@@ -34,13 +40,22 @@ public class OpenAiCompatibleChatClient {
             configured = configured.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey);
         }
         this.http = configured.build();
-        this.model = model;
+        this.fastModel = fastModel;
+        this.smartModel = smartModel;
     }
 
-    /** Send system- + bruker-melding, og returner modellens råtekst-svar (innholdet). */
-    public String complete(String systemPrompt, String userPrompt) {
+    /**
+     * Om SMART faktisk er en annen modell enn FAST. Når begge peker på samme
+     * modell (ett-modells-oppsett) er eskalering bare et bortkastet ekstra kall.
+     */
+    public boolean hasDedicatedSmartModel() {
+        return !smartModel.equals(fastModel);
+    }
+
+    /** Send system- + bruker-melding til valgt modellnivå, og returner modellens råtekst-svar. */
+    public String complete(LlmTier tier, String systemPrompt, String userPrompt) {
         Map<String, Object> body = Map.of(
-                "model", model,
+                "model", tier == LlmTier.SMART ? smartModel : fastModel,
                 // 0 = mest mulig deterministisk; vi vil ha presis tolkning, ikke kreativitet.
                 "temperature", 0,
                 "messages", List.of(

@@ -2,6 +2,7 @@ package no.weatheragent.training;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import no.weatheragent.interpret.LlmTier;
 import no.weatheragent.interpret.OpenAiCompatibleChatClient;
 import org.springframework.stereotype.Service;
 
@@ -32,7 +33,8 @@ public class WorkoutSuggester {
 
     public Suggestion suggest(UUID userId, String focus, String type) {
         String history = recentHistory(userId);
-        String raw = llm.complete(systemPrompt(), userPrompt(focus, type, history));
+        // Forslag krever resonnering over historikken (progressiv overload) -> smart modell.
+        String raw = llm.complete(LlmTier.SMART, systemPrompt(), userPrompt(focus, type, history));
         try {
             JsonNode json = mapper.readTree(extractJson(raw));
             String resolvedType = json.path("type").asText("");

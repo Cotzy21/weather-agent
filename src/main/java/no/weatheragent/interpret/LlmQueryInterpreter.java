@@ -30,15 +30,35 @@ public class LlmQueryInterpreter implements QueryInterpreter {
     @Override
     public Interpretation interpret(String text) {
         LocalDate today = LocalDate.now(OSLO);
-        String raw = client.complete(systemPrompt(today), text);
+        String prompt = systemPrompt(today);
 
+        // Tolkning er en stram ekstraksjonsoppgave -> billig modell holder som regel.
+        String raw = client.complete(LlmTier.FAST, prompt, text);
         try {
-            JsonNode json = mapper.readTree(extractJsonObject(raw));
-            return LlmInterpretationParser.parse(json, today);
-        } catch (Exception e) {
-            throw new IllegalStateException(
-                    "Klarte ikke å tolke modellsvaret som JSON: " + raw, e);
+            return parse(raw, today);
+        } catch (Exception fastFailed) {
+            if (!client.hasDedicatedSmartModel()) {
+                throw unparseable(raw, fastFailed);
+            }
+            // Eskalering: den billige modellen svarte uparserbart -> ETT forsøk til
+            // med den smarte, før vi gir opp.
+            String retried = client.complete(LlmTier.SMART, prompt, text);
+            try {
+                return parse(retried, today);
+            } catch (Exception smartFailed) {
+                throw unparseable(retried, smartFailed);
+            }
         }
+    }
+
+    private Interpretation parse(String raw, LocalDate today) throws Exception {
+        JsonNode json = mapper.readTree(extractJsonObject(raw));
+        return LlmInterpretationParser.parse(json, today);
+    }
+
+    private static IllegalStateException unparseable(String raw, Exception cause) {
+        return new IllegalStateException(
+                "Klarte ikke å tolke modellsvaret som JSON: " + raw, cause);
     }
 
     /** Instruksjonen til modellen. Dagens dato gis med, så relative datoer kan regnes ut. */

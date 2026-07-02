@@ -1,6 +1,7 @@
 package no.weatheragent.training;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import no.weatheragent.interpret.LlmTier;
 import no.weatheragent.interpret.OpenAiCompatibleChatClient;
 import org.junit.jupiter.api.Test;
 
@@ -11,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -25,7 +27,7 @@ class WorkoutSuggesterTest {
     @Test
     void parsesModelJsonIntoSuggestion() {
         when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
-        when(llm.complete(any(), any())).thenReturn("""
+        when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("""
                 Her er forslaget:
                 {"title":"Beinøkt","type":"styrke",
                  "content":{"blocks":[{"kind":"exercise","name":"Knebøy","sets":[{"reps":5,"weightKg":100}]}]},
@@ -44,7 +46,7 @@ class WorkoutSuggesterTest {
     @Test
     void throwsWhenModelReturnsNonJson() {
         when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
-        when(llm.complete(any(), any())).thenReturn("beklager, jeg klarte ikke");
+        when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("beklager, jeg klarte ikke");
 
         assertThrows(AiSuggestionException.class, () -> suggester.suggest(user, "fokus", null));
     }
