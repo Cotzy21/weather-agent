@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
@@ -45,7 +46,15 @@ public class SupabaseJwtConfig {
             hs256 = NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
         }
         if (jwkSetUri != null && !jwkSetUri.isBlank()) {
-            jwks = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+            // VIKTIG: uten eksplisitte algoritmer godtar Nimbus KUN RS256, mens
+            // nye Supabase-prosjekter signerer med ES256 (ECC). Uten denne lista
+            // blir hvert eneste innloggede kall avvist med 401.
+            jwks = NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
+                    .jwsAlgorithms(algs -> {
+                        algs.add(SignatureAlgorithm.RS256);
+                        algs.add(SignatureAlgorithm.ES256);
+                    })
+                    .build();
         }
 
         log.info("Supabase JWT-validering konfigurert: HS256={}, JWKS={}", hs256 != null, jwks != null);
@@ -53,7 +62,17 @@ public class SupabaseJwtConfig {
         if (hs256 != null && jwks != null) {
             JwtDecoder hmac = hs256;
             JwtDecoder asym = jwks;
-            return token -> ("HS256".equalsIgnoreCase(algOf(token)) ? hmac : asym).decode(token);
+            return token -> {
+                String alg = algOf(token);
+                JwtDecoder chosen = "HS256".equalsIgnoreCase(alg) ? hmac : asym;
+                try {
+                    return chosen.decode(token);
+                } catch (RuntimeException e) {
+                    // 401 uten spor er umulig å feilsøke - si hvorfor i loggen.
+                    log.warn("JWT-validering feilet (alg={}): {}", alg, e.getMessage());
+                    throw e;
+                }
+            };
         }
         if (hs256 != null) {
             return hs256;
