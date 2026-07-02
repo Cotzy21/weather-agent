@@ -64,6 +64,7 @@ export default function TrainingView({ session }) {
   const [workouts, setWorkouts] = useState([])
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [saved, setSaved] = useState(false) // kort «✓ Økt lagret»-kvittering
 
   const [progressName, setProgressName] = useState('')
   const [progress, setProgress] = useState(null)
@@ -168,6 +169,8 @@ export default function TrainingView({ session }) {
       })
       if (!res.ok) throw new Error(await readError(res))
       setTitle(''); setNotes(''); setBlocks([newExercise()]); setCardio({ distanceKm: '', durationMin: '', ascentM: '' })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
       loadWorkouts()
     } catch (e) {
       setError(e.message)
@@ -322,7 +325,9 @@ export default function TrainingView({ session }) {
 
       <div className="log-meta">
         <label>Dato<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
-        <label className="grow">Tittel<input placeholder="f.eks. Push A / Langtur" value={title} onChange={(e) => setTitle(e.target.value)} /></label>
+        <label className="grow">Tittel<input placeholder="f.eks. Push A / Langtur" value={title}
+               className={error === 'Gi økta en tittel.' && !title.trim() ? 'invalid' : ''}
+               onChange={(e) => setTitle(e.target.value)} /></label>
       </div>
 
       {type === 'STYRKE' ? (
@@ -332,9 +337,9 @@ export default function TrainingView({ session }) {
               <div className="block-head">
                 <span className="block-tag">{b.kind === 'dropset' ? 'Dropsett' : b.kind === 'superset' ? 'Supersett' : 'Øvelse'}</span>
                 <span className="block-move">
-                  <button className="move" disabled={bi === 0}
+                  <button className="move" disabled={bi === 0} title="Flytt opp"
                           onClick={() => moveBlock(bi, -1)} aria-label="Flytt opp">▲</button>
-                  <button className="move" disabled={bi === blocks.length - 1}
+                  <button className="move" disabled={bi === blocks.length - 1} title="Flytt ned"
                           onClick={() => moveBlock(bi, 1)} aria-label="Flytt ned">▼</button>
                 </span>
                 <button className="del" onClick={() => editBlocks((c) => c.splice(bi, 1))} aria-label="Fjern">✕</button>
@@ -411,6 +416,7 @@ export default function TrainingView({ session }) {
 
       <div className="log-actions">
         <button className="primary" onClick={submit} disabled={busy}>{busy ? 'Lagrer …' : 'Lagre økt'}</button>
+        {saved && <span className="success">✓ Økt lagret</span>}
       </div>
       {error && <p className="error">{error}</p>}
 

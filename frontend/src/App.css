@@ -121,8 +121,14 @@ button { font-family: inherit; }
   box-shadow: 0 6px 26px rgba(52, 211, 153, 0.4);
   filter: brightness(1.06);
 }
-.primary:active:not(:disabled) { transform: translateY(0); }
-.primary:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+.primary:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 2px 10px rgba(52, 211, 153, 0.2); }
+/* Disabled = grå og flat, ikke en blek gradient: grått leses som «kan ikke trykkes». */
+.primary:disabled {
+  background: var(--tint-strong) !important;
+  color: var(--muted) !important;
+  cursor: not-allowed;
+  box-shadow: none;
+}
 
 /* ---------- Header (brukes ikke i alle views, men beholdes) ---------- */
 header {
@@ -215,8 +221,11 @@ header .sub { margin-top: 6px; color: var(--muted); }
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
 }
-.winner { font-size: 16px; margin-bottom: 14px; line-height: 1.45; }
-.winner .medal { font-size: 18px; }
+/* Visuelt hierarki (Uber-prinsippet): navnet er hovedsaken -> størst og bold;
+   metadata (moh, snittvær) er sekundært -> mindre og dempet. */
+.winner { font-size: var(--fs-base); margin-bottom: 14px; line-height: 1.5; }
+.winner strong { font-size: var(--fs-lg); font-weight: 800; letter-spacing: -0.3px; }
+.winner .medal { font-size: var(--fs-lg); }
 
 /* «Planlegg tur hit»: hopp fra værsøket til ruteplanleggeren med stedet som mål */
 .plan-btn {
@@ -265,8 +274,8 @@ header .sub { margin-top: 6px; color: var(--muted); }
   padding: 6px 0;
 }
 .back:hover { text-shadow: 0 0 14px var(--glow); }
-.detail-title { font-size: 24px; margin: 8px 0 14px; font-weight: 700; }
-.detail-h3 { font-size: 16px; margin: 22px 0 10px; font-weight: 650; }
+.detail-title { font-size: var(--fs-xl); margin: 8px 0 14px; font-weight: 700; letter-spacing: -0.5px; }
+.detail-h3 { font-size: var(--fs-md); margin: 22px 0 10px; font-weight: 700; }
 .days { display: flex; flex-direction: column; gap: 6px; }
 .day {
   box-shadow: var(--elev);
@@ -281,7 +290,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
   font-size: 14px;
   transition: border-color 0.2s, transform 0.15s;
 }
-.day:hover { border-color: var(--border-strong); transform: translateX(3px); }
+.day:hover { border-color: var(--border-strong); transform: translateX(3px); background: var(--card-hover); }
 .day-name { font-weight: 500; }
 .day-temp { font-weight: 700; color: var(--accent-strong); }
 .day-precip, .day-wind { color: var(--muted); text-align: right; }
@@ -518,8 +527,9 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .dash { padding: 16px 0 28px; max-width: 680px; }
 .dash.hero { padding-top: 12vh; }
 .hero-title {
-  font-size: clamp(34px, 6vw, 54px);
-  line-height: 1.1;
+  /* Stor tekst: trangere letter-spacing og lav line-height (UI-prinsippene). */
+  font-size: clamp(30px, 5vw, 42px);
+  line-height: 1.06;
   font-weight: 800;
   letter-spacing: -1.5px;
   margin: 0 0 14px;
@@ -551,7 +561,8 @@ header .sub { margin-top: 6px; color: var(--muted); }
 }
 .stat-num {
   display: block;
-  font-size: 34px;
+  font-size: var(--fs-xl);
+  line-height: 1.15;
   font-weight: 800;
   background: var(--gradient);
   -webkit-background-clip: text;
@@ -561,11 +572,13 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .stat-label { font-size: 13px; color: var(--muted); }
 .dash-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .dash-actions button {
-  padding: 11px 18px; border: 1px solid var(--border); background: var(--card);
-  color: var(--text); border-radius: 12px; cursor: pointer; font-size: 15px;
-  transition: border-color 0.2s, transform 0.15s;
+  /* Knapper: padding ca. dobbelt så bred som høy, lik font/line-height. */
+  padding: 10px 20px; border: 1px solid var(--border); background: var(--card);
+  color: var(--text); border-radius: 12px; cursor: pointer;
+  font-size: var(--fs-base); line-height: 1.3;
+  transition: border-color 0.2s, transform 0.15s, background 0.2s;
 }
-.dash-actions button:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.dash-actions button:hover { border-color: var(--border-strong); transform: translateY(-1px); background: var(--card-hover); }
 .feed { display: flex; flex-direction: column; gap: 6px; }
 .feed-item {
   box-shadow: var(--elev);
@@ -574,7 +587,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
   font-size: 14px;
   transition: border-color 0.2s, transform 0.15s;
 }
-.feed-item:hover { border-color: var(--border-strong); transform: translateX(3px); }
+.feed-item:hover { border-color: var(--border-strong); transform: translateX(3px); background: var(--card-hover); }
 .feed-icon { font-size: 18px; }
 .feed-title { font-weight: 500; }
 .feed-item .muted { margin-left: auto; }
@@ -674,7 +687,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
   background: var(--card);
   transition: border-color 0.2s, transform 0.15s;
 }
-.workout:hover { border-color: var(--border-strong); transform: translateX(3px); }
+.workout:hover { border-color: var(--border-strong); transform: translateX(3px); background: var(--card-hover); }
 .workout-head { display: flex; align-items: center; gap: 8px; }
 .workout-head .del { margin-left: auto; }
 .workout ul { margin: 6px 0 0; padding-left: 18px; }
@@ -723,7 +736,8 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .fav-profile { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
 
 /* Måltidsbygger */
-.meal-start { border-radius: 12px; padding: 10px 16px; margin-top: 12px; font-size: 14px; }
+.meal-start-row { display: flex; align-items: center; gap: 10px; }
+.meal-start { border-radius: 12px; padding: 10px 20px; margin-top: 12px; font-size: var(--fs-sm); }
 .meal-builder { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
 .fav-chip.add { border-color: var(--border-strong); background: var(--bg-2); }
 .fav-chip.add:hover { border-color: var(--accent); background: var(--accent-soft); }
@@ -763,11 +777,12 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .food-kcal { font-size: 11px; }
 
 .macro-bars { margin-top: 12px; display: flex; flex-direction: column; gap: 5px; }
-.macro-row { display: grid; grid-template-columns: 84px 1fr 26px; gap: 10px; align-items: center; font-size: 13px; }
+/* minmax(0,1fr) + auto: verdiene («450/700 µg») skal ALDRI gå ut av boksen. */
+.macro-row { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: var(--fs-sm); }
 .macro-label { color: var(--muted); }
 .macro-bar { background: var(--tint); border-radius: 6px; height: 10px; overflow: hidden; }
 .macro-bar span { display: block; height: 100%; border-radius: 6px; transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
-.macro-count { text-align: right; font-weight: 700; }
+.macro-count { text-align: right; font-weight: 700; white-space: nowrap; }
 .family-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -860,8 +875,21 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .diary-controls { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
 .diary-controls label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
 .diary-search { width: 100%; margin-bottom: 8px; }
-.food-results { list-style: none; margin: 0 0 10px; padding: 0; max-height: 260px; overflow-y: auto; }
+/* Søkeresultatene er en popover-liste: eget kort med sterkere skygge. */
+.food-results {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 6px 10px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--card-solid);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-pop);
+}
 .food-results li { padding: 3px 0; }
+.food-results .linklike { padding: 4px 6px; border-radius: 8px; display: block; width: 100%; text-align: left; }
+.food-results .linklike:hover { background: var(--accent-soft); text-decoration: none; }
 .diary-add { border-top: 1px solid var(--border); padding-top: 10px; margin-bottom: 10px; }
 .diary-picked { margin: 0 0 8px; }
 .diary-amount { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }

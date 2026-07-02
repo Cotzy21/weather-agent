@@ -261,19 +261,19 @@ export default function App() {
           <span className="brand-name">Turvær</span>
         </div>
         <nav className="nav" aria-label="Moduser">
-          <button className={`nav-item ${tab === 'hjem' ? 'active' : ''}`} onClick={() => setTab('hjem')}>
+          <button className={`nav-item ${tab === 'hjem' ? 'active' : ''}`} title="Hjem" onClick={() => setTab('hjem')}>
             🏠 <span>Hjem</span>
           </button>
-          <button className={`nav-item ${tab === 'vaersok' ? 'active' : ''}`} onClick={() => setTab('vaersok')}>
+          <button className={`nav-item ${tab === 'vaersok' ? 'active' : ''}`} title="Værsøk" onClick={() => setTab('vaersok')}>
             🔎 <span>Værsøk</span>
           </button>
-          <button className={`nav-item ${tab === 'rute' ? 'active' : ''}`} onClick={() => setTab('rute')}>
+          <button className={`nav-item ${tab === 'rute' ? 'active' : ''}`} title="Ruteplanlegger" onClick={() => setTab('rute')}>
             🧭 <span>Ruteplanlegger</span>
           </button>
-          <button className={`nav-item ${tab === 'trening' ? 'active' : ''}`} onClick={() => setTab('trening')}>
+          <button className={`nav-item ${tab === 'trening' ? 'active' : ''}`} title="Trening" onClick={() => setTab('trening')}>
             🏋️ <span>Trening</span>
           </button>
-          <button className={`nav-item ${tab === 'kosthold' ? 'active' : ''}`} onClick={() => setTab('kosthold')}>
+          <button className={`nav-item ${tab === 'kosthold' ? 'active' : ''}`} title="Kosthold" onClick={() => setTab('kosthold')}>
             🥗 <span>Kosthold</span>
           </button>
         </nav>

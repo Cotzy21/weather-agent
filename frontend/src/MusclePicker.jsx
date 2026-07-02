@@ -113,6 +113,7 @@ export default function MusclePicker({ onCreate }) {
   const [focus, setFocus] = useState('styrke')
   const [exCount, setExCount] = useState(4)
   const [setCount, setSetCount] = useState(4)
+  const [created, setCreated] = useState(false) // kort «✓ Lagt i økta»-kvittering
   const svgRef = useRef(null)
 
   // Kroppen "puster" svakt + glir inn ved bytte av visning/kjønn.
@@ -137,6 +138,9 @@ export default function MusclePicker({ onCreate }) {
       reps: FOCUS[focus].reps,
     })
     setSelected([])
+    // Mikrointeraksjon: bekreft at øvelsene faktisk havnet i byggeren under.
+    setCreated(true)
+    setTimeout(() => setCreated(false), 2500)
   }
 
   // Jente/gutt: samme muskler, litt andre proporsjoner (smalere skuldre, bredere hofter).
@@ -151,11 +155,11 @@ export default function MusclePicker({ onCreate }) {
       <div className="mp-head">
         <span className="ai-title">🧬 Bygg økt fra kroppen</span>
         <div className="mp-toggles">
-          <div className="seg">
+          <div className="seg" title="Velg kroppstype">
             <button className={gender === 'gutt' ? 'on' : ''} onClick={() => setGender('gutt')}>Gutt</button>
             <button className={gender === 'jente' ? 'on' : ''} onClick={() => setGender('jente')}>Jente</button>
           </div>
-          <div className="seg">
+          <div className="seg" title="Snu kroppen for å nå muskler på begge sider">
             <button className={view === 'front' ? 'on' : ''} onClick={() => setView('front')}>Front</button>
             <button className={view === 'bak' ? 'on' : ''} onClick={() => setView('bak')}>Rygg</button>
           </div>
@@ -228,6 +232,7 @@ export default function MusclePicker({ onCreate }) {
           <button className="primary mp-create" disabled={!selected.length} onClick={create}>
             ⚡ Lag økt ({Math.min(exCount, selected.reduce((n, id) => n + MUSCLES[id].exercises.length, 0))} øvelser × {setCount} sett)
           </button>
+          {created && <span className="success">✓ Lagt i økta under</span>}
           <p className="mp-hint muted">Musklene på {view === 'front' ? 'baksiden' : 'framsiden'} finner du under «{view === 'front' ? 'Rygg' : 'Front'}».</p>
         </div>
       </div>

@@ -23,9 +23,20 @@
   --wire-fill: rgba(22, 48, 95, 0.06);
   --tint: rgba(22, 48, 95, 0.09);        /* svak flate (hover, søyler) */
   --tint-strong: rgba(22, 48, 95, 0.18);
-  --elev: 0 2px 14px rgba(22, 48, 95, 0.12);  /* kort-skygge (kontrast i lys modus) */
+  /* Skygger: myke og lave (mye blur, lav opacity); popover trenger mer. */
+  --elev: 0 6px 22px rgba(22, 48, 95, 0.09);
+  --elev-pop: 0 12px 34px rgba(22, 48, 95, 0.22);
+  --card-hover: #ffffff;                 /* flaten et hoverbart kort løftes til */
 
-  font: 16px/1.55 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+  /* Typografiskala – maks 6 størrelser i hele appen (UI-prinsippene). */
+  --fs-xs: 12px;   /* kildehenvisninger, hint */
+  --fs-sm: 13px;   /* labels, metadata */
+  --fs-base: 15px; /* brødtekst, knapper, inputs */
+  --fs-md: 16px;   /* fremhevet brødtekst */
+  --fs-lg: 19px;   /* seksjonstitler, viktigste verdi i et kort */
+  --fs-xl: 24px;   /* sidetittel (maks på dashboard) */
+
+  font: 16px/1.55 'DM Sans Variable', 'DM Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
   color: var(--text);
   color-scheme: light;
   -webkit-font-smoothing: antialiased;
@@ -53,7 +64,10 @@
   --wire-fill: rgba(148, 184, 255, 0.05);
   --tint: rgba(148, 184, 255, 0.07);
   --tint-strong: rgba(148, 184, 255, 0.16);
-  --elev: none;  /* i mørk modus gir kanter/glød kontrasten */
+  /* Mørk modus: ikke skygger - det som skal fremheves blir litt LYSERE i stedet. */
+  --elev: none;
+  --elev-pop: 0 12px 34px rgba(0, 0, 0, 0.5);
+  --card-hover: rgba(30, 42, 66, 0.85);
 
   color-scheme: dark;
 }
@@ -125,4 +139,27 @@ body::after {
   outline: 2px solid var(--accent-2);
   outline-offset: 2px;
   border-radius: 6px;
+}
+
+/* Alle knapper har fire tilstander: default, hover, PRESSED og disabled.
+   Pressed gis globalt; grå tekst signaliserer «kan ikke trykkes». */
+button:not(:disabled):active { transform: translateY(1px); }
+button:disabled { cursor: not-allowed; }
+
+/* Feedback-tekster: suksess og feil, med liten inntoning. */
+.success {
+  color: var(--accent-strong);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  animation: fade-in 0.25s ease-out;
+}
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Feiltilstand på inputs: rød border til feilen er rettet. */
+input.invalid, textarea.invalid {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.13) !important;
 }

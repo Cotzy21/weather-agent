@@ -182,6 +182,7 @@ export default function NutritionView({ session }) {
   const [building, setBuilding] = useState(false)
   const [mealName, setMealName] = useState('')
   const [ingredients, setIngredients] = useState([])
+  const [mealSaved, setMealSaved] = useState(false) // kort «✓ Måltid lagret»-kvittering
   const rootRef = useReveal([])
   const foodsRef = useRef(null)
 
@@ -240,6 +241,8 @@ export default function NutritionView({ session }) {
     setMealName('')
     setIngredients([])
     setBuilding(false)
+    setMealSaved(true)
+    setTimeout(() => setMealSaved(false), 2500)
   }
 
   const buildTotals = totalMacros(ingredients.map((i) => ({ ...i, grams: Number(i.grams) || 0 })))
@@ -276,9 +279,12 @@ export default function NutritionView({ session }) {
           </div>
 
           {!building ? (
-            <button className="primary meal-start" onClick={() => setBuilding(true)}>
-              🍽️ Sett sammen måltid av favorittene
-            </button>
+            <span className="meal-start-row">
+              <button className="primary meal-start" onClick={() => setBuilding(true)}>
+                🍽️ Sett sammen måltid av favorittene
+              </button>
+              {mealSaved && <span className="success">✓ Måltid lagret</span>}
+            </span>
           ) : (
             <div className="meal-builder">
               <p className="food-panel-title">Trykk på favoritter for å legge dem i måltidet:</p>
