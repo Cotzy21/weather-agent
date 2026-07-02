@@ -1,14 +1,16 @@
 :root {
-  /* Lys modus (standard): isbre-lys med samme nordlys-aksenter. */
-  --text: #16233b;
-  --muted: #5b6b84;
-  --bg: #eef3fa;
-  --bg-2: #f6f9fd;
-  --card: rgba(255, 255, 255, 0.74);
+  /* Lys modus (standard): isbre-lys med samme nordlys-aksenter.
+     NB kontrast: bakgrunnen skal være TYDELIG mørkere enn kortene, og kanter
+     skal synes - på HDR-/lyse skjermer flyter alt sammen ellers. */
+  --text: #101c31;
+  --muted: #47587a;
+  --bg: #dbe4f0;
+  --bg-2: #edf2f9;
+  --card: rgba(255, 255, 255, 0.92);
   --card-solid: #ffffff;
-  --sidebar-bg: rgba(255, 255, 255, 0.66);
-  --border: rgba(22, 48, 95, 0.12);
-  --border-strong: rgba(22, 48, 95, 0.26);
+  --sidebar-bg: rgba(255, 255, 255, 0.82);
+  --border: rgba(22, 48, 95, 0.22);
+  --border-strong: rgba(22, 48, 95, 0.42);
   --accent: #10b981;          /* nordlys-grønn */
   --accent-2: #0891b2;        /* is-cyan */
   --accent-3: #8b5cf6;        /* fiolett himmel */
@@ -17,10 +19,11 @@
   --glow: rgba(16, 185, 129, 0.28);
   --gradient: linear-gradient(135deg, #34d399 0%, #22d3ee 55%, #a78bfa 100%);
   --danger: #e11d48;
-  --wire: rgba(22, 48, 95, 0.45);        /* kroppsmodellens kontur */
-  --wire-fill: rgba(22, 48, 95, 0.05);
-  --tint: rgba(22, 48, 95, 0.07);        /* svak flate (hover, søyler) */
-  --tint-strong: rgba(22, 48, 95, 0.14);
+  --wire: rgba(22, 48, 95, 0.55);        /* kroppsmodellens kontur */
+  --wire-fill: rgba(22, 48, 95, 0.06);
+  --tint: rgba(22, 48, 95, 0.09);        /* svak flate (hover, søyler) */
+  --tint-strong: rgba(22, 48, 95, 0.18);
+  --elev: 0 2px 14px rgba(22, 48, 95, 0.12);  /* kort-skygge (kontrast i lys modus) */
 
   font: 16px/1.55 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
   color: var(--text);
@@ -50,6 +53,7 @@
   --wire-fill: rgba(148, 184, 255, 0.05);
   --tint: rgba(148, 184, 255, 0.07);
   --tint-strong: rgba(148, 184, 255, 0.16);
+  --elev: none;  /* i mørk modus gir kanter/glød kontrasten */
 
   color-scheme: dark;
 }

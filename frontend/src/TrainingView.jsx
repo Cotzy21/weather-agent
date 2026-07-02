@@ -124,6 +124,16 @@ export default function TrainingView({ session }) {
     setBlocks((bs) => { const copy = structuredClone(bs); mutator(copy); return copy })
   }
 
+  // Flytt en blokk opp (-1) eller ned (+1) i økta, som i Garmin-appen.
+  function moveBlock(index, delta) {
+    editBlocks((c) => {
+      const to = index + delta
+      if (to < 0 || to >= c.length) return
+      const [moved] = c.splice(index, 1)
+      c.splice(to, 0, moved)
+    })
+  }
+
   function buildContent() {
     if (type === 'STYRKE') {
       const out = blocks.map((b) => {
@@ -321,6 +331,12 @@ export default function TrainingView({ session }) {
             <div className={`block ${b.kind}`} key={bi}>
               <div className="block-head">
                 <span className="block-tag">{b.kind === 'dropset' ? 'Dropsett' : b.kind === 'superset' ? 'Supersett' : 'Øvelse'}</span>
+                <span className="block-move">
+                  <button className="move" disabled={bi === 0}
+                          onClick={() => moveBlock(bi, -1)} aria-label="Flytt opp">▲</button>
+                  <button className="move" disabled={bi === blocks.length - 1}
+                          onClick={() => moveBlock(bi, 1)} aria-label="Flytt ned">▼</button>
+                </span>
                 <button className="del" onClick={() => editBlocks((c) => c.splice(bi, 1))} aria-label="Fjern">✕</button>
               </div>
 
