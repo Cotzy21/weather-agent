@@ -11,8 +11,9 @@ import java.time.ZoneId;
  * QueryInterpreter som bruker en lokal LLM til selve språkforståelsen.
  *
  * Viktig (HANDOFF §6): faktaene - område og koordinater - hentes ALDRI fra
- * modellen, fordi små (og store) modeller hallusinerer norske stedsnavn og
- * koordinater. Modellen brukes KUN til å plukke ut fylke + datoer + intensjon.
+ * modellen, fordi små (og store) modeller hallusinerer stedsnavn og
+ * koordinater. Modellen brukes KUN til å plukke ut regionnavn + land + datoer
+ * + intensjon; selve oppslaget skjer i OSM.
  */
 @Component
 public class LlmQueryInterpreter implements QueryInterpreter {
@@ -68,10 +69,17 @@ public class LlmQueryInterpreter implements QueryInterpreter {
                 uten forklaring og uten kodeblokk-tegn.
 
                 Felter:
-                  "region"   - norsk fylke, kommune ELLER nasjonalpark spørsmålet gjelder,
-                               med offisielt navn (f.eks. "Møre og Romsdal", "Stranda",
-                               "Jotunheimen nasjonalpark"). Ta med "nasjonalpark" i navnet
-                               når det er en park. Bruk null hvis det ikke nevnes.
+                  "region"   - området spørsmålet gjelder: et administrativt område
+                               (fylke/kommune/delstat/provins) ELLER en nasjonalpark,
+                               hvor som helst i verden. Bruk det offisielle LOKALE
+                               navnet slik det skrives i landet selv (f.eks.
+                               "Møre og Romsdal", "Stranda", "Jotunheimen nasjonalpark",
+                               "Tirol", "Dolomiti Bellunesi"). Ta med "nasjonalpark"
+                               (eller landets tilsvarende) i navnet når det er en park.
+                               Bruk null hvis det ikke nevnes.
+                  "country"  - ISO 3166-1 alpha-2-koden for landet regionen ligger i,
+                               f.eks. "NO", "SE", "AT", "IT". Norske steder -> "NO".
+                               Bruk null KUN hvis du er usikker på landet.
                   "when"     - tidsuttrykket, NØYAKTIG én av disse kodene:
                                I_DAG, I_MORGEN, I_OVERMORGEN, HELGA, NESTE_HELG,
                                DENNE_UKA, NESTE_UKE, KONKRET, UKJENT.
@@ -88,13 +96,15 @@ public class LlmQueryInterpreter implements QueryInterpreter {
 
                 Eksempler:
                   "hvor blir det best vær i Rogaland neste uke"
-                    -> {"region":"Rogaland","when":"NESTE_UKE","target":"STED","fromDate":null,"toDate":null,"tripType":"UANSETT"}
+                    -> {"region":"Rogaland","country":"NO","when":"NESTE_UKE","target":"STED","fromDate":null,"toDate":null,"tripType":"UANSETT"}
                   "hvilken turrute i Ålesund har finest vær i morgen"
-                    -> {"region":"Ålesund","when":"I_MORGEN","target":"TUR","fromDate":null,"toDate":null,"tripType":"UANSETT"}
+                    -> {"region":"Ålesund","country":"NO","when":"I_MORGEN","target":"TUR","fromDate":null,"toDate":null,"tripType":"UANSETT"}
                   "fint fjellvær i Møre og Romsdal i helga"
-                    -> {"region":"Møre og Romsdal","when":"HELGA","target":"STED","fromDate":null,"toDate":null,"tripType":"FJELLTUR"}
+                    -> {"region":"Møre og Romsdal","country":"NO","when":"HELGA","target":"STED","fromDate":null,"toDate":null,"tripType":"FJELLTUR"}
+                  "beste turvær i Tirol neste helg"
+                    -> {"region":"Tirol","country":"AT","when":"NESTE_HELG","target":"STED","fromDate":null,"toDate":null,"tripType":"UANSETT"}
                   "været på Sunnmøre 3. juli"
-                    -> {"region":"Sunnmøre","when":"KONKRET","target":"STED","fromDate":"%s-07-03","toDate":"%s-07-03","tripType":"UANSETT"}
+                    -> {"region":"Sunnmøre","country":"NO","when":"KONKRET","target":"STED","fromDate":"%s-07-03","toDate":"%s-07-03","tripType":"UANSETT"}
                 """.formatted(today, today.getYear(), today.getYear());
     }
 

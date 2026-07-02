@@ -88,8 +88,8 @@ public class TurvaerService {
 
         // Hva skal rangeres: selve turrutene, eller steder/topper?
         List<Location> candidates = tolkning.target() == Target.TUR
-                ? trailCandidates(tolkning.region())
-                : peakCandidates(tolkning.region(), tolkning.tripType());
+                ? trailCandidates(tolkning.region(), tolkning.country())
+                : peakCandidates(tolkning.region(), tolkning.country(), tolkning.tripType());
 
         List<RankedPlaceOverPeriod> ranking =
                 bestWeatherFinder.rankOverPeriod(candidates, tolkning.dates().days(), weights);
@@ -113,10 +113,10 @@ public class TurvaerService {
     }
 
     /** Topper i området, redusert til et spredt kandidatsett. */
-    private List<Location> peakCandidates(String region, TripType tripType) {
+    private List<Location> peakCandidates(String region, String country, TripType tripType) {
         double minElevation = tripType == TripType.FJELLTUR
                 ? FJELL_MIN_ELEVATION_M : DEFAULT_MIN_ELEVATION_M;
-        List<Peak> peaks = overpassClient.peaksInArea(region);
+        List<Peak> peaks = overpassClient.peaksInArea(region, country);
         return CandidateSelector.representativePeaks(peaks, CELL_DEGREES, minElevation)
                 .stream()
                 .map(Peak::location)
@@ -124,8 +124,8 @@ public class TurvaerService {
     }
 
     /** Turruter i området (rute-senterpunkt), tynnet til et spredt kandidatsett. */
-    private List<Location> trailCandidates(String region) {
-        List<Location> locations = overpassClient.trailsInArea(region).stream()
+    private List<Location> trailCandidates(String region, String country) {
+        List<Location> locations = overpassClient.trailsInArea(region, country).stream()
                 .map(t -> new Location(t.name(), t.latitude(), t.longitude()))
                 .toList();
         return thinByGrid(locations, TRAIL_CELL_DEGREES, MAX_TRAIL_CANDIDATES);

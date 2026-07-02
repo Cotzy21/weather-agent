@@ -21,7 +21,7 @@ import static org.mockito.Mockito.when;
 class LlmQueryInterpreterTest {
 
     private static final String VALID_JSON = """
-            {"region":"Rogaland","when":"I_MORGEN","target":"STED",
+            {"region":"Rogaland","country":"NO","when":"I_MORGEN","target":"STED",
              "fromDate":null,"toDate":null,"tripType":"UANSETT"}
             """;
 
@@ -35,6 +35,7 @@ class LlmQueryInterpreterTest {
         Interpretation i = interpreter.interpret("vær i Rogaland i morgen");
 
         assertEquals("Rogaland", i.region());
+        assertEquals("NO", i.country());
         assertEquals(TimeExpression.I_MORGEN, i.when());
         verify(client, never()).complete(eq(LlmTier.SMART), any(), any());
     }

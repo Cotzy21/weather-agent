@@ -17,9 +17,11 @@ import java.util.Map;
  * Henter navngitte fjelltopper innenfor et navngitt område fra OpenStreetMap via
  * Overpass-API-et. Gratis og uten API-nøkkel.
  *
- * Området matches på navn og kan være et fylke (admin_level 4), en kommune
- * (admin_level 7) eller en nasjonalpark (boundary=national_park) - f.eks.
- * "Møre og Romsdal", "Stranda" eller "Jotunheimen nasjonalpark".
+ * Området kan være et administrativt område (fylke/kommune/delstat/provins,
+ * admin_level 4-8) eller en nasjonalpark (boundary=national_park), hvor som
+ * helst i verden - f.eks. "Møre og Romsdal", "Stranda" eller "Tirol". Med en
+ * landkode scopes søket til landet (unngår navnekollisjoner); uten søkes det
+ * globalt på navn. Selve spørringene bygges i {@link OverpassQueries}.
  *
  * API-dok: https://wiki.openstreetmap.org/wiki/Overpass_API
  */
@@ -32,43 +34,8 @@ public class OverpassClient {
     private static final int MAX_ATTEMPTS = 3;
     private static final long BACKOFF_MS = 2000;
 
-    /**
-     * %s = områdenavn (settes inn to ganger). Matcher fylke/kommune
-     * (boundary=administrative, admin_level 4 eller 7) ELLER nasjonalpark, og
-     * henter alle navngitte natural=peak-noder i området.
-     */
-    private static final String QUERY_TEMPLATE = """
-            [out:json][timeout:90];
-            (
-              area["name"="%s"]["boundary"="administrative"]["admin_level"~"^(4|7)$"];
-              area["name"="%s"]["boundary"="national_park"];
-            )->.omr;
-            node(area.omr)["natural"="peak"]["name"];
-            out;
-            """;
-
     /** Maks antall ruter vi returnerer (etter dedup på navn) for et helt område. */
     private static final int MAX_TRAILS = 25;
-
-    /**
-     * %s = områdenavn (to ganger). Navngitte turruter (route=hiking/foot) OG
-     * navngitte stier (highway=path/footway) innenfor et område. Rute-relasjoner
-     * hentes via recurse-up fra stiene i området (Overpass sitt area-filter virker
-     * ikke direkte på relasjoner).
-     */
-    private static final String TRAILS_IN_AREA_TEMPLATE = """
-            [out:json][timeout:120];
-            (
-              area["name"="%s"]["boundary"="administrative"]["admin_level"~"^(4|7)$"];
-              area["name"="%s"]["boundary"="national_park"];
-            )->.a;
-            way(area.a)["highway"~"path|footway"]->.w;
-            (
-              rel(bw.w)["route"~"hiking|foot"]["name"];
-              way.w["name"];
-            );
-            out center tags 600;
-            """;
 
     private final RestClient http;
 
@@ -76,19 +43,28 @@ public class OverpassClient {
         this.http = builder.build();
     }
 
-    /** Alle navngitte topper i et område (fylke, kommune eller nasjonalpark), matchet på navn. */
-    @Cacheable(value = "peaks", key = "#areaName.toLowerCase()")
-    public List<Peak> peaksInArea(String areaName) {
-        String query = QUERY_TEMPLATE.formatted(areaName, areaName);
+    /**
+     * Alle navngitte topper i et område (administrativt eller nasjonalpark).
+     * Med landkode søkes det i landet først; gir det ingen treff (f.eks. feil
+     * landkode fra tolkeren), prøves ett globalt navnesøk før vi gir opp.
+     */
+    @Cacheable(value = "peaks", key = "#areaName.toLowerCase() + ':' + #countryCode")
+    public List<Peak> peaksInArea(String areaName, String countryCode) {
+        List<Peak> peaks = OverpassPeakParser.parse(
+                fetch(OverpassQueries.peaks(areaName, countryCode)));
+        if (peaks.isEmpty() && countryCode != null) {
+            peaks = OverpassPeakParser.parse(fetch(OverpassQueries.peaks(areaName, null)));
+        }
+        return peaks;
+    }
 
-        JsonNode root = Retry.withRetry(MAX_ATTEMPTS, BACKOFF_MS, () -> http.post()
+    private JsonNode fetch(String query) {
+        return Retry.withRetry(MAX_ATTEMPTS, BACKOFF_MS, () -> http.post()
                 .uri(ENDPOINT)
                 .contentType(MediaType.TEXT_PLAIN)
                 .body(query)
                 .retrieve()
                 .body(JsonNode.class));
-
-        return OverpassPeakParser.parse(root);
     }
 
     /**
@@ -119,38 +95,29 @@ public class OverpassClient {
         }
         String query = "[out:json][timeout:90];\n(\n" + around + ");\nout center tags;\n";
 
-        JsonNode root = Retry.withRetry(MAX_ATTEMPTS, BACKOFF_MS, () -> http.post()
-                .uri(ENDPOINT)
-                .contentType(MediaType.TEXT_PLAIN)
-                .body(query)
-                .retrieve()
-                .body(JsonNode.class));
-
         // Behold første forekomst av hvert navn, så samme rute ikke listes flere ganger.
         Map<String, Trail> byName = new LinkedHashMap<>();
-        for (Trail trail : OverpassTrailParser.parse(root)) {
+        for (Trail trail : OverpassTrailParser.parse(fetch(query))) {
             byName.putIfAbsent(trail.name().toLowerCase(Locale.ROOT), trail);
         }
         return byName.values().stream().limit(MAX_TRAILS).toList();
     }
 
     /**
-     * Alle navngitte turruter/stier innenfor et område (fylke/kommune/nasjonalpark),
-     * deduplisert på navn. Brukes når brukeren vil rangere selve turrutene etter vær.
+     * Alle navngitte turruter/stier innenfor et område (administrativt eller
+     * nasjonalpark), deduplisert på navn. Brukes når brukeren vil rangere selve
+     * turrutene etter vær. Samme land-scope + globalt fallback som peaksInArea.
      */
-    @Cacheable(value = "trailsInArea", key = "#areaName.toLowerCase()")
-    public List<Trail> trailsInArea(String areaName) {
-        String query = TRAILS_IN_AREA_TEMPLATE.formatted(areaName, areaName);
-
-        JsonNode root = Retry.withRetry(MAX_ATTEMPTS, BACKOFF_MS, () -> http.post()
-                .uri(ENDPOINT)
-                .contentType(MediaType.TEXT_PLAIN)
-                .body(query)
-                .retrieve()
-                .body(JsonNode.class));
+    @Cacheable(value = "trailsInArea", key = "#areaName.toLowerCase() + ':' + #countryCode")
+    public List<Trail> trailsInArea(String areaName, String countryCode) {
+        List<Trail> trails = OverpassTrailParser.parse(
+                fetch(OverpassQueries.trailsInArea(areaName, countryCode)));
+        if (trails.isEmpty() && countryCode != null) {
+            trails = OverpassTrailParser.parse(fetch(OverpassQueries.trailsInArea(areaName, null)));
+        }
 
         Map<String, Trail> byName = new LinkedHashMap<>();
-        for (Trail trail : OverpassTrailParser.parse(root)) {
+        for (Trail trail : trails) {
             byName.putIfAbsent(trail.name().toLowerCase(Locale.ROOT), trail);
         }
         return List.copyOf(byName.values());

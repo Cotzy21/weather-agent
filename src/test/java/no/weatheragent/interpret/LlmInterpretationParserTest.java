@@ -60,6 +60,19 @@ class LlmInterpretationParserTest {
     }
 
     @Test
+    void countryIsUppercasedIsoCode() throws Exception {
+        assertEquals("AT", parse("{\"region\":\"Tirol\",\"country\":\"at\"}").country());
+        assertEquals("NO", parse("{\"region\":\"Rogaland\",\"country\":\"NO\"}").country());
+    }
+
+    @Test
+    void invalidOrMissingCountryBecomesNull() throws Exception {
+        assertNull(parse("{\"region\":\"Tirol\",\"country\":\"Austria\"}").country());
+        assertNull(parse("{\"region\":\"Tirol\",\"country\":null}").country());
+        assertNull(parse("{\"region\":\"Tirol\"}").country());
+    }
+
+    @Test
     void tripTypeIsCaseInsensitiveAndDefaultsToUansett() throws Exception {
         assertEquals(TripType.LAVTUR, parse("{\"tripType\":\"lavtur\"}").tripType());
         assertEquals(TripType.UANSETT, parse("{\"tripType\":\"piknik\"}").tripType());

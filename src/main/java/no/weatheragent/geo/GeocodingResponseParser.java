@@ -8,8 +8,10 @@ import java.util.List;
 /**
  * Oversetter Open-Meteo sitt geocoding-JSON til en liste med {@link Location}.
  *
- * Vi filtrerer til norske treff, siden dette er en norsk turvaer-app og
- * stedsnavn som "Stranda" ellers kan matche steder i andre land.
+ * Alle treff beholdes uansett land - appen dekker hele verden (vær fra MET
+ * LocationForecast er globalt). Treffene kommer relevans-sortert fra Open-Meteo,
+ * så tvetydige navn ("Stranda" finnes både i Norge og Italia) løses av
+ * rekkefølgen + at kalleren kan vise flere kandidater.
  *
  * Svaret fra Open-Meteo ser forenklet slik ut:
  * <pre>
@@ -25,11 +27,6 @@ public final class GeocodingResponseParser {
         List<Location> matches = new ArrayList<>();
 
         for (JsonNode result : root.path("results")) {
-            String countryCode = result.path("country_code").asText("");
-            if (!countryCode.isEmpty() && !countryCode.equals("NO")) {
-                continue;
-            }
-
             matches.add(new Location(
                     result.path("name").asText(),
                     result.path("latitude").asDouble(),

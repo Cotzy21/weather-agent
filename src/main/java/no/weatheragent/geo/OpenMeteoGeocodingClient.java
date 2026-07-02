@@ -24,7 +24,7 @@ public class OpenMeteoGeocodingClient {
                 .build();
     }
 
-    /** Alle norske treff for et soek, sortert etter relevans slik Open-Meteo returnerer dem. */
+    /** Alle treff for et soek (globalt), sortert etter relevans slik Open-Meteo returnerer dem. */
     public List<Location> search(String name) {
         JsonNode root = http.get()
                 .uri(uri -> uri.path("/search")

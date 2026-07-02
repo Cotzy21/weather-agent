@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.Locale;
 
 /**
  * Oversetter modellens JSON-svar til en {@link Interpretation}. Ren og testbar
@@ -30,6 +31,7 @@ public final class LlmInterpretationParser {
 
     public static Interpretation parse(JsonNode root, LocalDate today) {
         String region = text(root, "region");
+        String country = countryOrNull(root);
         TimeExpression when = TimeExpression.fromString(text(root, "when"));
         Target target = Target.fromString(text(root, "target"));
 
@@ -39,7 +41,19 @@ public final class LlmInterpretationParser {
 
         TripType tripType = TripType.fromString(text(root, "tripType"));
 
-        return new Interpretation(region, when, target, dates, tripType);
+        return new Interpretation(region, country, when, target, dates, tripType);
+    }
+
+    /**
+     * ISO 3166-1 alpha-2 i store bokstaver, eller null hvis feltet mangler eller
+     * ikke er en gyldig to-bokstavskode (da søkes det heller globalt på navn).
+     */
+    private static String countryOrNull(JsonNode root) {
+        String raw = text(root, "country");
+        if (raw == null || !raw.matches("[A-Za-z]{2}")) {
+            return null;
+        }
+        return raw.toUpperCase(Locale.ROOT);
     }
 
     /** Tekstverdi for et felt, eller null hvis det mangler/er tomt/er JSON-null. */

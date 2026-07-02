@@ -23,10 +23,10 @@ class GeocodingResponseParserTest {
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Test
-    void keepsOnlyNorwegianMatches() throws Exception {
+    void keepsMatchesFromAllCountries() throws Exception {
         List<Location> matches = GeocodingResponseParser.parse(mapper.readTree(SAMPLE_JSON));
 
-        assertEquals(2, matches.size());
+        assertEquals(3, matches.size());
         assertTrue(matches.stream().allMatch(l -> l.name().equals("Stranda")));
     }
 

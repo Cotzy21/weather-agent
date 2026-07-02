@@ -11,6 +11,7 @@ import java.util.List;
  * interne domene-recordene skjer i {@link #from}.
  */
 public record WeatherSearchDto(String region,
+                               String country,
                                String when,
                                String target,
                                String from,
@@ -24,6 +25,7 @@ public record WeatherSearchDto(String region,
         Interpretation i = result.interpretation();
         return new WeatherSearchDto(
                 i.region(),
+                i.country(),
                 i.when().name(),
                 i.target().name(),
                 i.dates().from().toString(),
