@@ -859,6 +859,28 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .food-tag { font-size: 11px; font-weight: 700; letter-spacing: 0.3px; }
 .food-star { position: absolute; top: 6px; right: 8px; font-size: 12px; opacity: 0.9; }
 
+/* ---------- Kosthold-kort på fremsiden ---------- */
+.dash-nutrition {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--tint);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  color: var(--text);
+  transition: border-color 0.2s, transform 0.15s, box-shadow 0.25s;
+}
+.dash-nutrition:hover {
+  border-color: rgba(52, 211, 153, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(52, 211, 153, 0.12);
+}
+.dash-nutrition-line { margin: 6px 0 0; font-size: 14px; }
+.dash-nutrition-line .over-budget { color: var(--danger); }
+
 /* ---------- Treningsplaner ---------- */
 .plan-list { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
 .plan-list ul { list-style: none; margin: 6px 0 0; padding: 0; }

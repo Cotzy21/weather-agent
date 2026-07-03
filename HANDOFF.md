@@ -80,11 +80,14 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
   (brukeren gjør research — SPØR om verdier, f.eks. trygge volumøkninger
   per uke, i stedet for å finne på).
 
-### Generelt — ikke startet
-- Fremside m/kosthold-sammendrag, i18n (engelsk standard, norsk +++,
-  lagres per bruker), klokke-integrasjoner (Apple Health/Garmin/Strava/Whoop),
-  prismodell. Sikkerhetsprinsipp: lagre minst mulig sensitivt, per-bruker
-  kryptering når integrasjonene kommer.
+### Generelt
+- ✅ NYTT: **fremside-sammendrag for kosthold** (klikkbart kort på Hjem):
+  dagens balanse (spist/trening/igjen av målet) + ukas lave næringsstoffer
+  med kort konsekvens-tekst; klikk går til kosthold-fanen.
+- Gjenstår: i18n (engelsk standard, norsk +++, lagres per bruker),
+  klokke-integrasjoner (Apple Health/Garmin/Strava/Whoop), prismodell.
+  Sikkerhetsprinsipp: lagre minst mulig sensitivt, per-bruker kryptering
+  når integrasjonene kommer.
 
 ## Kjente feil — status
 
@@ -113,11 +116,13 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
 
 ## Foreslåtte neste steg (i rekkefølge)
 
-1. Verifisere 401-fiksen + dagboka + kaloribalansen ende-til-ende når
-   env-variablene er satt her (Flyway kjører V5-V7 automatisk ved oppstart).
-2. Fremside-sammendrag (dagens balanse + ukas mangler på Hjem, klikk → kosthold).
-3. Turdetaljer i ruteplanleggeren (terreng/stigning/vanskelighetsgrad).
-4. Habit tracker (koffein/søvn/lesing …) i kosthold eller egen fane.
+1. Verifisere 401-fiksen + dagboka + kaloribalansen + fremside-kortet
+   ende-til-ende når env-variablene er satt her (Flyway kjører V5-V7
+   automatisk ved oppstart).
+2. Turdetaljer i ruteplanleggeren (terreng/stigning/vanskelighetsgrad).
+3. Habit tracker (koffein/søvn/lesing …) i kosthold eller egen fane.
+4. Recovery-fane med hardkodede råd per sport (brukeren gjør research -
+   spør etter verdier).
 
 ## Arbeidsstil (viktig)
 
