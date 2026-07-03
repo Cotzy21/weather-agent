@@ -1,14 +1,18 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import MealDiary from './MealDiary'
+import { apiUrl, readError } from './api'
+import { authHeaders } from './supabase'
 import { useReveal, pop } from './anim'
 
 /**
  * Kosthold: utforsk matfamiliene, merk favoritter, og sett sammen egne måltider
  * av favoritt-ingrediensene. Hver matvare har makrofordeling (protein/karbo/fett
  * per 100 g, ca-verdier fra Matvaretabellen) - ikke bare én merkelapp, siden
- * f.eks. kyllingfilet har både protein OG fett. Favoritter + egne måltider
- * lagres lokalt (localStorage).
+ * f.eks. kyllingfilet har både protein OG fett.
+ *
+ * Lagring: innlogget -> Supabase via API-et (følger deg mellom enheter), med
+ * engangs-migrering av det som lå i localStorage. Utlogget -> localStorage.
  */
 
 /* m = gram per 100 g: { p: protein, k: karbo, f: fett } */
@@ -183,6 +187,7 @@ export default function NutritionView({ session }) {
   const [mealName, setMealName] = useState('')
   const [ingredients, setIngredients] = useState([])
   const [mealSaved, setMealSaved] = useState(false) // kort «✓ Måltid lagret»-kvittering
+  const [mealError, setMealError] = useState(null)
   const rootRef = useReveal([])
   const foodsRef = useRef(null)
 
@@ -198,24 +203,91 @@ export default function NutritionView({ session }) {
     return () => ctx.revert()
   }, [open])
 
-  function saveFavs(next) {
-    setFavs(next)
-    try { localStorage.setItem(FAVS_KEY, JSON.stringify(next)) } catch { /* privat modus o.l. */ }
+  function persistLocal(storageKey, next) {
+    try { localStorage.setItem(storageKey, JSON.stringify(next)) } catch { /* privat modus o.l. */ }
   }
 
-  function saveMeals(next) {
-    setMeals(next)
-    try { localStorage.setItem(MEALS_KEY, JSON.stringify(next)) } catch { /* privat modus o.l. */ }
+  // Innlogget: hent favoritter + måltider fra kontoen, og migrer det som
+  // eventuelt lå i localStorage (engangs). Utlogget: vis det lokale.
+  useEffect(() => {
+    if (!session) { setFavs(loadFavs()); setMeals(loadMeals()); return }
+    syncFromServer()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session])
+
+  async function syncFromServer() {
+    try {
+      const headers = await authHeaders()
+      const [favRes, mealRes] = await Promise.all([
+        fetch(apiUrl('/api/kosthold/favoritter'), { headers }),
+        fetch(apiUrl('/api/kosthold/maaltider'), { headers }),
+      ])
+      if (!favRes.ok || !mealRes.ok) return // behold lokal visning (f.eks. utløpt token)
+
+      const serverFavs = (await favRes.json())
+        .map((f) => ({ key: f.key, n: f.name, e: f.emoji, m: FOOD_BY_KEY.get(f.key)?.m }))
+        .filter((f) => f.m)
+      const serverMeals = (await mealRes.json())
+        .map((m) => ({ id: m.id, name: m.name, ingredients: m.ingredients }))
+
+      const jsonHeaders = { 'Content-Type': 'application/json', ...headers }
+      const localFavs = loadFavs().filter((lf) => !serverFavs.some((sf) => sf.key === lf.key))
+      for (const lf of localFavs) {
+        const res = await fetch(apiUrl('/api/kosthold/favoritter'), {
+          method: 'POST', headers: jsonHeaders,
+          body: JSON.stringify({ key: lf.key, name: lf.n, emoji: lf.e, tag: '' }),
+        })
+        if (res.ok) serverFavs.push(lf)
+      }
+      const localMeals = loadMeals().filter((lm) => !serverMeals.some((sm) => sm.name === lm.name))
+      for (const lm of localMeals) {
+        const res = await fetch(apiUrl('/api/kosthold/maaltider'), {
+          method: 'POST', headers: jsonHeaders,
+          body: JSON.stringify({ name: lm.name, ingredients: lm.ingredients }),
+        })
+        if (res.ok) serverMeals.push({ ...lm, id: (await res.json()).id })
+      }
+      if (localFavs.length || localMeals.length) {
+        try { localStorage.removeItem(FAVS_KEY); localStorage.removeItem(MEALS_KEY) } catch { /* ok */ }
+      }
+      setFavs(serverFavs)
+      setMeals(serverMeals)
+    } catch { /* offline - lokal visning står */ }
   }
 
-  function toggleFav(food, familyId, el) {
+  async function toggleFav(food, familyId, el) {
     const key = `${familyId}:${food.n}`
-    if (favs.some((f) => f.key === key)) {
-      saveFavs(favs.filter((f) => f.key !== key))
+    const exists = favs.some((f) => f.key === key)
+    const next = exists
+      ? favs.filter((f) => f.key !== key)
+      : [...favs, { key, n: food.n, e: food.e, m: food.m }]
+    setFavs(next)
+    if (!exists) pop(el)
+
+    if (session) {
+      try {
+        if (exists) {
+          await fetch(apiUrl(`/api/kosthold/favoritter?key=${encodeURIComponent(key)}`), {
+            method: 'DELETE', headers: await authHeaders(),
+          })
+        } else {
+          await fetch(apiUrl('/api/kosthold/favoritter'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+            body: JSON.stringify({ key, name: food.n, emoji: food.e, tag: '' }),
+          })
+        }
+      } catch { /* nettglipp - synken tar det igjen neste innlasting */ }
     } else {
-      saveFavs([...favs, { key, n: food.n, e: food.e, m: food.m }])
-      pop(el)
+      persistLocal(FAVS_KEY, next)
     }
+  }
+
+  function removeFav(key) {
+    const fav = favs.find((f) => f.key === key)
+    if (!fav) return
+    const [familyId] = key.split(':')
+    toggleFav({ n: fav.n, e: fav.e, m: fav.m }, familyId, null)
   }
 
   const isFav = (familyId, food) => favs.some((f) => f.key === `${familyId}:${food.n}`)
@@ -232,17 +304,50 @@ export default function NutritionView({ session }) {
     setIngredients(ingredients.map((i) => (i.key === key ? { ...i, grams } : i)))
   }
 
-  function saveMeal() {
+  async function saveMeal() {
     const clean = ingredients
       .map((i) => ({ ...i, grams: Number(i.grams) || 0 }))
       .filter((i) => i.grams > 0)
     if (!mealName.trim() || clean.length === 0) return
-    saveMeals([...meals, { id: crypto.randomUUID(), name: mealName.trim(), ingredients: clean }])
+    setMealError(null)
+
+    const meal = { id: crypto.randomUUID(), name: mealName.trim(), ingredients: clean }
+    if (session) {
+      try {
+        const res = await fetch(apiUrl('/api/kosthold/maaltider'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+          body: JSON.stringify({ name: meal.name, ingredients: clean }),
+        })
+        if (!res.ok) throw new Error(await readError(res))
+        meal.id = (await res.json()).id
+      } catch (e) {
+        setMealError(e.message)
+        return
+      }
+    } else {
+      persistLocal(MEALS_KEY, [...meals, meal])
+    }
+    setMeals([...meals, meal])
     setMealName('')
     setIngredients([])
     setBuilding(false)
     setMealSaved(true)
     setTimeout(() => setMealSaved(false), 2500)
+  }
+
+  async function deleteMeal(id) {
+    const next = meals.filter((x) => x.id !== id)
+    setMeals(next)
+    if (session) {
+      try {
+        await fetch(apiUrl(`/api/kosthold/maaltider/${id}`), {
+          method: 'DELETE', headers: await authHeaders(),
+        })
+      } catch { /* nettglipp - synken tar det igjen neste innlasting */ }
+    } else {
+      persistLocal(MEALS_KEY, next)
+    }
   }
 
   const buildTotals = totalMacros(ingredients.map((i) => ({ ...i, grams: Number(i.grams) || 0 })))
@@ -265,10 +370,13 @@ export default function NutritionView({ session }) {
       {favs.length > 0 && (
         <div className="fav-shelf" data-reveal>
           <span className="ai-title">⭐ Favorittene dine</span>
+          <span className="muted sync-hint">
+            {session ? '☁️ synkes til kontoen din' : 'lagres kun i denne nettleseren – logg inn for å ta dem med deg'}
+          </span>
           <div className="fav-chips">
             {favs.map((f) => (
               <button key={f.key} className="fav-chip" title="Fjern"
-                      onClick={() => saveFavs(favs.filter((x) => x.key !== f.key))}>
+                      onClick={() => removeFav(f.key)}>
                 <span>{f.e}</span> {f.n} ✕
               </button>
             ))}
@@ -318,8 +426,9 @@ export default function NutritionView({ session }) {
                        value={mealName} onChange={(e) => setMealName(e.target.value)} />
                 <button className="primary" onClick={saveMeal}
                         disabled={!mealName.trim() || ingredients.length === 0}>Lagre måltid</button>
-                <button className="mini" onClick={() => { setBuilding(false); setIngredients([]) }}>Avbryt</button>
+                <button className="mini" onClick={() => { setBuilding(false); setIngredients([]); setMealError(null) }}>Avbryt</button>
               </div>
+              {mealError && <p className="error">Beklager – {mealError}</p>}
             </div>
           )}
         </div>
@@ -336,7 +445,7 @@ export default function NutritionView({ session }) {
                   <strong>{meal.name}</strong>
                   <span className="muted">~{kcalOf(t).toFixed(0)} kcal</span>
                   <button className="del" aria-label="Slett"
-                          onClick={() => saveMeals(meals.filter((x) => x.id !== meal.id))}>✕</button>
+                          onClick={() => deleteMeal(meal.id)}>✕</button>
                 </div>
                 <p className="muted meal-ingredients">
                   {meal.ingredients.map((i) => `${i.n} ${i.grams} g`).join(' · ')}

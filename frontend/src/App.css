@@ -936,6 +936,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
+.sync-hint { display: block; font-size: var(--fs-xs); margin-top: 2px; }
 .fav-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .fav-chip {
   display: inline-flex; align-items: center; gap: 5px;
