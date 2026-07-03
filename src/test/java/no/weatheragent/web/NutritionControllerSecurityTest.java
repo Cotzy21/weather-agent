@@ -1,5 +1,7 @@
 package no.weatheragent.web;
 
+import no.weatheragent.nutrition.CustomMeal;
+import no.weatheragent.nutrition.CustomMealService;
 import no.weatheragent.nutrition.NutritionFavorite;
 import no.weatheragent.nutrition.NutritionFavoriteService;
 import no.weatheragent.security.SecurityConfig;
@@ -41,6 +43,9 @@ class NutritionControllerSecurityTest {
     private NutritionFavoriteService favorites;
 
     @MockitoBean
+    private CustomMealService meals;
+
+    @MockitoBean
     private JwtDecoder jwtDecoder; // kreves av oauth2-resource-server-konfigurasjonen
 
     @Test
@@ -48,6 +53,38 @@ class NutritionControllerSecurityTest {
         mvc.perform(get("/api/kosthold/favoritter")).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/kosthold/favoritter")).andExpect(status().isUnauthorized());
         mvc.perform(delete("/api/kosthold/favoritter").param("key", "x")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void maaltiderRequireAuthentication() throws Exception {
+        mvc.perform(get("/api/kosthold/maaltider")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/kosthold/maaltider")).andExpect(status().isUnauthorized());
+        mvc.perform(delete("/api/kosthold/maaltider/" + UUID.randomUUID())).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void saveMealValidatesAndReturnsMeal() throws Exception {
+        when(meals.save(eq(UUID.fromString(SUB)), eq("Treningsfrokost"), any()))
+                .thenReturn(new CustomMeal(UUID.fromString(SUB), "Treningsfrokost",
+                        new com.fasterxml.jackson.databind.ObjectMapper().readTree(
+                                "[{\"key\":\"korn:Havregryn\",\"grams\":80}]")));
+
+        mvc.perform(post("/api/kosthold/maaltider")
+                        .with(jwt().jwt(j -> j.subject(SUB)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Treningsfrokost\",\"ingredients\":[{\"key\":\"korn:Havregryn\",\"grams\":80}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Treningsfrokost"))
+                .andExpect(jsonPath("$.ingredients[0].grams").value(80));
+    }
+
+    @Test
+    void saveMealRejectsBlankName() throws Exception {
+        mvc.perform(post("/api/kosthold/maaltider")
+                        .with(jwt().jwt(j -> j.subject(SUB)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"\",\"ingredients\":[{\"grams\":80}]}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

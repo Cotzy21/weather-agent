@@ -1,6 +1,8 @@
 package no.weatheragent.web;
 
 import no.weatheragent.nutrition.FavoriteLimitException;
+import no.weatheragent.nutrition.InvalidMealException;
+import no.weatheragent.nutrition.MealLimitException;
 import no.weatheragent.nutrition.UnknownFoodException;
 import no.weatheragent.training.AiSuggestionException;
 import org.springframework.http.HttpStatus;
@@ -38,10 +40,16 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ApiError(e.getMessage()));
     }
 
-    /** Tak på antall favoritter nådd -> 409 med en forståelig melding. */
-    @ExceptionHandler(FavoriteLimitException.class)
-    public ResponseEntity<ApiError> handleFavoriteLimit(FavoriteLimitException e) {
+    /** Tak på antall favoritter/måltider nådd -> 409 med en forståelig melding. */
+    @ExceptionHandler({FavoriteLimitException.class, MealLimitException.class})
+    public ResponseEntity<ApiError> handleLimit(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError(e.getMessage()));
+    }
+
+    /** Ugyldig måltid fra klienten (tom/for stor ingrediensliste) -> 400. */
+    @ExceptionHandler(InvalidMealException.class)
+    public ResponseEntity<ApiError> handleInvalidMeal(InvalidMealException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(e.getMessage()));
     }
 
     /** Logging mot en matvare som ikke finnes (utdatert id) -> 404. */
