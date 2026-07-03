@@ -335,6 +335,7 @@ export default function TrainingView({ session }) {
           {blocks.map((b, bi) => (
             <div className={`block ${b.kind}`} key={bi}>
               <div className="block-head">
+                <span className="block-handle" aria-hidden="true">⣿</span>
                 <span className="block-tag">{b.kind === 'dropset' ? 'Dropsett' : b.kind === 'superset' ? 'Supersett' : 'Øvelse'}</span>
                 <span className="block-move">
                   <button className="move" disabled={bi === 0} title="Flytt opp"

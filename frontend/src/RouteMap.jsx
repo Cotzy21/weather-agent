@@ -21,7 +21,9 @@ export default function RouteMap({ waypoints, route = [], onAdd, focus = null })
     if (!elRef.current) return
 
     if (!mapRef.current) {
-      mapRef.current = L.map(elRef.current).setView([64.5, 12], 4)
+      // Zoom-knappene til høyre (à la AllTrails) - panelet ligger oppe til venstre.
+      mapRef.current = L.map(elRef.current, { zoomControl: false }).setView([64.5, 12], 4)
+      L.control.zoom({ position: 'topright' }).addTo(mapRef.current)
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap-bidragsytere',
         maxZoom: 17,

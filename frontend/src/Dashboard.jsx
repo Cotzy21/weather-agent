@@ -4,6 +4,7 @@ import { apiUrl } from './api'
 import { useReveal, useCountUp } from './anim'
 
 const ICONS = { STYRKE: '🏋️', LØPING: '🏃', SVØMMING: '🏊', SYKKEL: '🚴', BULDRING: '🧗', HIKING: '🥾', FRISTIL: '✨' }
+const DAY_LETTERS = ['M', 'T', 'O', 'T', 'F', 'L', 'S'] // mandag først
 
 function startOfWeek() {
   const d = new Date()
@@ -13,6 +14,13 @@ function startOfWeek() {
   return d
 }
 
+const isoToday = () => new Date().toISOString().slice(0, 10)
+
+/**
+ * Hjem-dashboard i Garmin Connect-stil: «I fokus»-kort i et grid til venstre
+ * (ukas trening med stolper per dag, kosthold, siste økt) og en «I dag»-kolonne
+ * til høyre med dagens aktivitet og snarveier.
+ */
 export default function Dashboard({ session, onNavigate }) {
   const [workouts, setWorkouts] = useState([])
   const [day, setDay] = useState(null)   // dagens kaloribalanse
@@ -33,7 +41,7 @@ export default function Dashboard({ session, onNavigate }) {
   }
 
   async function loadNutrition() {
-    const iso = new Date().toISOString().slice(0, 10)
+    const iso = isoToday()
     try {
       const [dagRes, ukeRes] = await Promise.all([
         fetch(apiUrl(`/api/kosthold/dag?dato=${iso}`), { headers: await authHeaders() }),
@@ -47,9 +55,20 @@ export default function Dashboard({ session, onNavigate }) {
   const revealRef = useReveal([session, workouts.length])
 
   const weekStart = startOfWeek()
-  const weekCount = workouts.filter((w) => new Date(`${w.date}T00:00:00`) >= weekStart).length
+  const weekWorkouts = workouts.filter((w) => new Date(`${w.date}T00:00:00`) >= weekStart)
+  const weekCount = weekWorkouts.length
   const weekRef = useCountUp(weekCount)
-  const totalRef = useCountUp(workouts.length)
+
+  // Økter per ukedag (man-søn) til stolpediagrammet, à la Garmins ukeskort.
+  const dayCounts = Array(7).fill(0)
+  weekWorkouts.forEach((w) => {
+    dayCounts[(new Date(`${w.date}T00:00:00`).getDay() + 6) % 7]++
+  })
+  const maxCount = Math.max(1, ...dayCounts)
+  const todayIdx = (new Date().getDay() + 6) % 7
+
+  const todays = workouts.filter((w) => w.date === isoToday())
+  const latest = workouts[0]
 
   if (!session) {
     return (
@@ -67,45 +86,103 @@ export default function Dashboard({ session, onNavigate }) {
   }
 
   return (
-    <div className="dash" ref={revealRef}>
-      <h2 className="detail-title" data-reveal>Hei 👋</h2>
+    <div className="dash garmin" ref={revealRef}>
+      <h2 className="detail-title" data-reveal>I fokus</h2>
 
-      <div className="dash-stats" data-reveal>
-        <div className="stat"><span className="stat-num" ref={weekRef}>{weekCount}</span><span className="stat-label">økter denne uka</span></div>
-        <div className="stat"><span className="stat-num" ref={totalRef}>{workouts.length}</span><span className="stat-label">økter totalt</span></div>
-      </div>
+      <div className="dash-layout">
+        <div className="focus-grid">
+          <div className="focus-card" data-reveal>
+            <span className="focus-head">🏋️ Trening denne uka</span>
+            <div className="focus-main">
+              <span className="focus-big" ref={weekRef}>{weekCount}</span>
+              <span className="focus-sub muted">økter · {workouts.length} totalt</span>
+            </div>
+            <div className="week-bars" aria-label="Økter per ukedag">
+              {dayCounts.map((n, i) => (
+                <span className={`week-day ${i === todayIdx ? 'today' : ''}`} key={i}>
+                  <span className="week-bar">
+                    <span style={{ height: `${(n / maxCount) * 100}%` }} />
+                  </span>
+                  <span className="week-letter">{DAY_LETTERS[i]}</span>
+                </span>
+              ))}
+            </div>
+          </div>
 
-      <button className="dash-nutrition" data-reveal onClick={() => onNavigate('kosthold')}>
-        <span className="ai-title">🥗 Kostholdet ditt</span>
-        {day == null || (day.entries.length === 0 && lows.length === 0) ? (
-          <p className="muted">Ingenting logget ennå – begynn kostholdsdagboka her →</p>
-        ) : (
-          <>
-            <p className="dash-nutrition-line">
-              I dag: <strong>{day.kcal.toFixed(0)} kcal</strong>
-              {day.burnedKcal > 0 && <> · trening −{day.burnedKcal}</>}
-              {day.remainingKcal != null && (
-                <> · <strong className={day.remainingKcal < 0 ? 'over-budget' : ''}>
-                  {day.remainingKcal.toFixed(0)} igjen
-                </strong> av målet</>
-              )}
-            </p>
-            {lows.length > 0 && (
-              <p className="dash-nutrition-line">
-                🧪 Lavt denne uka: <strong>{lows.map((n) => n.name).slice(0, 3).join(', ')}
-                {lows.length > 3 ? ` +${lows.length - 3}` : ''}</strong>
-                {' '}– <span className="muted">{lows[0].advice.split('.')[0].toLowerCase()}.
-                Trykk for råd →</span>
-              </p>
+          <button className="focus-card clickable" data-reveal onClick={() => onNavigate('kosthold')}>
+            <span className="focus-head">🥗 Kosthold i dag</span>
+            {day == null || (day.entries.length === 0 && lows.length === 0) ? (
+              <p className="muted">Ingenting logget ennå – begynn kostholdsdagboka her →</p>
+            ) : (
+              <>
+                <div className="focus-main">
+                  <span className="focus-big">{day.kcal.toFixed(0)}</span>
+                  <span className="focus-sub muted">
+                    kcal
+                    {day.burnedKcal > 0 && <> · trening −{day.burnedKcal}</>}
+                  </span>
+                </div>
+                {day.remainingKcal != null && (
+                  <p className={`focus-line ${day.remainingKcal < 0 ? 'over-budget' : ''}`}>
+                    {day.remainingKcal.toFixed(0)} kcal igjen av målet
+                  </p>
+                )}
+                {lows.length > 0 && (
+                  <p className="focus-line muted">
+                    🧪 Lavt denne uka: {lows.map((n) => n.name).slice(0, 3).join(', ')}
+                    {lows.length > 3 ? ` +${lows.length - 3}` : ''} →
+                  </p>
+                )}
+              </>
             )}
-          </>
-        )}
-      </button>
+          </button>
 
-      <div className="dash-actions" data-reveal>
-        <button className="primary" onClick={() => onNavigate('trening')}>Logg økt</button>
-        <button onClick={() => onNavigate('rute')}>Planlegg rute</button>
-        <button onClick={() => onNavigate('vaersok')}>Finn turvær</button>
+          <div className="focus-card" data-reveal>
+            <span className="focus-head">⏱️ Siste økt</span>
+            {latest ? (
+              <>
+                <div className="focus-main">
+                  <span className="focus-big small">{ICONS[latest.type] || '•'}</span>
+                  <span>
+                    <strong className="focus-line">{latest.title}</strong>
+                    <span className="focus-line muted">{latest.date}</span>
+                  </span>
+                </div>
+              </>
+            ) : (
+              <p className="muted">Ingen økter ennå – logg din første under «Trening».</p>
+            )}
+          </div>
+
+          <div className="focus-card" data-reveal>
+            <span className="focus-head">🌤️ Turvær</span>
+            <p className="focus-line">Hvor er det finest i helga?</p>
+            <p className="focus-line muted">Spør værsøket – rangerer topper og turruter etter vær.</p>
+            <button className="mini" onClick={() => onNavigate('vaersok')}>Finn turvær →</button>
+          </div>
+        </div>
+
+        <aside className="today-col" data-reveal>
+          <h3 className="detail-h3">I dag</h3>
+          {todays.length === 0 ? (
+            <div className="today-card muted">Ingen aktivitet logget i dag ennå.</div>
+          ) : (
+            todays.map((w) => (
+              <div className="today-card" key={w.id}>
+                <span className="feed-icon">{ICONS[w.type] || '•'}</span>
+                <span>
+                  <strong className="focus-line">{w.title}</strong>
+                  <span className="focus-line muted">{w.type}</span>
+                </span>
+              </div>
+            ))
+          )}
+          <div className="dash-actions column">
+            <button className="primary" onClick={() => onNavigate('trening')}>Logg økt</button>
+            <button onClick={() => onNavigate('rute')}>Planlegg rute</button>
+            <button onClick={() => onNavigate('vaersok')}>Finn turvær</button>
+          </div>
+        </aside>
       </div>
 
       <h3 className="detail-h3" data-reveal>Nylig aktivitet</h3>

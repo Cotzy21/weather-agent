@@ -23,6 +23,7 @@ export default function RoutePlanner({ session, target, onClearTarget }) {
   const [routeName, setRouteName] = useState('')
   const [saved, setSaved] = useState([])
   const [shown, setShown] = useState(null) // geometri fra en lagret rute vist på kartet
+  const [panelOpen, setPanelOpen] = useState(true) // det flytende panelet over kartet
 
   const totalKm = useMemo(() => {
     let sum = 0
@@ -130,17 +131,7 @@ export default function RoutePlanner({ session, target, onClearTarget }) {
   }
 
   return (
-    <div className="planner">
-      {target && (
-        <div className="plan-target">
-          🎯 Mål fra værsøket: <strong>{target.name}</strong> – klikk i kartet for å
-          tegne ruta di fram til målet.
-          <button className="del" onClick={onClearTarget} aria-label="Fjern mål">✕</button>
-        </div>
-      )}
-      <p className="hint">
-        Klikk i kartet for å legge til punkter (start, stopp, teltplass, mål). Linja viser ruta.
-      </p>
+    <div className="planner atx">
       <RouteMap
         waypoints={waypoints}
         route={shown ?? plan?.geometry ?? []}
@@ -148,26 +139,47 @@ export default function RoutePlanner({ session, target, onClearTarget }) {
         focus={target}
       />
 
-      <div className="planner-row">
-        <span>{waypoints.length} punkt · <strong>{totalKm.toFixed(1)} km</strong></span>
-        <span className="spacer" />
-        <button onClick={undo} disabled={!waypoints.length}>Angre siste</button>
-        <button onClick={clearAll} disabled={!waypoints.length}>Tøm</button>
+      {/* Flytende piller over kartet (à la AllTrails' filterrad). */}
+      <div className="map-pills">
+        <span className="pill stat">{waypoints.length} punkt · <strong>{totalKm.toFixed(1)} km</strong></span>
+        <button className="pill" onClick={undo} disabled={!waypoints.length}>↩ Angre siste</button>
+        <button className="pill" onClick={clearAll} disabled={!waypoints.length}>✕ Tøm</button>
       </div>
 
-      <div className="planner-inputs">
-        <label>Vekt (kg)
-          <input type="number" value={weight} min="30" max="200"
-                 onChange={(e) => setWeight(+e.target.value)} />
-        </label>
-        <button className="primary" onClick={calc} disabled={loading || waypoints.length < 2}>
-          {loading ? 'Beregner …' : 'Beregn'}
-        </button>
-      </div>
+      {/* Flytende panel til venstre (à la AllTrails' «Explore trails»). */}
+      <div className={`map-panel ${panelOpen ? '' : 'closed'}`}>
+        <div className="map-panel-head">
+          <strong>🧭 Planlegg rute</strong>
+          <button className="sidebar-toggle" title={panelOpen ? 'Minimer panelet' : 'Utvid panelet'}
+                  onClick={() => setPanelOpen(!panelOpen)}>{panelOpen ? '▾' : '▴'}</button>
+        </div>
 
-      {error && <p className="error">Beklager – {error}</p>}
+        {panelOpen && (
+        <div className="map-panel-body">
+          {target && (
+            <div className="plan-target">
+              🎯 Mål fra værsøket: <strong>{target.name}</strong> – klikk i kartet for å
+              tegne ruta di fram til målet.
+              <button className="del" onClick={onClearTarget} aria-label="Fjern mål">✕</button>
+            </div>
+          )}
+          <p className="hint left">
+            Klikk i kartet for å legge til punkter (start, stopp, teltplass, mål).
+          </p>
 
-      {plan && (
+          <div className="planner-inputs">
+            <label>Vekt (kg)
+              <input type="number" value={weight} min="30" max="200"
+                     onChange={(e) => setWeight(+e.target.value)} />
+            </label>
+            <button className="primary" onClick={calc} disabled={loading || waypoints.length < 2}>
+              {loading ? 'Beregner …' : 'Beregn'}
+            </button>
+          </div>
+
+          {error && <p className="error">Beklager – {error}</p>}
+
+          {plan && (
         <div className="estimate">
           <p className="estimate-line">
             {plan.assessment && (
@@ -213,22 +225,25 @@ export default function RoutePlanner({ session, target, onClearTarget }) {
             <p className="muted">Logg inn for å lagre ruta.</p>
           )}
         </div>
-      )}
+          )}
 
-      {session && saved.length > 0 && (
-        <div className="saved-routes">
-          <p className="trails-title">📁 Mine ruter</p>
-          <ul>
-            {saved.map((r) => (
-              <li key={r.id}>
-                <button className="linklike" onClick={() => showRoute(r)}>{r.name}</button>
-                <span className="muted"> · {r.distanceKm.toFixed(1)} km · {r.ascentM.toFixed(0)} m</span>
-                <button className="del" onClick={() => deleteRoute(r.id)} aria-label="Slett">✕</button>
-              </li>
-            ))}
-          </ul>
+          {session && saved.length > 0 && (
+            <div className="saved-routes">
+              <p className="trails-title">📁 Mine ruter</p>
+              <ul>
+                {saved.map((r) => (
+                  <li key={r.id}>
+                    <button className="linklike" onClick={() => showRoute(r)}>{r.name}</button>
+                    <span className="muted"> · {r.distanceKm.toFixed(1)} km · {r.ascentM.toFixed(0)} m</span>
+                    <button className="del" onClick={() => deleteRoute(r.id)} aria-label="Slett">✕</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

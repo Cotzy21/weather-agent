@@ -20,6 +20,31 @@
   height: 100svh;
   z-index: 10;
 }
+.sidebar { transition: width 0.25s ease; }
+.sidebar-toggle {
+  align-self: flex-end;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--card-solid);
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.sidebar-toggle:hover { color: var(--accent-strong); border-color: var(--accent); background: var(--accent-soft); }
+
+/* Kollapset: ikon-rail à la Garmin - bare ikoner, labels skjules. */
+.sidebar.collapsed { width: 72px; padding-left: 8px; padding-right: 8px; }
+.sidebar.collapsed .brand { justify-content: center; padding: 6px 0; }
+.sidebar.collapsed .brand-name,
+.sidebar.collapsed .nav-item span { display: none; }
+.sidebar.collapsed .nav-item { justify-content: center; padding: 11px 0; }
+.sidebar.collapsed .nav-item:hover { transform: none; }
+.sidebar.collapsed .sidebar-toggle { align-self: center; }
+
 .brand {
   display: flex;
   align-items: center;
@@ -91,6 +116,7 @@
   .nav { flex-direction: row; }
   .nav-item span { display: none; }
   .nav-item:hover { transform: none; }
+  .sidebar-toggle { display: none; } /* mobil-raden er alltid kompakt */
   .main { padding: 0 16px; }
 }
 
@@ -136,7 +162,7 @@ header {
   padding: 28px 22px;
   text-align: center;
   color: #fff;
-  background: linear-gradient(135deg, rgba(52, 211, 153, 0.2), rgba(34, 211, 238, 0.14)), var(--card);
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.2), rgba(45, 212, 191, 0.14)), var(--card);
   border: 1px solid var(--border);
   border-radius: 20px;
 }
@@ -297,6 +323,89 @@ header .sub { margin-top: 6px; color: var(--muted); }
 
 /* ---------- Ruteplanlegger ---------- */
 .planner { padding: 14px 0 28px; }
+
+/* Full-bredde main når kartet skal fylle flaten (AllTrails-stil). */
+.main.wide { max-width: none; padding: 0; }
+
+/* Kart-først-layout: kartet fyller alt, panel og piller flyter over. */
+.planner.atx { position: relative; padding: 0; height: 100svh; }
+.planner.atx .route-map {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  max-height: none;
+  border: none;
+  border-radius: 0;
+  margin: 0;
+  resize: none;
+}
+.map-pills {
+  position: absolute;
+  top: 14px;
+  left: 386px;
+  right: 60px;
+  z-index: 900;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pill {
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--card-solid);
+  border: 1px solid var(--border);
+  box-shadow: var(--elev-pop);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+.pill:hover:not(:disabled):not(.stat) { border-color: var(--accent); background: var(--accent-soft); }
+.pill:disabled { color: var(--muted); cursor: not-allowed; }
+.pill.stat { cursor: default; }
+.map-panel {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 900;
+  width: 356px;
+  max-width: calc(100% - 28px);
+  max-height: calc(100% - 28px);
+  display: flex;
+  flex-direction: column;
+  background: var(--card-solid);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--elev-pop);
+  overflow: hidden;
+}
+.map-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  font-size: var(--fs-md);
+}
+.map-panel-body { padding: 0 14px 14px; overflow-y: auto; }
+.map-panel .hint.left { text-align: left; margin: 0 0 10px; font-size: var(--fs-sm); }
+.map-panel .planner-inputs { margin-bottom: 4px; }
+.map-panel .estimate { margin-top: 10px; }
+
+@media (max-width: 640px) {
+  /* Mobil: panelet blir et bunn-ark, pillene ligger øverst. */
+  .planner.atx { height: calc(100svh - 64px); }
+  .map-pills { left: 12px; right: 12px; top: 12px; }
+  .map-panel {
+    top: auto;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: 48%;
+  }
+}
 .route-map {
   height: 640px;
   min-height: 320px;
@@ -396,7 +505,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
 }
 .ai-panel {
   box-shadow: var(--elev);
-  background: linear-gradient(135deg, rgba(167, 139, 250, 0.1), rgba(34, 211, 238, 0.07)), var(--card);
+  background: linear-gradient(135deg, rgba(163, 230, 53, 0.1), rgba(45, 212, 191, 0.07)), var(--card);
   border: 1px solid var(--border);
   border-radius: 16px; padding: 14px 16px; margin-bottom: 18px;
   backdrop-filter: blur(12px);
@@ -408,7 +517,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
   flex: 1; padding: 10px 13px; border: 1px solid var(--border); border-radius: 12px;
   background: var(--bg-2); color: var(--text); font-size: 15px;
 }
-.ai-row input:focus { outline: none; border-color: var(--accent-3); box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.15); }
+.ai-row input:focus { outline: none; border-color: var(--accent-2); box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15); }
 .ai-row .primary { border-radius: 12px; padding: 9px 16px; }
 .ai-result { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .ai-result .mini { margin-top: 6px; }
@@ -416,7 +525,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
 /* ---------- Muskel-velger ---------- */
 .muscle-picker {
   box-shadow: var(--elev);
-  background: linear-gradient(160deg, rgba(34, 211, 238, 0.07), rgba(52, 211, 153, 0.05)), var(--card);
+  background: linear-gradient(160deg, rgba(45, 212, 191, 0.07), rgba(52, 211, 153, 0.05)), var(--card);
   border: 1px solid var(--border);
   border-radius: 18px;
   padding: 16px;
@@ -448,7 +557,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .body {
   width: 235px;
   flex-shrink: 0;
-  filter: drop-shadow(0 0 24px rgba(34, 211, 238, 0.12));
+  filter: drop-shadow(0 0 24px rgba(45, 212, 191, 0.12));
 }
 .body-outline {
   fill: var(--wire-fill);
@@ -465,9 +574,9 @@ header .sub { margin-top: 6px; color: var(--muted); }
   transition: fill 0.2s, stroke 0.2s, filter 0.25s;
 }
 .muscle.hovered {
-  fill: rgba(34, 211, 238, 0.4);
+  fill: rgba(45, 212, 191, 0.4);
   stroke: var(--accent-2);
-  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.7));
+  filter: drop-shadow(0 0 8px rgba(45, 212, 191, 0.7));
 }
 .muscle.selected {
   fill: rgba(52, 211, 153, 0.55);
@@ -526,6 +635,102 @@ header .sub { margin-top: 6px; color: var(--muted); }
 /* ---------- Hjem / dashboard ---------- */
 .dash { padding: 16px 0 28px; max-width: 680px; }
 .dash.hero { padding-top: 12vh; }
+.dash.garmin { max-width: 980px; }
+
+/* Garmin-layout: fokus-kort til venstre, «I dag»-kolonne til høyre. */
+.dash-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(220px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.focus-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.focus-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--elev);
+  color: var(--text);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: border-color 0.25s, transform 0.2s, background 0.2s;
+}
+.focus-card.clickable { cursor: pointer; font: inherit; }
+.focus-card.clickable:hover { border-color: rgba(16, 185, 129, 0.45); transform: translateY(-2px); background: var(--card-hover); }
+.focus-head {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--muted);
+}
+.focus-main { display: flex; align-items: baseline; gap: 10px; }
+.focus-big {
+  font-size: var(--fs-xl);
+  line-height: 1.1;
+  font-weight: 800;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.focus-big.small { font-size: var(--fs-lg); -webkit-text-fill-color: initial; background: none; color: inherit; }
+.focus-sub { font-size: var(--fs-sm); }
+.focus-line { display: block; font-size: var(--fs-sm); margin: 0; }
+
+/* Ukas stolper (Garmins ukeskort): én stolpe per dag, dagens dag markert. */
+.week-bars { display: flex; gap: 8px; width: 100%; margin-top: 4px; }
+.week-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.week-bar {
+  width: 100%;
+  max-width: 22px;
+  height: 44px;
+  background: var(--tint);
+  border-radius: 6px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+.week-bar span {
+  display: block;
+  width: 100%;
+  background: var(--gradient);
+  border-radius: 6px 6px 0 0;
+  transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.week-letter { font-size: var(--fs-xs); color: var(--muted); font-weight: 600; }
+.week-day.today .week-letter { color: var(--accent-strong); font-weight: 800; }
+
+.today-col { display: flex; flex-direction: column; gap: 8px; }
+.today-col .detail-h3 { margin-top: 0; }
+.today-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--elev);
+  font-size: var(--fs-sm);
+}
+.dash-actions.column { flex-direction: column; align-items: stretch; margin-top: 8px; }
+.dash-actions.column button { width: 100%; }
+
+@media (max-width: 860px) {
+  .dash-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .focus-grid { grid-template-columns: 1fr; }
+}
 .hero-title {
   /* Stor tekst: trangere letter-spacing og lav line-height (UI-prinsippene). */
   font-size: clamp(30px, 5vw, 42px);
@@ -608,15 +813,25 @@ header .sub { margin-top: 6px; color: var(--muted); }
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .builder { display: flex; flex-direction: column; gap: 10px; }
+/* Garmin-stil: hvert steg er en rad-container med farget venstrekant per type. */
 .block {
   box-shadow: var(--elev);
   border: 1px solid var(--border); border-radius: 14px; padding: 12px 13px;
   background: var(--card);
   animation: pop 0.25s ease-out;
+  border-left: 4px solid var(--accent);
 }
-.block.superset { border-color: rgba(167, 139, 250, 0.45); box-shadow: 0 0 16px rgba(167, 139, 250, 0.08); }
-.block.dropset { border-color: rgba(34, 211, 238, 0.4); }
+.block.superset { border-left-color: #a3e635; }
+.block.dropset { border-left-color: #2dd4bf; }
 .block-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.block-handle {
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: -2px;
+  cursor: default;
+  user-select: none;
+  opacity: 0.7;
+}
 .block-move { display: inline-flex; gap: 2px; margin-left: auto; }
 .block-move .move {
   border: 1px solid var(--border);

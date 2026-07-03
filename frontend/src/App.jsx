@@ -229,6 +229,8 @@ export default function App() {
   const [tab, setTab] = useState('hjem')
   const [session, setSession] = useState(null)
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') ?? 'light')
+  // Sidemenyen har to states (som Garmin): utvidet og kollapset ikon-rail.
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === '1')
 
   // Sted valgt i værsøket som brukeren vil planlegge tur til. Ligger her (ikke
   // i planleggeren) fordi tabbene demonteres ved bytte - staten må overleve.
@@ -245,6 +247,10 @@ export default function App() {
   }, [theme])
 
   useEffect(() => {
+    try { localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0') } catch { /* privat modus o.l. */ }
+  }, [collapsed])
+
+  useEffect(() => {
     if (!supabase) return undefined
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
@@ -255,7 +261,15 @@ export default function App() {
 
   return (
     <div className="app">
-      <aside className="sidebar">
+      <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+        <button
+          className="sidebar-toggle"
+          title={collapsed ? 'Utvid menyen' : 'Minimer menyen'}
+          aria-label={collapsed ? 'Utvid menyen' : 'Minimer menyen'}
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          {collapsed ? '›' : '‹'}
+        </button>
         <div className="brand" title="Turvær">
           <span className="brand-icon">⛰️</span>
           <span className="brand-name">Turvær</span>
@@ -292,7 +306,7 @@ export default function App() {
         </button>
       </aside>
 
-      <main className="main" ref={mainRef}>
+      <main className={`main ${tab === 'rute' ? 'wide' : ''}`} ref={mainRef}>
         {tab === 'hjem' && <Dashboard session={session} onNavigate={setTab} />}
         {tab === 'vaersok' && <VaersokView onPlan={planTrip} />}
         {tab === 'rute' && (

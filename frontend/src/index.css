@@ -1,31 +1,31 @@
 :root {
-  /* Lys modus (standard): isbre-lys med samme nordlys-aksenter.
-     NB kontrast: bakgrunnen skal være TYDELIG mørkere enn kortene, og kanter
-     skal synes - på HDR-/lyse skjermer flyter alt sammen ellers. */
-  --text: #101c31;
-  --muted: #47587a;
-  --bg: #dbe4f0;
-  --bg-2: #edf2f9;
+  /* Lys modus (standard): grønn er bedriftsfargen - nøytralene er salvie/skog,
+     ikke blågrå. NB kontrast: bakgrunnen skal være TYDELIG mørkere enn kortene,
+     og kanter skal synes - på HDR-/lyse skjermer flyter alt sammen ellers. */
+  --text: #0e2417;
+  --muted: #48604f;
+  --bg: #dbe7dd;
+  --bg-2: #eef4ef;
   --card: rgba(255, 255, 255, 0.92);
   --card-solid: #ffffff;
   --sidebar-bg: rgba(255, 255, 255, 0.82);
-  --border: rgba(22, 48, 95, 0.22);
-  --border-strong: rgba(22, 48, 95, 0.42);
-  --accent: #10b981;          /* nordlys-grønn */
-  --accent-2: #0891b2;        /* is-cyan */
-  --accent-3: #8b5cf6;        /* fiolett himmel */
+  --border: rgba(15, 61, 37, 0.22);
+  --border-strong: rgba(15, 61, 37, 0.42);
+  --accent: #10b981;          /* skog/nordlys-grønn (bedriftsfargen) */
+  --accent-2: #0d9488;        /* fjordgrønn (sekundær) */
+  --accent-3: #4d7c0f;        /* mose (tertiær) */
   --accent-strong: #047857;
-  --accent-soft: rgba(16, 185, 129, 0.12);
+  --accent-soft: rgba(16, 185, 129, 0.13);
   --glow: rgba(16, 185, 129, 0.28);
-  --gradient: linear-gradient(135deg, #34d399 0%, #22d3ee 55%, #a78bfa 100%);
+  --gradient: linear-gradient(135deg, #6ee7b7 0%, #10b981 55%, #047857 100%);
   --danger: #e11d48;
-  --wire: rgba(22, 48, 95, 0.55);        /* kroppsmodellens kontur */
-  --wire-fill: rgba(22, 48, 95, 0.06);
-  --tint: rgba(22, 48, 95, 0.09);        /* svak flate (hover, søyler) */
-  --tint-strong: rgba(22, 48, 95, 0.18);
+  --wire: rgba(15, 61, 37, 0.55);        /* kroppsmodellens kontur */
+  --wire-fill: rgba(15, 61, 37, 0.06);
+  --tint: rgba(15, 61, 37, 0.09);        /* svak flate (hover, søyler) */
+  --tint-strong: rgba(15, 61, 37, 0.18);
   /* Skygger: myke og lave (mye blur, lav opacity); popover trenger mer. */
-  --elev: 0 6px 22px rgba(22, 48, 95, 0.09);
-  --elev-pop: 0 12px 34px rgba(22, 48, 95, 0.22);
+  --elev: 0 6px 22px rgba(15, 61, 37, 0.10);
+  --elev-pop: 0 12px 34px rgba(15, 61, 37, 0.24);
   --card-hover: #ffffff;                 /* flaten et hoverbart kort løftes til */
 
   /* Typografiskala – maks 6 størrelser i hele appen (UI-prinsippene). */
@@ -43,31 +43,33 @@
 }
 
 :root[data-theme='dark'] {
-  /* Mørk modus: nattehimmel over fjellet, nordlys som aksent. */
-  --text: #e8eef8;
-  --muted: #94a3b8;
-  --bg: #070b14;
-  --bg-2: #0b1322;
-  --card: rgba(17, 26, 43, 0.66);
-  --card-solid: #111a2b;
-  --sidebar-bg: rgba(10, 16, 28, 0.7);
-  --border: rgba(148, 184, 255, 0.14);
-  --border-strong: rgba(148, 184, 255, 0.28);
+  /* Mørk modus: dyp skogsnatt - ALT går i mørke grønntoner, ikke navy/grå.
+     (UI-prinsippene: mørke grønne flater passer akkurat denne appen.) */
+  --text: #e4f2e8;
+  --muted: #8fab99;
+  --bg: #06120b;
+  --bg-2: #0a1c12;
+  --card: rgba(13, 31, 21, 0.72);
+  --card-solid: #0d1f15;
+  --sidebar-bg: rgba(8, 23, 15, 0.75);
+  --border: rgba(110, 231, 183, 0.14);
+  --border-strong: rgba(110, 231, 183, 0.30);
   --accent: #34d399;
-  --accent-2: #22d3ee;
-  --accent-3: #a78bfa;
+  --accent-2: #2dd4bf;
+  --accent-3: #a3e635;
   --accent-strong: #6ee7b7;
-  --accent-soft: rgba(52, 211, 153, 0.12);
+  --accent-soft: rgba(52, 211, 153, 0.13);
   --glow: rgba(52, 211, 153, 0.35);
+  --gradient: linear-gradient(135deg, #86efac 0%, #34d399 55%, #0d9488 100%);
   --danger: #fb7185;
-  --wire: rgba(148, 184, 255, 0.45);
-  --wire-fill: rgba(148, 184, 255, 0.05);
-  --tint: rgba(148, 184, 255, 0.07);
-  --tint-strong: rgba(148, 184, 255, 0.16);
+  --wire: rgba(134, 239, 172, 0.45);
+  --wire-fill: rgba(134, 239, 172, 0.05);
+  --tint: rgba(134, 239, 172, 0.07);
+  --tint-strong: rgba(134, 239, 172, 0.16);
   /* Mørk modus: ikke skygger - det som skal fremheves blir litt LYSERE i stedet. */
   --elev: none;
   --elev-pop: 0 12px 34px rgba(0, 0, 0, 0.5);
-  --card-hover: rgba(30, 42, 66, 0.85);
+  --card-hover: rgba(22, 46, 31, 0.9);
 
   color-scheme: dark;
 }
@@ -94,8 +96,8 @@ body::after {
 body::before {
   background:
     radial-gradient(52% 42% at 12% 8%, rgba(52, 211, 153, 0.16), transparent 70%),
-    radial-gradient(46% 40% at 88% 16%, rgba(34, 211, 238, 0.13), transparent 70%),
-    radial-gradient(52% 46% at 70% 92%, rgba(167, 139, 250, 0.14), transparent 70%);
+    radial-gradient(46% 40% at 88% 16%, rgba(45, 212, 191, 0.13), transparent 70%),
+    radial-gradient(52% 46% at 70% 92%, rgba(163, 230, 53, 0.10), transparent 70%);
   animation: aurora 26s ease-in-out infinite alternate;
   will-change: transform;
 }
