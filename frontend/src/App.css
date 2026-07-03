@@ -828,10 +828,26 @@ header .sub { margin-top: 6px; color: var(--muted); }
   color: var(--muted);
   font-size: 13px;
   letter-spacing: -2px;
-  cursor: default;
+  cursor: grab;
   user-select: none;
   opacity: 0.7;
+  padding: 2px 4px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
 }
+.block-handle:hover { color: var(--accent-strong); background: var(--accent-soft); }
+.block-handle:active { cursor: grabbing; }
+
+/* Under draing: den løftede blokka tones ned, slippunktet får en grønn kant. */
+.block.dragging { opacity: 0.45; }
+.block.drag-over {
+  box-shadow: 0 -3px 0 0 var(--accent), var(--elev);
+  border-top-color: var(--accent);
+}
+
+.stepper.small { margin-left: 2px; }
+.stepper.small button { width: 24px; height: 22px; font-size: 14px; }
+.stepper.small span { min-width: 30px; font-size: var(--fs-xs); }
 .block-move { display: inline-flex; gap: 2px; margin-left: auto; }
 .block-move .move {
   border: 1px solid var(--border);

@@ -39,7 +39,8 @@ const today = () => new Date().toISOString().slice(0, 10)
 const newSet = () => ({ reps: '', weightKg: '' })
 const newExercise = () => ({ kind: 'exercise', name: '', sets: [newSet()] })
 const newDropset = () => ({ kind: 'dropset', name: '', drops: [newSet()] })
-const newSuperset = () => ({ kind: 'superset', exercises: [{ name: '', sets: [newSet()] }] })
+// Supersett har runder (à la Garmins «Repeat x Sets»): hele gruppa gjentas N ganger.
+const newSuperset = () => ({ kind: 'superset', rounds: 3, exercises: [{ name: '', sets: [newSet()] }] })
 
 function cleanSets(arr) {
   return (arr || [])
@@ -65,6 +66,10 @@ export default function TrainingView({ session }) {
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState(false) // kort «✓ Økt lagret»-kvittering
+
+  // Drag-and-drop-omorganisering av blokker (pilene finnes fortsatt for touch).
+  const [dragIdx, setDragIdx] = useState(null)
+  const [dragOver, setDragOver] = useState(null)
 
   const [progressName, setProgressName] = useState('')
   const [progress, setProgress] = useState(null)
@@ -135,12 +140,25 @@ export default function TrainingView({ session }) {
     })
   }
 
+  // Slipp en dratt blokk på plassen til `target`.
+  function dropBlock(target) {
+    if (dragIdx != null && dragIdx !== target) {
+      editBlocks((c) => {
+        const [moved] = c.splice(dragIdx, 1)
+        c.splice(target, 0, moved)
+      })
+    }
+    setDragIdx(null)
+    setDragOver(null)
+  }
+
   function buildContent() {
     if (type === 'STYRKE') {
       const out = blocks.map((b) => {
         if (b.kind === 'superset') {
           return {
             kind: 'superset',
+            rounds: Math.max(1, Number(b.rounds) || 1),
             exercises: b.exercises
               .filter((e) => e.name.trim())
               .map((e) => ({ name: e.name.trim(), sets: cleanSets(e.sets) })),
@@ -241,7 +259,11 @@ export default function TrainingView({ session }) {
     if (t === 'STYRKE') {
       const bs = (c.blocks || []).map((b) => {
         if (b.kind === 'superset') {
-          return { kind: 'superset', exercises: (b.exercises || []).map((e) => ({ name: e.name || '', sets: mapSets(e.sets) })) }
+          return {
+            kind: 'superset',
+            rounds: b.rounds ?? 3,
+            exercises: (b.exercises || []).map((e) => ({ name: e.name || '', sets: mapSets(e.sets) })),
+          }
         }
         if (b.kind === 'dropset') {
           return { kind: 'dropset', name: b.name || '', drops: mapSets(b.drops) }
@@ -333,10 +355,37 @@ export default function TrainingView({ session }) {
       {type === 'STYRKE' ? (
         <div className="builder">
           {blocks.map((b, bi) => (
-            <div className={`block ${b.kind}`} key={bi}>
+            <div
+              className={`block ${b.kind} ${dragIdx === bi ? 'dragging' : ''} ${dragOver === bi && dragIdx !== bi ? 'drag-over' : ''}`}
+              key={bi}
+              onDragOver={(e) => { if (dragIdx != null) { e.preventDefault(); setDragOver(bi) } }}
+              onDragLeave={() => { if (dragOver === bi) setDragOver(null) }}
+              onDrop={(e) => { e.preventDefault(); dropBlock(bi) }}
+            >
               <div className="block-head">
-                <span className="block-handle" aria-hidden="true">⣿</span>
+                <span
+                  className="block-handle"
+                  title="Dra for å flytte"
+                  draggable
+                  onDragStart={(e) => {
+                    setDragIdx(bi)
+                    e.dataTransfer.effectAllowed = 'move'
+                    e.dataTransfer.setData('text/plain', String(bi))
+                    // Vis hele blokka som drabilde, ikke bare håndtaket.
+                    e.dataTransfer.setDragImage(e.currentTarget.closest('.block'), 20, 20)
+                  }}
+                  onDragEnd={() => { setDragIdx(null); setDragOver(null) }}
+                >⣿</span>
                 <span className="block-tag">{b.kind === 'dropset' ? 'Dropsett' : b.kind === 'superset' ? 'Supersett' : 'Øvelse'}</span>
+                {b.kind === 'superset' && (
+                  <span className="stepper small" title="Hvor mange runder gruppa gjentas">
+                    <button onClick={() => editBlocks((c) => { c[bi].rounds = Math.max(1, (c[bi].rounds ?? 3) - 1) })}
+                            aria-label="Færre runder">−</button>
+                    <span>{b.rounds ?? 3}×</span>
+                    <button onClick={() => editBlocks((c) => { c[bi].rounds = Math.min(10, (c[bi].rounds ?? 3) + 1) })}
+                            aria-label="Flere runder">+</button>
+                  </span>
+                )}
                 <span className="block-move">
                   <button className="move" disabled={bi === 0} title="Flytt opp"
                           onClick={() => moveBlock(bi, -1)} aria-label="Flytt opp">▲</button>
@@ -471,7 +520,7 @@ function WorkoutBody({ workout: w }) {
         {(c.blocks || []).map((b, i) => (
           <li key={i}>
             {b.kind === 'superset'
-              ? <>Supersett: {(b.exercises || []).map((e) => `${e.name} (${sumSets(e.sets)})`).join(' + ')}</>
+              ? <>Supersett{(b.rounds ?? 1) > 1 ? ` ×${b.rounds}` : ''}: {(b.exercises || []).map((e) => `${e.name} (${sumSets(e.sets)})`).join(' + ')}</>
               : <>{b.name} – {b.kind === 'dropset' ? `dropsett: ${sumSets(b.drops)}` : sumSets(b.sets)}</>}
           </li>
         ))}
