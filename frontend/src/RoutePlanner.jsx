@@ -170,9 +170,26 @@ export default function RoutePlanner({ session, target, onClearTarget }) {
       {plan && (
         <div className="estimate">
           <p className="estimate-line">
+            {plan.assessment && (
+              <span className={`diff-badge diff-${plan.assessment.difficulty.toLowerCase()}`}>
+                {plan.assessment.difficultyLabel}
+              </span>
+            )}
             <strong>{plan.distanceKm.toFixed(1)} km</strong> · {plan.ascentM.toFixed(0)} m stigning
             {' '}· ~{plan.hours.toFixed(1)} t · <strong>{plan.calories} kcal</strong>
           </p>
+          {plan.assessment && (
+            <p className="terrain-line muted">
+              ⛰️ Høyeste punkt ~{plan.assessment.highestPointM.toFixed(0)} moh
+              {' '}· bratteste parti ~{plan.assessment.maxGradientPct.toFixed(0)} % helning
+            </p>
+          )}
+          {plan.assessment?.challenges.length > 0 && (
+            <div className="gear">
+              <span className="gear-title">⚠️ Vær forberedt på</span>
+              <ul>{plan.assessment.challenges.map((c, i) => <li key={i}>{c}</li>)}</ul>
+            </div>
+          )}
           <div className="gear">
             <span className="gear-title">🍫 Mat &amp; drikke</span>
             <ul>{plan.snacks.map((s, i) => <li key={i}>{s}</li>)}</ul>

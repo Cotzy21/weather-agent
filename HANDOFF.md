@@ -41,8 +41,14 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
 ### Ruteplanlegger — grunnmur på plass
 - ✅ Klikk-waypoints → rute (`RoutingClient`), høydeprofil (`ElevationClient`),
   kalorier (`CalorieAdvisor`), klesråd (`ClothingAdvisor`), lagring av ruter.
-- Gjenstår: terreng/vanskelighetsgrad/utfordringer per tur, highlighting av
-  populære stier rundt et valgt resultat, «fortell om turen»-tekst (LLM).
+- ✅ NYTT: **terrengvurdering** (`RouteAssessor`, ren/testbar): DNT-inspirert
+  vanskelighetsgrad (grønn/blå/rød/svart = verste av distanse-, stignings-
+  og bratthets-karakter), høyeste punkt, bratteste parti (%), og regelbaserte
+  «vær forberedt på»-råd (bratt/høyfjell/langtur/nedstigning). Beregnes fra
+  høydeprofilen som allerede hentes; terskler kan finjusteres mot ekte
+  DNT-verdier senere.
+- Gjenstår: highlighting av populære stier rundt et valgt resultat,
+  «fortell om turen»-tekst (LLM), klesråd koblet til værdato for turen.
 
 ### Trening — fungerer, med kjente feil (se under)
 - ✅ Logging av økter (styrke/cardio/hiking), progresjon per øvelse,
@@ -116,13 +122,13 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
 
 ## Foreslåtte neste steg (i rekkefølge)
 
-1. Verifisere 401-fiksen + dagboka + kaloribalansen + fremside-kortet
-   ende-til-ende når env-variablene er satt her (Flyway kjører V5-V7
-   automatisk ved oppstart).
-2. Turdetaljer i ruteplanleggeren (terreng/stigning/vanskelighetsgrad).
-3. Habit tracker (koffein/søvn/lesing …) i kosthold eller egen fane.
-4. Recovery-fane med hardkodede råd per sport (brukeren gjør research -
-   spør etter verdier).
+1. Verifisere alt nytt ende-til-ende når env-variablene er satt her
+   (Flyway kjører V5-V7 automatisk ved oppstart).
+2. Habit tracker (koffein/søvn/lesing …) i kosthold eller egen fane.
+3. Recovery-fane med hardkodede råd per sport (brukeren gjør research -
+   spør etter verdier, f.eks. trygge ukentlige volumøkninger).
+4. Skadeforebygging: varsle ved uvanlig volumhopp i én aktivitetstype
+   (bruker treningsloggen som alt finnes).
 
 ## Arbeidsstil (viktig)
 
