@@ -43,6 +43,12 @@ public final class WorkoutCalorieEstimator {
         String type = workout.getType() == null ? "" : workout.getType().toUpperCase();
         JsonNode c = workout.getContent();
 
+        // Ekte kalorier (f.eks. fra Garmin-import med pulsdata) trumfer estimatet.
+        double loggedKcal = c.path("kcal").asDouble(0);
+        if (loggedKcal > 0) {
+            return (int) Math.round(loggedKcal);
+        }
+
         double durationMin = c.path("durationMin").asDouble(0);
         double distanceKm = c.path("distanceKm").asDouble(0);
         double ascentM = c.path("ascentM").asDouble(0);

@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import jakarta.validation.Valid;
 import no.weatheragent.training.Suggestion;
 import no.weatheragent.training.TrainingPlanService;
+import no.weatheragent.training.WorkoutImportService;
 import no.weatheragent.training.WorkoutService;
 import no.weatheragent.training.WorkoutSuggester;
+import no.weatheragent.web.dto.ImportResultDto;
 import no.weatheragent.web.dto.LogWorkoutRequest;
 import no.weatheragent.web.dto.ProgressPointDto;
 import no.weatheragent.web.dto.SavePlanRequest;
@@ -35,14 +37,34 @@ import java.util.UUID;
 @RestController
 public class TrainingController {
 
+    /** Tak på CSV-størrelse ved import (tegn) - Garmins egne filer er langt mindre. */
+    private static final int MAX_IMPORT_CHARS = 5_000_000;
+
     private final WorkoutService workouts;
     private final WorkoutSuggester suggester;
     private final TrainingPlanService plans;
+    private final WorkoutImportService importer;
 
-    public TrainingController(WorkoutService workouts, WorkoutSuggester suggester, TrainingPlanService plans) {
+    public TrainingController(WorkoutService workouts, WorkoutSuggester suggester,
+                              TrainingPlanService plans, WorkoutImportService importer) {
         this.workouts = workouts;
         this.suggester = suggester;
         this.plans = plans;
+        this.importer = importer;
+    }
+
+    /**
+     * Importer aktiviteter fra en Garmin Connect CSV-eksport (rå CSV i body).
+     * Idempotent - allerede importerte økter hoppes over.
+     */
+    @PostMapping(value = "/api/trening/import/garmin", consumes = "text/plain")
+    public ResponseEntity<ImportResultDto> importGarmin(@AuthenticationPrincipal Jwt jwt,
+                                                        @RequestBody String csv) {
+        if (csv.length() > MAX_IMPORT_CHARS) {
+            return ResponseEntity.status(413).build();
+        }
+        return ResponseEntity.ok(ImportResultDto.from(
+                importer.importGarmin(UUID.fromString(jwt.getSubject()), csv)));
     }
 
     @PostMapping("/api/treningsokter")

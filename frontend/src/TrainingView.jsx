@@ -71,6 +71,10 @@ export default function TrainingView({ session }) {
   const [dragIdx, setDragIdx] = useState(null)
   const [dragOver, setDragOver] = useState(null)
 
+  // Garmin-import (CSV-eksport fra Garmin Connect).
+  const [importBusy, setImportBusy] = useState(false)
+  const [importMsg, setImportMsg] = useState(null)
+
   const [progressName, setProgressName] = useState('')
   const [progress, setProgress] = useState(null)
 
@@ -194,6 +198,32 @@ export default function TrainingView({ session }) {
       setError(e.message)
     } finally {
       setBusy(false)
+    }
+  }
+
+  // Les CSV-fila i nettleseren og send råteksten til backend, som parser og
+  // hopper over økter som finnes fra før (idempotent).
+  async function importGarmin(file) {
+    if (!file) return
+    setImportBusy(true)
+    setImportMsg(null)
+    try {
+      const text = await file.text()
+      const res = await fetch(apiUrl('/api/trening/import/garmin'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain', ...(await authHeaders()) },
+        body: text,
+      })
+      if (!res.ok) throw new Error(await readError(res))
+      const r = await res.json()
+      setImportMsg(r.imported === 0 && r.skipped === 0
+        ? 'Fant ingen aktiviteter i fila – er det CSV-eksporten fra Garmin Connect?'
+        : `✓ ${r.imported} økter importert${r.skipped ? ` · ${r.skipped} hoppet over (fantes fra før)` : ''}`)
+      loadWorkouts()
+    } catch (e) {
+      setImportMsg(`Feil: ${e.message}`)
+    } finally {
+      setImportBusy(false)
     }
   }
 
@@ -488,6 +518,24 @@ export default function TrainingView({ session }) {
             ))}
           </div>
         ))}
+
+      <div className="import-panel">
+        <span className="ai-title">⌚ Importer fra Garmin</span>
+        <p className="muted import-hint">
+          Garmin Connect → Aktiviteter → Alle aktiviteter → «Eksporter CSV», og velg fila her.
+          Øktene dine havner i dagboka med ekte kalorier, og dagsbalansen bruker dem automatisk.
+        </p>
+        <label className={`file-btn ${importBusy ? 'busy' : ''}`}>
+          {importBusy ? 'Importerer …' : '📂 Velg CSV-fil'}
+          <input type="file" accept=".csv,text/csv" hidden disabled={importBusy}
+                 onChange={(e) => { importGarmin(e.target.files[0]); e.target.value = '' }} />
+        </label>
+        {importMsg && (
+          <p className={importMsg.startsWith('✓') ? 'success' : importMsg.startsWith('Feil') ? 'error' : 'muted'}>
+            {importMsg}
+          </p>
+        )}
+      </div>
 
       <h3 className="detail-h3">Tidligere økter</h3>
       {workouts.length === 0 ? (

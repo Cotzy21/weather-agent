@@ -23,6 +23,13 @@ class WorkoutCalorieEstimatorTest {
     }
 
     @Test
+    void loggedCaloriesFromGarminTrumpTheEstimate() {
+        // Importerte økter har ekte kalorier (pulsdata) - da estimerer vi ikke.
+        assertEquals(412, WorkoutCalorieEstimator.estimate(
+                workout("LØPING", "{\"distanceKm\":10,\"durationMin\":60,\"kcal\":412}"), WEIGHT));
+    }
+
+    @Test
     void runningUsesSpeedAsMet() {
         // 10 km på 60 min = 10 km/t -> 10 MET · 80 kg · 1 t = 800 kcal.
         assertEquals(800, WorkoutCalorieEstimator.estimate(

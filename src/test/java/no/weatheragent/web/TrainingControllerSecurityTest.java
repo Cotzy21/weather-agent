@@ -2,6 +2,7 @@ package no.weatheragent.web;
 
 import no.weatheragent.security.SecurityConfig;
 import no.weatheragent.training.TrainingPlanService;
+import no.weatheragent.training.WorkoutImportService;
 import no.weatheragent.training.WorkoutService;
 import no.weatheragent.training.WorkoutSuggester;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(TrainingController.class)
@@ -35,6 +37,9 @@ class TrainingControllerSecurityTest {
 
     @MockitoBean
     private TrainingPlanService plans;
+
+    @MockitoBean
+    private WorkoutImportService importer;
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
@@ -61,6 +66,12 @@ class TrainingControllerSecurityTest {
     @Test
     void planerRequireAuthentication() throws Exception {
         mvc.perform(get("/api/trening/planer")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void garminImportRequiresAuthentication() throws Exception {
+        mvc.perform(post("/api/trening/import/garmin").contentType("text/plain").content("a,b"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
