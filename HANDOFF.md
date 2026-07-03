@@ -63,8 +63,16 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
   hardkodede råd når inntaket er lavt (`NutrientReference`).
   Kilde-attribusjon til Matvaretabellen/Mattilsynet vises i UI (NLOD-lisens,
   kommersiell bruk OK med henvisning).
-- Gjenstår: kaloriteller m/vektmål, strekkode (utsatt), egne/publiserte
-  matvarer, kobling trening ↔ kosthold (forbrente kalorier → anbefalinger),
+- ✅ NYTT: **kaloriteller med vektmål** (`CalorieGoal*`, Flyway V7): profil
+  (vekt/høyde/alder/kjønn/aktivitet/tempo) → daglig kcal-mål via
+  Mifflin-St Jeor × aktivitetsfaktor ± 7700 kcal/kg fordelt på uka; gulv på
+  1400 kcal/dag og tak på ±1,5 kg/uke. Målet beregnes alltid ferskt (lagres
+  ikke), så formel-forbedringer slår inn for alle.
+- ✅ NYTT: **trening ↔ kosthold**: `WorkoutCalorieEstimator` (ren MET-tabell,
+  løping fartsbasert, hiking m/stigningstillegg, styrke ~3 min/sett) +
+  `DailyBalanceService` → `/api/kosthold/dag` viser nå
+  «mål − spist + trening = igjen» og et påfyll-råd ved forbrenning ≥ 500 kcal.
+- Gjenstår: strekkode (utsatt), egne/publiserte matvarer,
   fremside-sammendrag, habit tracker.
 
 ### Recovery/skadeforebygging — ikke startet
@@ -105,11 +113,11 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
 
 ## Foreslåtte neste steg (i rekkefølge)
 
-1. Verifisere 401-fiksen + dagboka ende-til-ende når env-variablene er satt
-   her (migrasjonene V5/V6 kjøres automatisk av Flyway ved oppstart).
-2. Kaloriteller med vektmål i kosthold (daglig kcal-mål ut fra mål/tempo).
-3. Kobling trening ↔ kosthold (forbrente kalorier inn i dagstotalen).
-4. Turdetaljer i ruteplanleggeren (terreng/stigning/vanskelighetsgrad).
+1. Verifisere 401-fiksen + dagboka + kaloribalansen ende-til-ende når
+   env-variablene er satt her (Flyway kjører V5-V7 automatisk ved oppstart).
+2. Fremside-sammendrag (dagens balanse + ukas mangler på Hjem, klikk → kosthold).
+3. Turdetaljer i ruteplanleggeren (terreng/stigning/vanskelighetsgrad).
+4. Habit tracker (koffein/søvn/lesing …) i kosthold eller egen fane.
 
 ## Arbeidsstil (viktig)
 

@@ -895,7 +895,21 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .diary-amount { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
 .diary-amount label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
 .diary-amount input { width: 90px; }
-.diary-totals { font-size: 15px; margin: 10px 0; }
+.diary-totals { font-size: 15px; margin: 10px 0 4px; }
+.diary-balance { font-size: 14px; margin: 0 0 8px; color: var(--muted); }
+.diary-balance .over-budget { color: var(--danger); }
+.goal-toggle { align-self: end; font-weight: 600; }
+.goal-form { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; border-top: 1px solid var(--border); padding-top: 10px; margin-bottom: 10px; }
+.goal-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.goal-form input { width: 80px; }
+.recovery-tip {
+  background: var(--accent-soft);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin: 0 0 10px;
+  font-size: 13.5px;
+}
 .diary-meal ul { list-style: none; margin: 4px 0 10px; padding: 0; }
 .diary-meal li { display: flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 14px; }
 .week-panel { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 8px; }

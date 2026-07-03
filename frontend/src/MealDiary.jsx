@@ -18,6 +18,22 @@ const MEALS = [
   { v: 'MELLOM', t: 'Mellommåltid' },
 ]
 
+const ACTIVITY = [
+  { v: 'ROLIG', t: 'Rolig (stillesittende)' },
+  { v: 'LETT', t: 'Lett aktiv' },
+  { v: 'MODERAT', t: 'Moderat aktiv' },
+  { v: 'HØY', t: 'Svært aktiv' },
+]
+
+const PACE = [
+  { v: -1, t: 'Ned 1 kg/uke' },
+  { v: -0.5, t: 'Ned 0,5 kg/uke' },
+  { v: -0.25, t: 'Ned 0,25 kg/uke' },
+  { v: 0, t: 'Holde vekta' },
+  { v: 0.25, t: 'Opp 0,25 kg/uke' },
+  { v: 0.5, t: 'Opp 0,5 kg/uke' },
+]
+
 const today = () => new Date().toISOString().slice(0, 10)
 
 export default function MealDiary({ session }) {
@@ -34,6 +50,12 @@ export default function MealDiary({ session }) {
   const [week, setWeek] = useState([])
   const [showWeek, setShowWeek] = useState(false)
   const [error, setError] = useState(null)
+
+  const [goal, setGoal] = useState(null)       // lagret profil + utregnet mål
+  const [showGoal, setShowGoal] = useState(false)
+  const [goalForm, setGoalForm] = useState({
+    weightKg: '', heightCm: '', age: '', sex: 'M', activityLevel: 'MODERAT', goalKgPerWeek: 0,
+  })
 
   // Debounced søk – venter til brukeren slutter å skrive.
   useEffect(() => {
@@ -56,7 +78,7 @@ export default function MealDiary({ session }) {
   }, [query])
 
   useEffect(() => { loadDay() }, [date]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { loadWeek() }, [])    // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadWeek(); loadGoal() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadDay() {
     try {
@@ -70,6 +92,42 @@ export default function MealDiary({ session }) {
       const res = await fetch(apiUrl(`/api/kosthold/uke?til=${today()}`), { headers: await authHeaders() })
       if (res.ok) setWeek(await res.json())
     } catch { /* panelet er sekundært */ }
+  }
+
+  async function loadGoal() {
+    try {
+      const res = await fetch(apiUrl('/api/kosthold/maal'), { headers: await authHeaders() })
+      if (res.ok) {
+        const g = await res.json()
+        setGoal(g)
+        setGoalForm({ weightKg: g.weightKg, heightCm: g.heightCm, age: g.age, sex: g.sex, activityLevel: g.activityLevel, goalKgPerWeek: g.goalKgPerWeek })
+      }
+      // 404 = ikke satt opp ennå - da viser vi bare «sett opp mål»-knappen.
+    } catch { /* sekundært */ }
+  }
+
+  async function saveGoal() {
+    setError(null)
+    try {
+      const res = await fetch(apiUrl('/api/kosthold/maal'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({
+          weightKg: Number(goalForm.weightKg),
+          heightCm: Number(goalForm.heightCm),
+          age: Number(goalForm.age),
+          sex: goalForm.sex,
+          activityLevel: goalForm.activityLevel,
+          goalKgPerWeek: Number(goalForm.goalKgPerWeek),
+        }),
+      })
+      if (!res.ok) throw new Error(await readError(res))
+      setGoal(await res.json())
+      setShowGoal(false)
+      loadDay() // dagsbalansen avhenger av målet
+    } catch (e) {
+      setError(e.message)
+    }
   }
 
   function pick(food) {
@@ -131,7 +189,49 @@ export default function MealDiary({ session }) {
             {MEALS.map((m) => <option key={m.v} value={m.v}>{m.t}</option>)}
           </select>
         </label>
+        <button className="linklike goal-toggle" onClick={() => setShowGoal(!showGoal)}>
+          🎯 {goal ? `Mål: ${goal.dailyTargetKcal.toFixed(0)} kcal/dag` : 'Sett opp kalorimål'} {showGoal ? '▾' : '▸'}
+        </button>
       </div>
+
+      {showGoal && (
+        <div className="goal-form">
+          <label>Vekt (kg)
+            <input type="number" min="30" value={goalForm.weightKg}
+                   onChange={(e) => setGoalForm({ ...goalForm, weightKg: e.target.value })} />
+          </label>
+          <label>Høyde (cm)
+            <input type="number" min="120" value={goalForm.heightCm}
+                   onChange={(e) => setGoalForm({ ...goalForm, heightCm: e.target.value })} />
+          </label>
+          <label>Alder
+            <input type="number" min="15" value={goalForm.age}
+                   onChange={(e) => setGoalForm({ ...goalForm, age: e.target.value })} />
+          </label>
+          <label>Kjønn
+            <select value={goalForm.sex} onChange={(e) => setGoalForm({ ...goalForm, sex: e.target.value })}>
+              <option value="M">Mann</option>
+              <option value="K">Kvinne</option>
+            </select>
+          </label>
+          <label>Hverdagsaktivitet
+            <select value={goalForm.activityLevel}
+                    onChange={(e) => setGoalForm({ ...goalForm, activityLevel: e.target.value })}>
+              {ACTIVITY.map((a) => <option key={a.v} value={a.v}>{a.t}</option>)}
+            </select>
+          </label>
+          <label>Mål
+            <select value={goalForm.goalKgPerWeek}
+                    onChange={(e) => setGoalForm({ ...goalForm, goalKgPerWeek: e.target.value })}>
+              {PACE.map((p) => <option key={p.v} value={p.v}>{p.t}</option>)}
+            </select>
+          </label>
+          <button className="primary" onClick={saveGoal}
+                  disabled={!goalForm.weightKg || !goalForm.heightCm || !goalForm.age}>
+            Lagre mål
+          </button>
+        </div>
+      )}
 
       <input
         className="diary-search"
@@ -182,7 +282,18 @@ export default function MealDiary({ session }) {
           <p className="diary-totals">
             <strong>{day.kcal.toFixed(0)} kcal</strong>
             {' '}· {day.proteinG.toFixed(0)} g protein · {day.carbG.toFixed(0)} g karbo · {day.fatG.toFixed(0)} g fett
+            {day.burnedKcal > 0 && <> · 🏋️ trening −{day.burnedKcal} kcal</>}
           </p>
+          {day.targetKcal != null && (
+            <p className="diary-balance">
+              Mål {day.targetKcal.toFixed(0)} − spist {day.kcal.toFixed(0)}
+              {day.burnedKcal > 0 && <> + trening {day.burnedKcal}</>}
+              {' '}= <strong className={day.remainingKcal < 0 ? 'over-budget' : ''}>
+                {day.remainingKcal.toFixed(0)} kcal igjen
+              </strong>
+            </p>
+          )}
+          {day.recoveryTip && <p className="recovery-tip">💧 {day.recoveryTip}</p>}
           {MEALS.filter((m) => day.entries.some((e) => e.meal === m.v)).map((m) => (
             <div className="diary-meal" key={m.v}>
               <p className="trails-title">{m.t}</p>

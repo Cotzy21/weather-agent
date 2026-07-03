@@ -47,6 +47,12 @@ class MealLogControllerSecurityTest {
     private MealLogService meals;
 
     @MockitoBean
+    private no.weatheragent.nutrition.DailyBalanceService balance;
+
+    @MockitoBean
+    private no.weatheragent.nutrition.CalorieGoalService goals;
+
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     @Test
@@ -54,7 +60,32 @@ class MealLogControllerSecurityTest {
         mvc.perform(get("/api/kosthold/matvarer").param("sok", "melk")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/kosthold/dag").param("dato", "2026-07-02")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/kosthold/uke").param("til", "2026-07-02")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/kosthold/maal")).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/kosthold/logg")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void dayIncludesTrainingBalance() throws Exception {
+        when(balance.day(eq(UUID.fromString(SUB)), eq(LocalDate.of(2026, 7, 2))))
+                .thenReturn(new no.weatheragent.nutrition.DailyBalanceService.DayBalance(
+                        new MealLogService.DaySummary(List.of(), 1500, 100, 50, 150),
+                        800, 2800.0, 2100.0, "Stor treningsdag ..."));
+
+        mvc.perform(get("/api/kosthold/dag").param("dato", "2026-07-02")
+                        .with(jwt().jwt(j -> j.subject(SUB))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.kcal").value(1500.0))
+                .andExpect(jsonPath("$.burnedKcal").value(800))
+                .andExpect(jsonPath("$.remainingKcal").value(2100.0))
+                .andExpect(jsonPath("$.recoveryTip").isNotEmpty());
+    }
+
+    @Test
+    void goalReturns404UntilConfigured() throws Exception {
+        when(goals.find(UUID.fromString(SUB))).thenReturn(java.util.Optional.empty());
+
+        mvc.perform(get("/api/kosthold/maal").with(jwt().jwt(j -> j.subject(SUB))))
+                .andExpect(status().isNotFound());
     }
 
     @Test
