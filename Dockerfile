@@ -28,4 +28,12 @@ FROM eclipse-temurin:23-jre
 WORKDIR /app
 COPY --from=backend /app/target/weather-agent-*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Container-vennlige JVM-flagg (viktig på små hosts som Render free / 512 MB):
+#  - MaxRAMPercentage: bruk en ANDEL av containerens RAM, ikke anta en stor maskin
+#    (uten dette tar JVM for mye og blir OOM-drept -> "henger"/restart-loop).
+#  - SerialGC: lavest minne/CPU-overhead på 1-CPU-maskiner.
+#  - ExitOnOutOfMemoryError: krasj hardt ved OOM så hosten restarter rent.
+# Kan overstyres ved å sette JAVA_OPTS som env-variabel hos hosten. exec => java
+# blir PID 1 og får SIGTERM for ryddig avslutning.
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=65.0 -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError"
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
