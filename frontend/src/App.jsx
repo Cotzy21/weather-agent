@@ -4,6 +4,7 @@ import PlaceDetail from './PlaceDetail'
 import RoutePlanner from './RoutePlanner'
 import TrainingView from './TrainingView'
 import NutritionView from './NutritionView'
+import RecoveryView from './RecoveryView'
 import Dashboard from './Dashboard'
 import AuthView from './AuthView'
 import { supabase } from './supabase'
@@ -290,6 +291,9 @@ export default function App() {
           <button className={`nav-item ${tab === 'kosthold' ? 'active' : ''}`} title="Kosthold" onClick={() => setTab('kosthold')}>
             🥗 <span>Kosthold</span>
           </button>
+          <button className={`nav-item ${tab === 'restitusjon' ? 'active' : ''}`} title="Restitusjon" onClick={() => setTab('restitusjon')}>
+            🧘 <span>Restitusjon</span>
+          </button>
         </nav>
         <button
           className="nav-item account-btn"
@@ -318,6 +322,7 @@ export default function App() {
         )}
         {tab === 'trening' && <TrainingView session={session} />}
         {tab === 'kosthold' && <NutritionView session={session} />}
+        {tab === 'restitusjon' && <RecoveryView session={session} />}
         {tab === 'konto' && <AuthView session={session} />}
       </main>
     </div>

@@ -45,6 +45,7 @@ public class SecurityConfig {
                                 "/api/treningsokter", "/api/treningsokter/**",
                                 "/api/ovelser/**",
                                 "/api/trening/**",
+                                "/api/recovery", "/api/recovery/**",
                                 "/api/kosthold/**").authenticated()
                         .anyRequest().permitAll())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));

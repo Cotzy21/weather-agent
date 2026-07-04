@@ -1298,3 +1298,36 @@ header .sub { margin-top: 6px; color: var(--muted); }
 }
 .composer button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 26px rgba(52, 211, 153, 0.4); }
 .composer button:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+/* ---------- Restitusjon og skadeforebygging ---------- */
+.warn-card {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.warn-card.high {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.45);
+}
+.warn-head { margin: 0 0 4px; font-size: 15px; }
+.warn-msg { margin: 0; font-size: 14px; color: var(--muted); }
+.rest-card {
+  background: var(--accent-soft);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  font-size: 14.5px;
+}
+.advice-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.advice-head { margin: 0 0 6px; font-size: 15px; }
+.advice-card ul { margin: 0; padding-left: 20px; }
+.advice-card li { margin: 3px 0; font-size: 14px; }

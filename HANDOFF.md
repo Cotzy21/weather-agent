@@ -81,10 +81,19 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
 - Gjenstår: strekkode (utsatt), egne/publiserte matvarer,
   fremside-sammendrag, habit tracker.
 
-### Recovery/skadeforebygging — ikke startet
-- Plan: hardkodet/forhåndsresearchet innhold for de vanligste sportene
-  (brukeren gjør research — SPØR om verdier, f.eks. trygge volumøkninger
-  per uke, i stedet for å finne på).
+### Recovery/skadeforebygging — BYGGET (egen «Restitusjon»-fane)
+- ✅ **Skadevarsler** (`InjuryRiskAnalyzer`, ren): ACWR-metoden — belastning
+  siste 7 dager delt på snittet av de 4 ukene før, per økt-type. Ratio ≥1,3
+  = moderat, ≥1,5 = høy; helt ny aktivitet får eget «bygg gradvis»-varsel.
+  Belastningsmål = kcal fra `WorkoutCalorieEstimator` (samme enhet på tvers
+  av typer, og Garmin-importerte økter bidrar med EKTE pulskalorier).
+  Typespesifikke skaderåd hardkodet (beinhinner/akilles, pulley, svømmerskulder …).
+- ✅ **Restitusjonssteg** (`RecoveryAdvisor`, ren): hardkodede råd per
+  økt-type for øktene i dag/i går, + hviledag-forslag ved ≥3 treningsdager
+  på rad. UI sier tydelig «tommelfingerregler, ikke medisinske råd».
+- ✅ `GET /api/recovery` (autentisert) + 🧘 Restitusjon-fane i frontend.
+- Gjenstår: recovery-verktøy (massasjepistol, basseng …) inn i rådene,
+  finjustere terskler/rådtekster med brukerens research.
 
 ### Generelt
 - ✅ NYTT: **fremside-sammendrag for kosthold** (klikkbart kort på Hjem):
@@ -122,13 +131,11 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
 
 ## Foreslåtte neste steg (i rekkefølge)
 
-1. Verifisere alt nytt ende-til-ende når env-variablene er satt her
-   (Flyway kjører V5-V7 automatisk ved oppstart).
+1. Verifisere alt nytt ende-til-ende mot ekte backend/DB (Flyway kjører
+   V5-V8 automatisk ved oppstart).
 2. Habit tracker (koffein/søvn/lesing …) i kosthold eller egen fane.
-3. Recovery-fane med hardkodede råd per sport (brukeren gjør research -
-   spør etter verdier, f.eks. trygge ukentlige volumøkninger).
-4. Skadeforebygging: varsle ved uvanlig volumhopp i én aktivitetstype
-   (bruker treningsloggen som alt finnes).
+3. i18n: engelsk standard + norsk, språkvalg lagret per bruker.
+4. Recovery-verktøy (massasjepistol, basseng …) inn i restitusjonsrådene.
 
 ## Arbeidsstil (viktig)
 
