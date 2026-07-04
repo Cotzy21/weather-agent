@@ -1331,3 +1331,39 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .advice-head { margin: 0 0 6px; font-size: 15px; }
 .advice-card ul { margin: 0; padding-left: 20px; }
 .advice-card li { margin: 3px 0; font-size: 14px; }
+
+/* ---------- Habit tracker (Restitusjon-fanen) ---------- */
+.habits { margin-top: 20px; }
+.habits-head { display: flex; align-items: center; gap: 10px; }
+.habits-head .detail-h3 { margin: 0; }
+.habit-form { margin: 10px 0; }
+.habit-suggestions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.habit-form-fields { display: flex; gap: 8px; flex-wrap: wrap; }
+.habit-form-fields input { flex: 1; min-width: 140px; }
+.habit-form-fields input.short { flex: 0; min-width: 110px; }
+.habit-grid { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+.habit-row { display: flex; align-items: center; gap: 6px; }
+.habit-header { color: var(--muted); font-size: 12px; }
+.habit-name { flex: 1; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.habit-unit { font-size: 12px; }
+.habit-day { width: 42px; text-align: center; }
+.habit-day.today { color: var(--accent-strong); font-weight: 700; }
+.habit-cell {
+  width: 42px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-2);
+  color: var(--text);
+  text-align: center;
+  font-size: 13px;
+  padding: 0 2px;
+}
+.habit-cell.today { border-color: var(--accent); }
+.habit-cell.toggle { cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.habit-cell.toggle.done { background: var(--accent-soft); border-color: rgba(52, 211, 153, 0.5); color: var(--accent-strong); font-weight: 700; }
+.habit-cell.toggle:hover { border-color: var(--accent); }
+.habit-streak { width: 30px; text-align: center; font-size: 13px; font-weight: 700; color: var(--accent-strong); }
+@media (max-width: 640px) {
+  .habit-day, .habit-cell { width: 34px; }
+}

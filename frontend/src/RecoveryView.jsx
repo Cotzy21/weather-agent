@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import HabitTracker from './HabitTracker'
 import { authHeaders } from './supabase'
 import { apiUrl } from './api'
 import { useReveal } from './anim'
@@ -93,6 +94,8 @@ export default function RecoveryView({ session }) {
           ))}
         </>
       )}
+
+      <HabitTracker />
 
       <p className="muted source-note" data-reveal>
         Varslene sammenligner siste 7 dager med snittet av de 4 ukene før

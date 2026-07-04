@@ -78,8 +78,12 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
   løping fartsbasert, hiking m/stigningstillegg, styrke ~3 min/sett) +
   `DailyBalanceService` → `/api/kosthold/dag` viser nå
   «mål − spist + trening = igjen» og et påfyll-råd ved forbrenning ≥ 500 kcal.
-- Gjenstår: strekkode (utsatt), egne/publiserte matvarer,
-  fremside-sammendrag, habit tracker.
+- ✅ NYTT: **habit tracker** (`habit`-pakke, Flyway V9, UI i Restitusjon-fanen
+  siden søvn/koffein er restitusjonsdata): egendefinerte vaner m/emoji og
+  valgfri enhet (tom = ja/nei-vane), 7-dagers rutenett (toggle/tallfelt),
+  streak per vane, hurtigforslag (koffein/søvn/lesing/meditasjon/vann),
+  tak på 20. Skal senere sammenlignes med HRV fra klokke-import.
+- Gjenstår: strekkode (utsatt), egne/publiserte matvarer deles offentlig.
 
 ### Recovery/skadeforebygging — BYGGET (egen «Restitusjon»-fane)
 - ✅ **Skadevarsler** (`InjuryRiskAnalyzer`, ren): ACWR-metoden — belastning
