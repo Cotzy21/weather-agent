@@ -1,6 +1,8 @@
 package no.weatheragent.interpret;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import no.weatheragent.ranking.Impact;
+import no.weatheragent.ranking.ScoreWeights;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
@@ -41,7 +43,23 @@ public final class LlmInterpretationParser {
 
         TripType tripType = TripType.fromString(text(root, "tripType"));
 
-        return new Interpretation(region, country, when, target, dates, tripType);
+        return new Interpretation(region, country, when, target, dates, tripType, weightsOrNull(root));
+    }
+
+    /**
+     * Vekter fra spørsmålet («hater regn» -> regn HØY), eller null når modellen
+     * ikke fant preferanser. Ukjente verdier blir MIDDELS (Impact.fromString).
+     */
+    private static ScoreWeights weightsOrNull(JsonNode root) {
+        JsonNode w = root.path("weights");
+        if (w.isMissingNode() || w.isNull() || !w.isObject()) {
+            return null;
+        }
+        return ScoreWeights.of(
+                Impact.fromString(text(w, "temp")),
+                Impact.fromString(text(w, "rain")),
+                Impact.fromString(text(w, "wind")),
+                Impact.fromString(text(w, "elevation")));
     }
 
     /**

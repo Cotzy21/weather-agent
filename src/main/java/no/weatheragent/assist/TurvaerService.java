@@ -90,6 +90,12 @@ public class TurvaerService {
             return new TurResult(tolkning, List.of(), List.of(), List.of());
         }
 
+        // «Vi hater regn og vind» skal vekte seg selv - men bare når brukeren
+        // ikke selv har justert glidebryterne (manuelle valg vinner alltid).
+        if (ScoreWeights.DEFAULT.equals(weights) && tolkning.weights() != null) {
+            weights = tolkning.weights();
+        }
+
         // «Hvordan blir været i Oslo» er ikke et rangeringsspørsmål: slå opp
         // stedet (geocoding) og vis varselet for akkurat det, med turer og
         // klær-råd rundt - i stedet for å rangere topper i området.

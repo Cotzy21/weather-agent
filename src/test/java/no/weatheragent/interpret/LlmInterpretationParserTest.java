@@ -115,4 +115,32 @@ class LlmInterpretationParserTest {
         assertEquals(today, r.dates().from());
         assertEquals(today, r.dates().to());
     }
+
+    @Test
+    void parsesWeightsWhenTheQuestionExpressesPreferences() throws Exception {
+        var root = new com.fasterxml.jackson.databind.ObjectMapper().readTree("""
+                {"region":"Nordland","country":"NO","when":"HELGA","target":"STED",
+                 "tripType":"UANSETT",
+                 "weights":{"temp":"LAV","rain":"HØY","wind":"HØY","elevation":"MIDDELS"}}
+                """);
+
+        Interpretation i = LlmInterpretationParser.parse(root, java.time.LocalDate.of(2026, 7, 4));
+
+        org.junit.jupiter.api.Assertions.assertNotNull(i.weights());
+        // «Hater regn/vind» -> faktor 2.0; «temp ikke viktig» -> 0.5.
+        org.junit.jupiter.api.Assertions.assertEquals(2.0, i.weights().precipitation());
+        org.junit.jupiter.api.Assertions.assertEquals(2.0, i.weights().wind());
+        org.junit.jupiter.api.Assertions.assertEquals(0.5, i.weights().temperature());
+        org.junit.jupiter.api.Assertions.assertEquals(1.0, i.weights().elevation());
+    }
+
+    @Test
+    void missingWeightsGivesNull() throws Exception {
+        var root = new com.fasterxml.jackson.databind.ObjectMapper().readTree(
+                "{\"region\":\"Rogaland\",\"when\":\"HELGA\"}");
+
+        Interpretation i = LlmInterpretationParser.parse(root, java.time.LocalDate.of(2026, 7, 4));
+
+        org.junit.jupiter.api.Assertions.assertNull(i.weights());
+    }
 }

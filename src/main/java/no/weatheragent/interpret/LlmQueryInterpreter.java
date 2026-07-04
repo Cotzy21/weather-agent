@@ -97,6 +97,14 @@ public class LlmQueryInterpreter implements QueryInterpreter {
                                "STED"   ellers (rangere steder: "hvor blir det
                                         best/finest vær ...").
                   "tripType" - nøyaktig én av: FJELLTUR, LAVTUR, UANSETT.
+                  "weights"  - KUN når spørsmålet uttrykker vær-preferanser, ellers
+                               null. Objekt med "temp", "rain", "wind", "elevation",
+                               hver nøyaktig LAV, MIDDELS eller HØY.
+                               Å HATE/ville unngå noe -> den faktoren HØY (den skal
+                               telle mye). At noe «ikke er viktig» -> LAV.
+                               Eksempel: «vi hater regn og vind, temperatur er ikke
+                               viktig» -> {"temp":"LAV","rain":"HØY","wind":"HØY",
+                               "elevation":"MIDDELS"}.
 
                 I dag er %s (tidssone Europe/Oslo) - bruk det bare til å fylle inn
                 årstall ved konkrete datoer.
@@ -114,6 +122,8 @@ public class LlmQueryInterpreter implements QueryInterpreter {
                     -> {"region":"Tirol","country":"AT","when":"NESTE_HELG","target":"STED","fromDate":null,"toDate":null,"tripType":"UANSETT"}
                   "været på Sunnmøre 3. juli"
                     -> {"region":"Sunnmøre","country":"NO","when":"KONKRET","target":"STED","fromDate":"%s-07-03","toDate":"%s-07-03","tripType":"UANSETT"}
+                  "vi hater regn og vind men temperaturen er ikke viktig, hvor i Nordland bør vi telte i helga"
+                    -> {"region":"Nordland","country":"NO","when":"HELGA","target":"STED","fromDate":null,"toDate":null,"tripType":"UANSETT","weights":{"temp":"LAV","rain":"HØY","wind":"HØY","elevation":"MIDDELS"}}
                 """.formatted(today, today.getYear(), today.getYear());
     }
 
