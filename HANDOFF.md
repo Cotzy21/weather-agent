@@ -47,6 +47,9 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
   «vær forberedt på»-råd (bratt/høyfjell/langtur/nedstigning). Beregnes fra
   høydeprofilen som allerede hentes; terskler kan finjusteres mot ekte
   DNT-verdier senere.
+- ✅ NYTT: **prompten vekter seg selv**: «vi hater regn og vind, temperatur
+  er ikke viktig» -> tolkeren gir weights (regn/vind HØY, temp LAV) som
+  brukes NÅR de manuelle glidebryterne står på standard (manuelt vinner).
 - Gjenstår: highlighting av populære stier rundt et valgt resultat,
   «fortell om turen»-tekst (LLM), klesråd koblet til værdato for turen.
 
