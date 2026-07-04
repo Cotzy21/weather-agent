@@ -143,11 +143,12 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
 
 ## Foreslåtte neste steg (i rekkefølge)
 
-1. Verifisere alt nytt ende-til-ende mot ekte backend/DB (Flyway kjører
-   V5-V8 automatisk ved oppstart).
-2. Habit tracker (koffein/søvn/lesing …) i kosthold eller egen fane.
-3. i18n: engelsk standard + norsk, språkvalg lagret per bruker.
-4. Recovery-verktøy (massasjepistol, basseng …) inn i restitusjonsrådene.
+1. **DEPLOY — se DEPLOY.md** for hele sjekklisten (env, lisenser,
+   rate limiting, RLS, personvern). Habit tracker og i18n er ferdige.
+2. Verifisere alt ende-til-ende mot ekte backend/DB (Flyway kjører
+   V1-V9 automatisk ved oppstart).
+3. Recovery-verktøy (massasjepistol, basseng …) inn i restitusjonsrådene.
+4. Klokke-integrasjoner / backend-i18n / prismodell (se DEPLOY.md §3).
 
 ## Arbeidsstil (viktig)
 
