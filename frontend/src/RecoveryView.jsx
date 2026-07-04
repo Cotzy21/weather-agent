@@ -3,6 +3,7 @@ import HabitTracker from './HabitTracker'
 import { authHeaders } from './supabase'
 import { apiUrl } from './api'
 import { useReveal } from './anim'
+import { useI18n } from './i18n.jsx'
 
 /**
  * Restitusjon og skadeforebygging: skadevarsler (volumhopp per aktivitet),
@@ -18,6 +19,7 @@ const TYPE_LABELS = {
 const label = (type) => TYPE_LABELS[type] || type
 
 export default function RecoveryView({ session }) {
+  const { t } = useI18n()
   const [report, setReport] = useState(null)
   const revealRef = useReveal([session, report])
 
@@ -37,10 +39,9 @@ export default function RecoveryView({ session }) {
   if (!session) {
     return (
       <div className="recovery" ref={revealRef}>
-        <h2 className="detail-title" data-reveal>🧘 Restitusjon</h2>
+        <h2 className="detail-title" data-reveal>{t('🧘 Restitusjon')}</h2>
         <p className="muted" data-reveal>
-          Logg inn og før treningsdagbok – så får du restitusjonsråd og beskjed
-          når treningsmengden øker raskere enn kroppen liker.
+          {t('Logg inn og før treningsdagbok – så får du restitusjonsråd og beskjed når treningsmengden øker raskere enn kroppen liker.')}
         </p>
       </div>
     )
@@ -51,24 +52,23 @@ export default function RecoveryView({ session }) {
 
   return (
     <div className="recovery" ref={revealRef}>
-      <h2 className="detail-title" data-reveal>🧘 Restitusjon</h2>
+      <h2 className="detail-title" data-reveal>{t('🧘 Restitusjon')}</h2>
 
-      {!report && <p className="muted" data-reveal>Henter rapporten …</p>}
+      {!report && <p className="muted" data-reveal>{t('Henter rapporten …')}</p>}
 
       {empty && (
         <p className="muted" data-reveal>
-          Ingenting å melde – logg økter under «Trening», så dukker råd og
-          varsler opp her.
+          {t('Ingenting å melde – logg økter under «Trening», så dukker råd og varsler opp her.')}
         </p>
       )}
 
       {report?.warnings.map((w) => (
         <div key={w.type} className={`warn-card ${w.level === 'HOY' ? 'high' : ''}`} data-reveal>
           <p className="warn-head">
-            ⚠️ <strong>{label(w.type)}</strong>
+            ⚠️ <strong>{t(label(w.type))}</strong>
             {w.level === 'NY_AKTIVITET'
-              ? ' – ny aktivitet for deg'
-              : ` – ~${w.percentAboveNormal} % over ditt vanlige nivå`}
+              ? ` ${t('– ny aktivitet for deg')}`
+              : ` ${t('– ~{p} % over ditt vanlige nivå', { p: w.percentAboveNormal })}`}
           </p>
           <p className="warn-msg">{w.message}</p>
         </div>
@@ -76,18 +76,18 @@ export default function RecoveryView({ session }) {
 
       {report?.restDaySuggested && (
         <div className="rest-card" data-reveal>
-          🛌 Du har trent <strong>{report.streakDays} dager på rad</strong> – kroppen
-          bygger seg sterkere på hviledagen. Vurder en rolig dag i morgen.
+          🛌 <strong>{t('Du har trent {n} dager på rad', { n: report.streakDays })}</strong>{' '}
+          {t('– kroppen bygger seg sterkere på hviledagen. Vurder en rolig dag i morgen.')}
         </div>
       )}
 
       {report?.advice.length > 0 && (
         <>
-          <h3 className="detail-h3" data-reveal>Etter de siste øktene</h3>
+          <h3 className="detail-h3" data-reveal>{t('Etter de siste øktene')}</h3>
           {report.advice.map((a) => (
             <div key={a.type} className="advice-card" data-reveal>
               <p className="advice-head">
-                <strong>{label(a.type)}</strong> <span className="muted">· {a.when}</span>
+                <strong>{t(label(a.type))}</strong> <span className="muted">· {t(a.when)}</span>
               </p>
               <ul>{a.steps.map((s, i) => <li key={i}>{s}</li>)}</ul>
             </div>
@@ -98,9 +98,7 @@ export default function RecoveryView({ session }) {
       <HabitTracker />
 
       <p className="muted source-note" data-reveal>
-        Varslene sammenligner siste 7 dager med snittet av de 4 ukene før
-        (ACWR-metoden fra idrettsforskningen). Generelle tommelfingerregler –
-        ikke medisinske råd.
+        {t('Varslene sammenligner siste 7 dager med snittet av de 4 ukene før (ACWR-metoden fra idrettsforskningen). Generelle tommelfingerregler – ikke medisinske råd.')}
       </p>
     </div>
   )

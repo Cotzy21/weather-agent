@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import ResultMap from './ResultMap'
 import { apiUrl, readError } from './api'
+import { useI18n } from './i18n.jsx'
 
 // "2026-06-27" -> "Lørdag 27. jun"
 function fmtDay(iso) {
@@ -10,6 +11,7 @@ function fmtDay(iso) {
 }
 
 export default function PlaceDetail({ place, onBack, onPlan }) {
+  const { t } = useI18n()
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
 
@@ -32,9 +34,9 @@ export default function PlaceDetail({ place, onBack, onPlan }) {
 
   return (
     <div className="detail">
-      <button className="back" onClick={onBack}>← Tilbake til resultatene</button>
+      <button className="back" onClick={onBack}>{t('← Tilbake til resultatene')}</button>
 
-      {error && <p className="error">Beklager – {error}</p>}
+      {error && <p className="error">{t('Beklager –')} {error}</p>}
       {!data && !error && (
         <p className="muted typing">Henter varsel <span>·</span><span>·</span><span>·</span></p>
       )}
@@ -48,7 +50,7 @@ export default function PlaceDetail({ place, onBack, onPlan }) {
                 className="plan-btn"
                 onClick={() => onPlan({ name: data.name, lat: place.lat, lon: place.lon })}
               >
-                🧭 Planlegg tur hit
+                {t('🧭 Planlegg tur hit')}
               </button>
             )}
           </h2>
@@ -65,9 +67,9 @@ export default function PlaceDetail({ place, onBack, onPlan }) {
             trails={data.trails}
           />
 
-          <h3 className="detail-h3">Vær de neste dagene</h3>
+          <h3 className="detail-h3">{t('Vær de neste dagene')}</h3>
           {data.days.length === 0 ? (
-            <p className="muted">Ingen værdata tilgjengelig for stedet.</p>
+            <p className="muted">{t('Ingen værdata tilgjengelig for stedet.')}</p>
           ) : (
             <div className="days">
               {data.days.map((d, i) => (
@@ -75,7 +77,7 @@ export default function PlaceDetail({ place, onBack, onPlan }) {
                   <span className="day-name">{fmtDay(d.date)}</span>
                   <span className="day-temp">{d.maxTempC.toFixed(1)}°</span>
                   <span className="day-precip">
-                    {d.totalPrecipMm > 0 ? `💧 ${d.totalPrecipMm.toFixed(1)} mm` : 'tørt'}
+                    {d.totalPrecipMm > 0 ? `💧 ${d.totalPrecipMm.toFixed(1)} mm` : t('tørt')}
                   </span>
                   <span className="day-wind">{d.avgWindMs.toFixed(1)} m/s</span>
                 </div>
@@ -91,7 +93,7 @@ export default function PlaceDetail({ place, onBack, onPlan }) {
           )}
 
           <div className="trails">
-            <p className="trails-title">🥾 Merkede turer i nærheten</p>
+            <p className="trails-title">{t('🥾 Merkede turer i nærheten')}</p>
             {data.trails?.length > 0 ? (
               <ul>
                 {data.trails.map((t, i) => (
@@ -102,7 +104,7 @@ export default function PlaceDetail({ place, onBack, onPlan }) {
                 ))}
               </ul>
             ) : (
-              <p className="muted">Fant ingen merkede turer (OpenStreetMap) i nærheten.</p>
+              <p className="muted">{t('Fant ingen merkede turer (OpenStreetMap) i nærheten.')}</p>
             )}
           </div>
         </>

@@ -9,6 +9,7 @@ import Dashboard from './Dashboard'
 import AuthView from './AuthView'
 import { supabase } from './supabase'
 import { apiUrl, readError } from './api'
+import { useI18n } from './i18n.jsx'
 import { useTabTransition } from './anim'
 import './App.css'
 
@@ -31,6 +32,7 @@ function placeForMap(p) {
 }
 
 function Answer({ result, onSelectPlace, onPlan }) {
+  const { t } = useI18n()
   const region = result.region ?? '(ukjent)'
   const isTrail = result.target === 'TUR'
   const isForecast = result.target === 'VARSEL'
@@ -48,8 +50,8 @@ function Answer({ result, onSelectPlace, onPlan }) {
         {interp}
         <p className="muted">
           {result.region
-            ? 'Fant ingen værdata for perioden (kanskje for langt fram?).'
-            : 'Jeg fant ingen region i spørsmålet – prøv å nevne et fylke, f.eks. «Rogaland».'}
+            ? t('Fant ingen værdata for perioden (kanskje for langt fram?).')
+            : t('Jeg fant ingen region i spørsmålet – prøv å nevne et fylke, f.eks. «Rogaland».')}
         </p>
       </div>
     )
@@ -62,30 +64,30 @@ function Answer({ result, onSelectPlace, onPlan }) {
       {interp}
       <p className="winner">
         <span className="medal">{isForecast ? '🌤️' : isTrail ? '🥾' : '🏔️'}</span>{' '}
-        {isForecast ? 'Været i ' : isTrail ? 'Finest vær på turrute: ' : 'Finest vær: '}
+        {isForecast ? 'Været i ' : isTrail ? `${t('Finest vær på turrute:')} ` : `${t('Finest vær:')} `}
         <strong>{best.name}</strong>{' '}
-        <span className="muted">({best.elevationM.toFixed(0)} moh)</span> – snitt{' '}
-        {best.avgTempC.toFixed(1)} °C, {best.avgPrecipMm.toFixed(1)} mm regn/dag
+        <span className="muted">({best.elevationM.toFixed(0)} {t('moh')})</span> – {t('snitt')}{' '}
+        {best.avgTempC.toFixed(1)} °C, {best.avgPrecipMm.toFixed(1)} {t('mm regn/dag')}
         <button
           className="plan-btn"
           onClick={() => onPlan({ name: best.name, lat: best.lat, lon: best.lon })}
         >
-          🧭 Planlegg tur hit
+          {t('🧭 Planlegg tur hit')}
         </button>
       </p>
       {result.clothing?.length > 0 && (
         <div className="gear">
-          <span className="gear-title">🎒 Klær &amp; utstyr</span>
+          <span className="gear-title">{t('🎒 Klær & utstyr')}</span>
           <ul>
             {result.clothing.map((c, i) => <li key={i}>{c}</li>)}
           </ul>
         </div>
       )}
       <ResultMap places={places.map(placeForMap)} trails={result.trails ?? []} />
-      <p className="table-hint">Trykk på en rad for å åpne detaljside med varsel for de neste dagene.</p>
+      <p className="table-hint">{t('Trykk på en rad for å åpne detaljside med varsel for de neste dagene.')}</p>
       <table className="ranking">
         <thead>
-          <tr><th>{isTrail ? 'Tur' : 'Sted'}</th><th>moh</th><th>°C</th><th>mm</th><th>m/s</th><th>score</th></tr>
+          <tr><th>{isTrail ? t('Tur') : t('Sted')}</th><th>{t('moh')}</th><th>°C</th><th>mm</th><th>m/s</th><th>{t('score')}</th></tr>
         </thead>
         <tbody>
           {places.map((p, i) => (
@@ -107,18 +109,18 @@ function Answer({ result, onSelectPlace, onPlan }) {
 
       {!isTrail && (
         <div className="trails">
-          <p className="trails-title">🥾 Merkede turer i området</p>
+          <p className="trails-title">{t('🥾 Merkede turer i området')}</p>
           {result.trails?.length > 0 ? (
             <ul>
-              {result.trails.map((t, i) => (
+              {result.trails.map((trail, i) => (
                 <li key={i}>
-                  {t.name}
-                  {t.operator && <span className="muted"> · {t.operator}</span>}
+                  {trail.name}
+                  {trail.operator && <span className="muted"> · {trail.operator}</span>}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="muted">Fant ingen merkede turer (OpenStreetMap) i nærheten.</p>
+            <p className="muted">{t('Fant ingen merkede turer (OpenStreetMap) i nærheten.')}</p>
           )}
         </div>
       )}
@@ -127,6 +129,7 @@ function Answer({ result, onSelectPlace, onPlan }) {
 }
 
 function VaersokView({ onPlan }) {
+  const { t } = useI18n()
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -169,14 +172,14 @@ function VaersokView({ onPlan }) {
   return (
     <>
       <section className="weights" aria-label="Vekting av faktorer">
-        <span className="weights-title">Hva betyr mest for deg?</span>
+        <span className="weights-title">{t('Hva betyr mest for deg?')}</span>
         <div className="weights-grid">
           {FACTORS.map((f) => (
             <label key={f.key} className="weight">
-              <span className="weight-label">{f.icon} {f.label}</span>
+              <span className="weight-label">{f.icon} {t(f.label)}</span>
               <select value={weights[f.key]} onChange={(e) => setWeight(f.key, e.target.value)}>
                 {LEVELS.map((l) => (
-                  <option key={l.v} value={l.v}>{l.t}</option>
+                  <option key={l.v} value={l.v}>{t(l.t)}</option>
                 ))}
               </select>
             </label>
@@ -190,7 +193,7 @@ function VaersokView({ onPlan }) {
         <>
           <div className="chat">
             {messages.length === 0 && (
-              <p className="hint">Prøv: «hvor er det finest fjellvær i Møre og Romsdal i helga»</p>
+              <p className="hint">{t('Prøv: «hvor er det finest fjellvær i Møre og Romsdal i helga»')}</p>
             )}
             {messages.map((m, i) =>
               m.role === 'user' ? (
@@ -198,14 +201,14 @@ function VaersokView({ onPlan }) {
               ) : (
                 <div key={i} className="msg bot">
                   {m.error
-                    ? <p className="error">Beklager – {m.error}</p>
+                    ? <p className="error">{t('Beklager –')} {m.error}</p>
                     : <Answer result={m.result} onSelectPlace={setDetail} onPlan={onPlan} />}
                 </div>
               )
             )}
             {loading && (
               <div className="msg bot">
-                <p className="muted typing">Henter vær <span>·</span><span>·</span><span>·</span></p>
+                <p className="muted typing">{t('Henter vær')} <span>·</span><span>·</span><span>·</span></p>
               </div>
             )}
             <div ref={endRef} />
@@ -215,10 +218,10 @@ function VaersokView({ onPlan }) {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Skriv et spørsmål …"
+              placeholder={t('Skriv et spørsmål …')}
               autoFocus
             />
-            <button type="submit" disabled={loading || !input.trim()}>Send</button>
+            <button type="submit" disabled={loading || !input.trim()}>{t('Send')}</button>
           </form>
         </>
       )}
@@ -227,6 +230,7 @@ function VaersokView({ onPlan }) {
 }
 
 export default function App() {
+  const { t, lang, setLang } = useI18n()
   const [tab, setTab] = useState('hjem')
   const [session, setSession] = useState(null)
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') ?? 'light')
@@ -265,8 +269,8 @@ export default function App() {
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
         <button
           className="sidebar-toggle"
-          title={collapsed ? 'Utvid menyen' : 'Minimer menyen'}
-          aria-label={collapsed ? 'Utvid menyen' : 'Minimer menyen'}
+          title={collapsed ? t('Utvid menyen') : t('Minimer menyen')}
+          aria-label={collapsed ? t('Utvid menyen') : t('Minimer menyen')}
           onClick={() => setCollapsed(!collapsed)}
         >
           {collapsed ? '›' : '‹'}
@@ -276,37 +280,44 @@ export default function App() {
           <span className="brand-name">Turvær</span>
         </div>
         <nav className="nav" aria-label="Moduser">
-          <button className={`nav-item ${tab === 'hjem' ? 'active' : ''}`} title="Hjem" onClick={() => setTab('hjem')}>
-            🏠 <span>Hjem</span>
+          <button className={`nav-item ${tab === 'hjem' ? 'active' : ''}`} title={t('Hjem')} onClick={() => setTab('hjem')}>
+            🏠 <span>{t('Hjem')}</span>
           </button>
-          <button className={`nav-item ${tab === 'vaersok' ? 'active' : ''}`} title="Værsøk" onClick={() => setTab('vaersok')}>
-            🔎 <span>Værsøk</span>
+          <button className={`nav-item ${tab === 'vaersok' ? 'active' : ''}`} title={t('Værsøk')} onClick={() => setTab('vaersok')}>
+            🔎 <span>{t('Værsøk')}</span>
           </button>
-          <button className={`nav-item ${tab === 'rute' ? 'active' : ''}`} title="Ruteplanlegger" onClick={() => setTab('rute')}>
-            🧭 <span>Ruteplanlegger</span>
+          <button className={`nav-item ${tab === 'rute' ? 'active' : ''}`} title={t('Ruteplanlegger')} onClick={() => setTab('rute')}>
+            🧭 <span>{t('Ruteplanlegger')}</span>
           </button>
-          <button className={`nav-item ${tab === 'trening' ? 'active' : ''}`} title="Trening" onClick={() => setTab('trening')}>
-            🏋️ <span>Trening</span>
+          <button className={`nav-item ${tab === 'trening' ? 'active' : ''}`} title={t('Trening')} onClick={() => setTab('trening')}>
+            🏋️ <span>{t('Trening')}</span>
           </button>
-          <button className={`nav-item ${tab === 'kosthold' ? 'active' : ''}`} title="Kosthold" onClick={() => setTab('kosthold')}>
-            🥗 <span>Kosthold</span>
+          <button className={`nav-item ${tab === 'kosthold' ? 'active' : ''}`} title={t('Kosthold')} onClick={() => setTab('kosthold')}>
+            🥗 <span>{t('Kosthold')}</span>
           </button>
-          <button className={`nav-item ${tab === 'restitusjon' ? 'active' : ''}`} title="Restitusjon" onClick={() => setTab('restitusjon')}>
-            🧘 <span>Restitusjon</span>
+          <button className={`nav-item ${tab === 'restitusjon' ? 'active' : ''}`} title={t('Restitusjon')} onClick={() => setTab('restitusjon')}>
+            🧘 <span>{t('Restitusjon')}</span>
           </button>
         </nav>
         <button
           className="nav-item account-btn"
-          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-          title="Bytt mellom lys og mørk modus"
+          onClick={() => setLang(lang === 'nb' ? 'en' : 'nb')}
+          title={lang === 'nb' ? 'Switch to English' : 'Bytt til norsk'}
         >
-          {theme === 'light' ? '🌙' : '☀️'} <span>{theme === 'light' ? 'Mørk modus' : 'Lys modus'}</span>
+          🌐 <span>{lang === 'nb' ? t('English') : t('Norsk')}</span>
+        </button>
+        <button
+          className="nav-item account-btn"
+          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          title={t('Bytt mellom lys og mørk modus')}
+        >
+          {theme === 'light' ? '🌙' : '☀️'} <span>{theme === 'light' ? t('Mørk modus') : t('Lys modus')}</span>
         </button>
         <button
           className={`nav-item ${tab === 'konto' ? 'active' : ''}`}
           onClick={() => setTab('konto')}
         >
-          👤 <span>{session ? 'Min konto' : 'Logg inn'}</span>
+          👤 <span>{session ? t('Min konto') : t('Logg inn')}</span>
         </button>
       </aside>
 

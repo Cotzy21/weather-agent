@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { authHeaders } from './supabase'
 import { apiUrl, readError } from './api'
+import { useI18n } from './i18n.jsx'
 
 /**
  * Habit tracker: vaner (koffein, søvn, lesing …) med 7-dagers rutenett og
@@ -20,26 +21,27 @@ const SUGGESTIONS = [
 const toIso = (d) => d.toISOString().slice(0, 10)
 
 /** De siste 7 dagene, eldst først, som { iso, label } (label = "M", "T" …). */
-function lastDays(n) {
+function lastDays(n, locale) {
   const days = []
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date()
     d.setDate(d.getDate() - i)
     days.push({
       iso: toIso(d),
-      label: d.toLocaleDateString('nb-NO', { weekday: 'short' }).slice(0, 2),
+      label: d.toLocaleDateString(locale, { weekday: 'short' }).slice(0, 2),
     })
   }
   return days
 }
 
 export default function HabitTracker() {
+  const { t, lang } = useI18n()
   const [habits, setHabits] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ name: '', emoji: '', unit: '' })
   const [error, setError] = useState(null)
 
-  const days = lastDays(7)
+  const days = lastDays(7, lang === 'en' ? 'en-GB' : 'nb-NO')
   const today = days[days.length - 1].iso
 
   useEffect(() => { load() }, [])
@@ -96,9 +98,9 @@ export default function HabitTracker() {
   return (
     <div className="habits" data-reveal>
       <div className="habits-head">
-        <h3 className="detail-h3">📅 Vaner</h3>
+        <h3 className="detail-h3">{t('📅 Vaner')}</h3>
         <button className="mini" onClick={() => setShowForm(!showForm)}>
-          {showForm ? 'Lukk' : '+ Ny vane'}
+          {showForm ? t('Lukk') : t('+ Ny vane')}
         </button>
       </div>
 
@@ -108,28 +110,28 @@ export default function HabitTracker() {
             <div className="habit-suggestions">
               {unusedSuggestions.map((s) => (
                 <button key={s.name} className="pill" onClick={() => create(s)}>
-                  {s.emoji} {s.name}
+                  {s.emoji} {t(s.name)}
                 </button>
               ))}
             </div>
           )}
           <div className="habit-form-fields">
-            <input placeholder="Navn (f.eks. Tøying)" value={form.name}
+            <input placeholder={t('Navn (f.eks. Tøying)')} value={form.name}
                    onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            <input className="short" placeholder="Emoji" value={form.emoji}
+            <input className="short" placeholder={t('Emoji')} value={form.emoji}
                    onChange={(e) => setForm({ ...form, emoji: e.target.value })} />
-            <input className="short" placeholder="Enhet (tom = ja/nei)" value={form.unit}
+            <input className="short" placeholder={t('Enhet (tom = ja/nei)')} value={form.unit}
                    onChange={(e) => setForm({ ...form, unit: e.target.value })} />
             <button className="primary" disabled={!form.name.trim()} onClick={() => create(form)}>
-              Legg til
+              {t('Legg til')}
             </button>
           </div>
         </div>
       )}
-      {error && <p className="error">Beklager – {error}</p>}
+      {error && <p className="error">{t('Beklager –')} {error}</p>}
 
       {habits && habits.length === 0 && !showForm && (
-        <p className="muted">Ingen vaner ennå – legg til koffein, søvn eller noe helt eget.</p>
+        <p className="muted">{t('Ingen vaner ennå – legg til koffein, søvn eller noe helt eget.')}</p>
       )}
 
       {habits && habits.length > 0 && (
@@ -139,14 +141,14 @@ export default function HabitTracker() {
             {days.map((d) => (
               <span key={d.iso} className={`habit-day ${d.iso === today ? 'today' : ''}`}>{d.label}</span>
             ))}
-            <span className="habit-streak" title="Dager på rad">🔥</span>
+            <span className="habit-streak" title={t('Dager på rad')}>🔥</span>
           </div>
 
           {habits.map((h) => (
             <div className="habit-row" key={h.id}>
               <span className="habit-name" title={h.unit ? `${h.name} (${h.unit})` : h.name}>
-                {h.emoji} {h.name}
-                {h.unit && <span className="muted habit-unit"> {h.unit}</span>}
+                {h.emoji} {t(h.name)}
+                {h.unit && <span className="muted habit-unit"> {t(h.unit)}</span>}
               </span>
 
               {days.map((d) => {
@@ -177,7 +179,7 @@ export default function HabitTracker() {
               })}
 
               <span className="habit-streak">{h.streakDays > 0 ? h.streakDays : ''}</span>
-              <button className="del" onClick={() => remove(h.id)} aria-label="Slett vane">✕</button>
+              <button className="del" onClick={() => remove(h.id)} aria-label={t('Slett vane')}>✕</button>
             </div>
           ))}
         </div>

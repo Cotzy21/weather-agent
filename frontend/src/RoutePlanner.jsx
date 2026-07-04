@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import RouteMap from './RouteMap'
 import { apiUrl, readError } from './api'
 import { authHeaders } from './supabase'
+import { useI18n } from './i18n.jsx'
 
 function distanceKm(a, b) {
   const R = 6371
@@ -14,6 +15,7 @@ function distanceKm(a, b) {
 }
 
 export default function RoutePlanner({ session, target, onClearTarget }) {
+  const { t } = useI18n()
   const [waypoints, setWaypoints] = useState([])
   const [weight, setWeight] = useState(75)
   const [plan, setPlan] = useState(null)
@@ -43,7 +45,7 @@ export default function RoutePlanner({ session, target, onClearTarget }) {
   // Sted sendt fra værsøket: foreslå det som rutenavn (uten å overskrive noe
   // brukeren alt har skrevet). Kartet sentreres via focus-proppen på RouteMap.
   useEffect(() => {
-    if (target) setRouteName((name) => name || `Tur til ${target.name}`)
+    if (target) setRouteName((name) => name || t('Tur til {name}', { name: target.name }))
   }, [target])
 
   async function loadSaved() {
@@ -141,16 +143,16 @@ export default function RoutePlanner({ session, target, onClearTarget }) {
 
       {/* Flytende piller over kartet (à la AllTrails' filterrad). */}
       <div className="map-pills">
-        <span className="pill stat">{waypoints.length} punkt · <strong>{totalKm.toFixed(1)} km</strong></span>
-        <button className="pill" onClick={undo} disabled={!waypoints.length}>↩ Angre siste</button>
-        <button className="pill" onClick={clearAll} disabled={!waypoints.length}>✕ Tøm</button>
+        <span className="pill stat">{waypoints.length} {t('punkt')} · <strong>{totalKm.toFixed(1)} km</strong></span>
+        <button className="pill" onClick={undo} disabled={!waypoints.length}>{t('↩ Angre siste')}</button>
+        <button className="pill" onClick={clearAll} disabled={!waypoints.length}>{t('✕ Tøm')}</button>
       </div>
 
       {/* Flytende panel til venstre (à la AllTrails' «Explore trails»). */}
       <div className={`map-panel ${panelOpen ? '' : 'closed'}`}>
         <div className="map-panel-head">
-          <strong>🧭 Planlegg rute</strong>
-          <button className="sidebar-toggle" title={panelOpen ? 'Minimer panelet' : 'Utvid panelet'}
+          <strong>{t('🧭 Planlegg rute')}</strong>
+          <button className="sidebar-toggle" title={panelOpen ? t('Minimer panelet') : t('Utvid panelet')}
                   onClick={() => setPanelOpen(!panelOpen)}>{panelOpen ? '▾' : '▴'}</button>
         </div>
 
@@ -158,78 +160,76 @@ export default function RoutePlanner({ session, target, onClearTarget }) {
         <div className="map-panel-body">
           {target && (
             <div className="plan-target">
-              🎯 Mål fra værsøket: <strong>{target.name}</strong> – klikk i kartet for å
-              tegne ruta di fram til målet.
-              <button className="del" onClick={onClearTarget} aria-label="Fjern mål">✕</button>
+              {t('🎯 Mål fra værsøket:')} <strong>{target.name}</strong> {t('– klikk i kartet for å tegne ruta di fram til målet.')}
+              <button className="del" onClick={onClearTarget} aria-label={t('Fjern mål')}>✕</button>
             </div>
           )}
           <p className="hint left">
-            Klikk i kartet for å legge til punkter (start, stopp, teltplass, mål).
+            {t('Klikk i kartet for å legge til punkter (start, stopp, teltplass, mål).')}
           </p>
 
           <div className="planner-inputs">
-            <label>Vekt (kg)
+            <label>{t('Vekt (kg)')}
               <input type="number" value={weight} min="30" max="200"
                      onChange={(e) => setWeight(+e.target.value)} />
             </label>
             <button className="primary" onClick={calc} disabled={loading || waypoints.length < 2}>
-              {loading ? 'Beregner …' : 'Beregn'}
+              {loading ? t('Beregner …') : t('Beregn')}
             </button>
           </div>
 
-          {error && <p className="error">Beklager – {error}</p>}
+          {error && <p className="error">{t('Beklager –')} {error}</p>}
 
           {plan && (
         <div className="estimate">
           <p className="estimate-line">
             {plan.assessment && (
               <span className={`diff-badge diff-${plan.assessment.difficulty.toLowerCase()}`}>
-                {plan.assessment.difficultyLabel}
+                {t(plan.assessment.difficultyLabel)}
               </span>
             )}
-            <strong>{plan.distanceKm.toFixed(1)} km</strong> · {plan.ascentM.toFixed(0)} m stigning
+            <strong>{plan.distanceKm.toFixed(1)} km</strong> · {plan.ascentM.toFixed(0)} m {t('stigning')}
             {' '}· ~{plan.hours.toFixed(1)} t · <strong>{plan.calories} kcal</strong>
           </p>
           {plan.assessment && (
             <p className="terrain-line muted">
-              ⛰️ Høyeste punkt ~{plan.assessment.highestPointM.toFixed(0)} moh
-              {' '}· bratteste parti ~{plan.assessment.maxGradientPct.toFixed(0)} % helning
+              {t('⛰️ Høyeste punkt ~{m} moh · bratteste parti ~{p} % helning', { m: plan.assessment.highestPointM.toFixed(0), p: plan.assessment.maxGradientPct.toFixed(0) })}
             </p>
           )}
           {plan.assessment?.challenges.length > 0 && (
             <div className="gear">
-              <span className="gear-title">⚠️ Vær forberedt på</span>
+              <span className="gear-title">{t('⚠️ Vær forberedt på')}</span>
               <ul>{plan.assessment.challenges.map((c, i) => <li key={i}>{c}</li>)}</ul>
             </div>
           )}
           <div className="gear">
-            <span className="gear-title">🍫 Mat &amp; drikke</span>
+            <span className="gear-title">{t('🍫 Mat & drikke')}</span>
             <ul>{plan.snacks.map((s, i) => <li key={i}>{s}</li>)}</ul>
           </div>
           <p className="muted estimate-note">
             {plan.snappedToTrails
-              ? 'Rute langs faktiske stier. Stigning fra høydeprofil. Grovt estimat (~4 km/t, ~6 MET).'
-              : 'Rett linje mellom punktene (sti-ruting ikke aktivert). Stigning fra høydeprofil. Grovt estimat (~4 km/t, ~6 MET).'}
+              ? t('Rute langs faktiske stier. Stigning fra høydeprofil. Grovt estimat (~4 km/t, ~6 MET).')
+              : t('Rett linje mellom punktene (sti-ruting ikke aktivert). Stigning fra høydeprofil. Grovt estimat (~4 km/t, ~6 MET).')}
           </p>
 
           {session ? (
             <div className="save-route">
               <input
-                placeholder="Navn på ruta"
+                placeholder={t('Navn på ruta')}
                 value={routeName}
                 onChange={(e) => setRouteName(e.target.value)}
               />
-              <button className="primary" onClick={saveRoute} disabled={!routeName.trim()}>Lagre rute</button>
+              <button className="primary" onClick={saveRoute} disabled={!routeName.trim()}>{t('Lagre rute')}</button>
             </div>
           ) : (
-            <p className="muted">Logg inn for å lagre ruta.</p>
+            <p className="muted">{t('Logg inn for å lagre ruta.')}</p>
           )}
         </div>
           )}
 
           {session && saved.length > 0 && (
             <div className="saved-routes">
-              <p className="trails-title">📁 Mine ruter</p>
+              <p className="trails-title">{t('📁 Mine ruter')}</p>
               <ul>
                 {saved.map((r) => (
                   <li key={r.id}>

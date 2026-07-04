@@ -103,10 +103,19 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
 - ✅ NYTT: **fremside-sammendrag for kosthold** (klikkbart kort på Hjem):
   dagens balanse (spist/trening/igjen av målet) + ukas lave næringsstoffer
   med kort konsekvens-tekst; klikk går til kosthold-fanen.
-- Gjenstår: i18n (engelsk standard, norsk +++, lagres per bruker),
-  klokke-integrasjoner (Apple Health/Garmin/Strava/Whoop), prismodell.
-  Sikkerhetsprinsipp: lagre minst mulig sensitivt, per-bruker kryptering
-  når integrasjonene kommer.
+- ✅ NYTT: **i18n påbegynt** (`frontend/src/i18n.jsx`): lettvekts uten
+  bibliotek, gettext-stil — norsk tekst er nøkkelen, `t('…')` slår opp i
+  EN-ordboka og faller tilbake til norsk. Plassholdere: `t('… {n} …', {n})`.
+  🌐-knapp i sidemenyen, valget lagres i localStorage.
+  **Oversatt**: chrome/nav, Hjem, Værsøk (+detaljside), Ruteplanlegger,
+  Restitusjon, Vaner. **Gjenstår**: TrainingView, NutritionView, MealDiary,
+  AuthView (samme mekaniske mønster), og DERETTER flippes `DEFAULT_LANG`
+  til 'en' i i18n.jsx (planen: engelsk standard — venter til full dekning
+  så UI-et ikke blir blandet). Backend-innhold (råd/feilmeldinger) er
+  fortsatt norsk — oversettes senere via Accept-Language mot API-et.
+- Gjenstår ellers: klokke-integrasjoner (Apple Health/Garmin/Strava/Whoop),
+  prismodell. Sikkerhetsprinsipp: lagre minst mulig sensitivt, per-bruker
+  kryptering når integrasjonene kommer.
 
 ## Kjente feil — status
 
