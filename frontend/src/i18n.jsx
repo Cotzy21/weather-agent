@@ -10,13 +10,13 @@ import { createContext, useContext, useEffect, useState } from 'react'
  * Plassholdere skrives som {n} i begge språk og fylles av t():
  *   t('Du har trent {n} dager på rad', { n: 4 })
  *
- * Språket lagres i localStorage. Norsk er standard til ALLE views er dekket -
- * så flippes DEFAULT_LANG til 'en' (planen sier engelsk som standard).
+ * Språket lagres i localStorage. Engelsk er standard (per planen); norsk
+ * velges med 🌐-knappen i sidemenyen.
  * Backend-innhold (råd, feilmeldinger) er fortsatt norsk; det oversettes i et
  * senere steg med Accept-Language mot API-et.
  */
 
-const DEFAULT_LANG = 'nb'
+const DEFAULT_LANG = 'en'
 
 const EN = {
   // Sidemeny / chrome
@@ -183,7 +183,164 @@ const EN = {
   'kopper': 'cups',
   'timer': 'hours',
   'glass': 'glasses',
+
+  // Konto (AuthView)
+  'Konto': 'Account',
+  'Supabase er ikke konfigurert ennå (mangler VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).':
+      'Supabase is not configured yet (missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).',
+  'Innlogget som': 'Logged in as',
+  'Logg ut': 'Log out',
+  'Konto opprettet. Bekreft e-posten din hvis bekreftelse er påslått.':
+      'Account created. Confirm your email if confirmation is enabled.',
+  'E-post': 'Email',
+  'Passord': 'Password',
+  'Registrer': 'Sign up',
+
+  // Kostholdsdagboka (MealDiary)
+  'Logg inn for å føre kostholdsdagbok.': 'Log in to keep a food diary.',
+  'Dag': 'Day',
+  'Måltid': 'Meal',
+  'Frokost': 'Breakfast',
+  'Lunsj': 'Lunch',
+  'Middag': 'Dinner',
+  'Kvelds': 'Supper',
+  'Mellommåltid': 'Snack',
+  'Mål: {n} kcal/dag': 'Goal: {n} kcal/day',
+  'Sett opp kalorimål': 'Set up a calorie goal',
+  'Høyde (cm)': 'Height (cm)',
+  'Alder': 'Age',
+  'Kjønn': 'Sex',
+  'Mann': 'Male',
+  'Kvinne': 'Female',
+  'Hverdagsaktivitet': 'Everyday activity',
+  'Rolig (stillesittende)': 'Sedentary',
+  'Lett aktiv': 'Lightly active',
+  'Moderat aktiv': 'Moderately active',
+  'Svært aktiv': 'Very active',
+  'Mål': 'Goal',
+  'Ned 1 kg/uke': 'Lose 1 kg/week',
+  'Ned 0,5 kg/uke': 'Lose 0.5 kg/week',
+  'Ned 0,25 kg/uke': 'Lose 0.25 kg/week',
+  'Holde vekta': 'Maintain weight',
+  'Opp 0,25 kg/uke': 'Gain 0.25 kg/week',
+  'Opp 0,5 kg/uke': 'Gain 0.5 kg/week',
+  'Lagre mål': 'Save goal',
+  'Søk i Matvaretabellen … (f.eks. havregryn)': 'Search the Norwegian food table … (e.g. oats)',
+  'Mengde': 'Amount',
+  'Enhet': 'Unit',
+  'gram': 'grams',
+  'karbo': 'carbs',
+  'fett': 'fat',
+  'spist': 'eaten',
+  'kcal igjen': 'kcal left',
+  'Slett': 'Delete',
+  'Ingenting logget denne dagen ennå.': 'Nothing logged this day yet.',
+  '🧪 Ukas vitaminer og mineraler': "🧪 This week's vitamins and minerals",
+  '– {n} å se på': '– {n} to look at',
+  '– ser bra ut': '– looking good',
+  'Kilde: Matvaretabellen, Mattilsynet (matvaretabellen.no)':
+      'Source: The Norwegian Food Composition Table, Mattilsynet (matvaretabellen.no)',
+
+  // Kosthold (matfamiliene)
+  '🥗 Kosthold': '🥗 Nutrition',
+  'Utforsk matfamiliene, merk favorittene dine, og sett dem sammen til egne måltider.':
+      'Explore the food families, star your favourites and combine them into your own meals.',
+  '⭐ Favorittene dine': '⭐ Your favourites',
+  '☁️ synkes til kontoen din': '☁️ synced to your account',
+  'lagres kun i denne nettleseren – logg inn for å ta dem med deg':
+      'stored only in this browser – log in to take them with you',
+  'Fjern': 'Remove',
+  'Samlet energifordeling:': 'Combined energy split:',
+  '🍽️ Sett sammen måltid av favorittene': '🍽️ Build a meal from your favourites',
+  '✓ Måltid lagret': '✓ Meal saved',
+  'Trykk på favoritter for å legge dem i måltidet:': 'Tap favourites to add them to the meal:',
+  'Navn på måltidet, f.eks. Treningsfrokost': 'Meal name, e.g. Training breakfast',
+  'Lagre måltid': 'Save meal',
+  'Avbryt': 'Cancel',
+  '🍽️ Måltidene dine': '🍽️ Your meals',
+  'matvarer': 'foods',
+  '– trykk for å merke favoritter': '– tap to star favourites',
+  'Makroverdier er ca-tall per 100 g (Matvaretabellen).':
+      'Macro values are approximate per 100 g (Norwegian Food Composition Table).',
+  'Kjøtt': 'Meat',
+  'Fisk & sjømat': 'Fish & seafood',
+  'Grønnsaker': 'Vegetables',
+  'Frukt & bær': 'Fruit & berries',
+  'Korn & karbo': 'Grains & carbs',
+  'Meieri': 'Dairy',
+  'Nøtter & frø': 'Nuts & seeds',
+  'Kyllingfilet': 'Chicken fillet', 'Karbonadedeig': 'Lean ground beef', 'Biff': 'Steak',
+  'Svinekotelett': 'Pork chop', 'Kalkun': 'Turkey', 'Lammelår': 'Leg of lamb', 'Egg': 'Eggs',
+  'Laks': 'Salmon', 'Torsk': 'Cod', 'Makrell': 'Mackerel', 'Reker': 'Shrimp',
+  'Tunfisk': 'Tuna', 'Sei': 'Pollock', 'Sild': 'Herring', 'Blåskjell': 'Mussels',
+  'Brokkoli': 'Broccoli', 'Spinat': 'Spinach', 'Gulrot': 'Carrot', 'Paprika': 'Bell pepper',
+  'Tomat': 'Tomato', 'Agurk': 'Cucumber', 'Søtpotet': 'Sweet potato', 'Blomkål': 'Cauliflower',
+  'Løk': 'Onion', 'Sopp': 'Mushrooms',
+  'Eple': 'Apple', 'Banan': 'Banana', 'Appelsin': 'Orange', 'Blåbær': 'Blueberries',
+  'Jordbær': 'Strawberries', 'Druer': 'Grapes', 'Kiwi': 'Kiwi',
+  'Havregryn': 'Oats', 'Ris (kokt)': 'Rice (cooked)', 'Fullkornspasta': 'Whole grain pasta',
+  'Grovbrød': 'Whole grain bread', 'Poteter': 'Potatoes', 'Knekkebrød': 'Crispbread',
+  'Melk': 'Milk', 'Gresk yoghurt': 'Greek yogurt', 'Ost': 'Cheese',
+  'Mandler': 'Almonds', 'Valnøtter': 'Walnuts', 'Peanøttsmør': 'Peanut butter',
+  'Chiafrø': 'Chia seeds', 'Solsikkefrø': 'Sunflower seeds',
+
+  // Trening
+  'Gi økta en tittel.': 'Give the workout a title.',
+  'Fant ingen aktiviteter i fila – er det CSV-eksporten fra Garmin Connect?':
+      'No activities found in the file – is it the CSV export from Garmin Connect?',
+  'økter importert': 'workouts imported',
+  'hoppet over (fantes fra før)': 'skipped (already imported)',
+  'Logg inn for å lagre økter, se progresjon og få AI-forslag – men prøv gjerne kroppsmodellen:':
+      'Log in to save workouts, see progression and get AI suggestions – but feel free to try the body model:',
+  '🤖 AI-forslag': '🤖 AI suggestion',
+  'Fokus, f.eks. større bein, bedre cardio, forberede BJJ':
+      'Focus, e.g. bigger legs, better cardio, BJJ prep',
+  'Tenker …': 'Thinking …',
+  'Foreslå økt': 'Suggest a workout',
+  'Bruk i bygger ↓': 'Use in builder ↓',
+  '💾 Lagre som plan': '💾 Save as plan',
+  '📋 Mine planer': '📋 My plans',
+  'Bruk i ny økt': 'Use in a new workout',
+  'Slett plan': 'Delete plan',
+  'Ny økt': 'New workout',
+  'Dato': 'Date',
+  'Tittel': 'Title',
+  'f.eks. Push A / Langtur': 'e.g. Push A / Long run',
+  'Dra for å flytte': 'Drag to move',
+  'Dropsett': 'Drop set',
+  'Supersett': 'Superset',
+  'Øvelse': 'Exercise',
+  'Hvor mange runder gruppa gjentas': 'How many rounds the group repeats',
+  'Flytt opp': 'Move up',
+  'Flytt ned': 'Move down',
+  '+ Øvelse': '+ Exercise',
+  '+ Dropsett': '+ Drop set',
+  '+ Supersett': '+ Superset',
+  '+ sett': '+ set',
+  '+ drop': '+ drop',
+  '+ øvelse i supersett': '+ exercise in superset',
+  'Distanse (km)': 'Distance (km)',
+  'Varighet (min)': 'Duration (min)',
+  'Stigning (m)': 'Ascent (m)',
+  'Notater': 'Notes',
+  'Valgfritt': 'Optional',
+  'Lagrer …': 'Saving …',
+  'Lagre økt': 'Save workout',
+  '✓ Økt lagret': '✓ Workout saved',
+  'Progresjon (styrke)': 'Progression (strength)',
+  'Øvelse, f.eks. Benkpress': 'Exercise, e.g. Bench press',
+  'Vis': 'Show',
+  'Ingen logget for denne øvelsen ennå.': 'Nothing logged for this exercise yet.',
+  '⌚ Importer fra Garmin': '⌚ Import from Garmin',
+  'Garmin Connect → Aktiviteter → Alle aktiviteter → «Eksporter CSV», og velg fila her.':
+      'Garmin Connect → Activities → All activities → “Export CSV”, then pick the file here.',
+  'Importerer …': 'Importing …',
+  '📂 Velg CSV-fil': '📂 Choose CSV file',
+  'Tidligere økter': 'Previous workouts',
+  'Ingen økter ennå.': 'No workouts yet.',
+  'Henter varsel': 'Fetching forecast',
 }
+
 
 const I18nContext = createContext({ lang: DEFAULT_LANG, t: (s) => s, setLang: () => {} })
 

@@ -38,13 +38,13 @@ export default function PlaceDetail({ place, onBack, onPlan }) {
 
       {error && <p className="error">{t('Beklager –')} {error}</p>}
       {!data && !error && (
-        <p className="muted typing">Henter varsel <span>·</span><span>·</span><span>·</span></p>
+        <p className="muted typing">{t('Henter varsel')} <span>·</span><span>·</span><span>·</span></p>
       )}
 
       {data && (
         <>
           <h2 className="detail-title">
-            {data.name} <span className="muted">{data.elevationM.toFixed(0)} moh</span>
+            {data.name} <span className="muted">{data.elevationM.toFixed(0)} {t('moh')}</span>
             {onPlan && (
               <button
                 className="plan-btn"
@@ -87,7 +87,7 @@ export default function PlaceDetail({ place, onBack, onPlan }) {
 
           {data.clothing?.length > 0 && (
             <div className="gear">
-              <span className="gear-title">🎒 Klær &amp; utstyr</span>
+              <span className="gear-title">{t('🎒 Klær & utstyr')}</span>
               <ul>{data.clothing.map((c, i) => <li key={i}>{c}</li>)}</ul>
             </div>
           )}

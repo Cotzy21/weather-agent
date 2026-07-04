@@ -107,12 +107,11 @@ Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
   bibliotek, gettext-stil — norsk tekst er nøkkelen, `t('…')` slår opp i
   EN-ordboka og faller tilbake til norsk. Plassholdere: `t('… {n} …', {n})`.
   🌐-knapp i sidemenyen, valget lagres i localStorage.
-  **Oversatt**: chrome/nav, Hjem, Værsøk (+detaljside), Ruteplanlegger,
-  Restitusjon, Vaner. **Gjenstår**: TrainingView, NutritionView, MealDiary,
-  AuthView (samme mekaniske mønster), og DERETTER flippes `DEFAULT_LANG`
-  til 'en' i i18n.jsx (planen: engelsk standard — venter til full dekning
-  så UI-et ikke blir blandet). Backend-innhold (råd/feilmeldinger) er
-  fortsatt norsk — oversettes senere via Accept-Language mot API-et.
+  **ALLE views er oversatt** (chrome, Hjem, Værsøk, Ruteplanlegger,
+  Restitusjon, Vaner, Trening, Kosthold, MealDiary, Konto — inkl.
+  matfamilier/matvarenavn), og **engelsk er nå standardspråket** per
+  planen. Backend-innhold (råd/feilmeldinger/AI-svar) er fortsatt norsk —
+  oversettes senere via Accept-Language mot API-et.
 - Gjenstår ellers: klokke-integrasjoner (Apple Health/Garmin/Strava/Whoop),
   prismodell. Sikkerhetsprinsipp: lagre minst mulig sensitivt, per-bruker
   kryptering når integrasjonene kommer.

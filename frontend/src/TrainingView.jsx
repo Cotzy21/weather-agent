@@ -3,6 +3,7 @@ import { authHeaders } from './supabase'
 import { apiUrl, readError } from './api'
 import MusclePicker from './MusclePicker'
 import { useReveal } from './anim'
+import { useI18n } from './i18n.jsx'
 
 const TYPES = [
   { v: 'STYRKE', t: '🏋️ Styrke' },
@@ -55,6 +56,7 @@ function mapSets(arr) {
 }
 
 export default function TrainingView({ session }) {
+  const { t } = useI18n()
   const [type, setType] = useState('STYRKE')
   const [date, setDate] = useState(today())
   const [title, setTitle] = useState('')
@@ -65,7 +67,7 @@ export default function TrainingView({ session }) {
   const [workouts, setWorkouts] = useState([])
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
-  const [saved, setSaved] = useState(false) // kort «✓ Økt lagret»-kvittering
+  const [saved, setSaved] = useState(false) // kort kvittering etter lagring
 
   // Drag-and-drop-omorganisering av blokker (pilene finnes fortsatt for touch).
   const [dragIdx, setDragIdx] = useState(null)
@@ -180,7 +182,7 @@ export default function TrainingView({ session }) {
   }
 
   async function submit() {
-    if (!title.trim()) { setError('Gi økta en tittel.'); return }
+    if (!title.trim()) { setError(t('Gi økta en tittel.')); return }
     setBusy(true)
     setError(null)
     try {
@@ -217,8 +219,8 @@ export default function TrainingView({ session }) {
       if (!res.ok) throw new Error(await readError(res))
       const r = await res.json()
       setImportMsg(r.imported === 0 && r.skipped === 0
-        ? 'Fant ingen aktiviteter i fila – er det CSV-eksporten fra Garmin Connect?'
-        : `✓ ${r.imported} økter importert${r.skipped ? ` · ${r.skipped} hoppet over (fantes fra før)` : ''}`)
+        ? t('Fant ingen aktiviteter i fila – er det CSV-eksporten fra Garmin Connect?')
+        : `✓ ${r.imported} ${t('økter importert')}${r.skipped ? ` · ${r.skipped} ${t('hoppet over (fantes fra før)')}` : ''}`)
       loadWorkouts()
     } catch (e) {
       setImportMsg(`Feil: ${e.message}`)
@@ -312,9 +314,9 @@ export default function TrainingView({ session }) {
   if (!session) {
     return (
       <div className="training" ref={revealRef}>
-        <h2 className="detail-title" data-reveal>Trening</h2>
+        <h2 className="detail-title" data-reveal>{t('Trening')}</h2>
         <p className="muted" data-reveal>
-          Logg inn for å lagre økter, se progresjon og få AI-forslag – men prøv gjerne kroppsmodellen:
+          {t('Logg inn for å lagre økter, se progresjon og få AI-forslag – men prøv gjerne kroppsmodellen:')}
         </p>
         <MusclePicker onCreate={() => {}} />
       </div>
@@ -330,12 +332,12 @@ export default function TrainingView({ session }) {
       <MusclePicker onCreate={applyMuscles} />
 
       <div className="ai-panel" data-reveal>
-        <span className="ai-title">🤖 AI-forslag</span>
+        <span className="ai-title">{t('🤖 AI-forslag')}</span>
         <div className="ai-row">
-          <input placeholder="Fokus, f.eks. større bein, bedre cardio, forberede BJJ"
+          <input placeholder={t('Fokus, f.eks. større bein, bedre cardio, forberede BJJ')}
                  value={aiFocus} onChange={(e) => setAiFocus(e.target.value)} />
           <button className="primary" onClick={suggest} disabled={aiBusy || !aiFocus.trim()}>
-            {aiBusy ? 'Tenker …' : 'Foreslå økt'}
+            {aiBusy ? t('Tenker …') : t('Foreslå økt')}
           </button>
         </div>
         {aiError && <p className="error">{aiError}</p>}
@@ -344,21 +346,21 @@ export default function TrainingView({ session }) {
             <strong>{suggestion.title}</strong>{' '}
             <span className="muted">({(TYPES.find((t) => t.v === suggestion.type)?.t) || suggestion.type})</span>
             {suggestion.rationale && <p className="muted">{suggestion.rationale}</p>}
-            <button className="mini" onClick={() => applySuggestion(suggestion)}>Bruk i bygger ↓</button>
-            <button className="mini" onClick={() => savePlan(suggestion)}>💾 Lagre som plan</button>
+            <button className="mini" onClick={() => applySuggestion(suggestion)}>{t('Bruk i bygger ↓')}</button>
+            <button className="mini" onClick={() => savePlan(suggestion)}>{t('💾 Lagre som plan')}</button>
           </div>
         )}
 
         {plans.length > 0 && (
           <div className="plan-list">
-            <span className="ai-title">📋 Mine planer</span>
+            <span className="ai-title">{t('📋 Mine planer')}</span>
             <ul>
               {plans.map((p) => (
                 <li key={p.id}>
                   <strong>{p.title}</strong>{' '}
                   <span className="muted">({(TYPES.find((t) => t.v === p.type)?.t) || p.type})</span>
-                  <button className="mini" onClick={() => applySuggestion(p)}>Bruk i ny økt</button>
-                  <button className="del" onClick={() => deletePlan(p.id)} aria-label="Slett plan">✕</button>
+                  <button className="mini" onClick={() => applySuggestion(p)}>{t('Bruk i ny økt')}</button>
+                  <button className="del" onClick={() => deletePlan(p.id)} aria-label={t('Slett plan')}>✕</button>
                 </li>
               ))}
             </ul>
@@ -366,19 +368,19 @@ export default function TrainingView({ session }) {
         )}
       </div>
 
-      <h2 className="detail-title" data-reveal>Ny økt</h2>
+      <h2 className="detail-title" data-reveal>{t('Ny økt')}</h2>
       <div className="type-select" data-reveal>
         {TYPES.map((tp) => (
           <button key={tp.v} className={`type-chip ${type === tp.v ? 'active' : ''}`} onClick={() => setType(tp.v)}>
-            {tp.t}
+            {t(tp.t)}
           </button>
         ))}
       </div>
 
       <div className="log-meta">
-        <label>Dato<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
-        <label className="grow">Tittel<input placeholder="f.eks. Push A / Langtur" value={title}
-               className={error === 'Gi økta en tittel.' && !title.trim() ? 'invalid' : ''}
+        <label>{t('Dato')}<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+        <label className="grow">{t('Tittel')}<input placeholder={t('f.eks. Push A / Langtur')} value={title}
+               className={error === t('Gi økta en tittel.') && !title.trim() ? 'invalid' : ''}
                onChange={(e) => setTitle(e.target.value)} /></label>
       </div>
 
@@ -395,7 +397,7 @@ export default function TrainingView({ session }) {
               <div className="block-head">
                 <span
                   className="block-handle"
-                  title="Dra for å flytte"
+                  title={t('Dra for å flytte')}
                   draggable
                   onDragStart={(e) => {
                     setDragIdx(bi)
@@ -406,9 +408,9 @@ export default function TrainingView({ session }) {
                   }}
                   onDragEnd={() => { setDragIdx(null); setDragOver(null) }}
                 >⣿</span>
-                <span className="block-tag">{b.kind === 'dropset' ? 'Dropsett' : b.kind === 'superset' ? 'Supersett' : 'Øvelse'}</span>
+                <span className="block-tag">{b.kind === 'dropset' ? t('Dropsett') : b.kind === 'superset' ? t('Supersett') : t('Øvelse')}</span>
                 {b.kind === 'superset' && (
-                  <span className="stepper small" title="Hvor mange runder gruppa gjentas">
+                  <span className="stepper small" title={t('Hvor mange runder gruppa gjentas')}>
                     <button onClick={() => editBlocks((c) => { c[bi].rounds = Math.max(1, (c[bi].rounds ?? 3) - 1) })}
                             aria-label="Færre runder">−</button>
                     <span>{b.rounds ?? 3}×</span>
@@ -417,19 +419,19 @@ export default function TrainingView({ session }) {
                   </span>
                 )}
                 <span className="block-move">
-                  <button className="move" disabled={bi === 0} title="Flytt opp"
+                  <button className="move" disabled={bi === 0} title={t('Flytt opp')}
                           onClick={() => moveBlock(bi, -1)} aria-label="Flytt opp">▲</button>
-                  <button className="move" disabled={bi === blocks.length - 1} title="Flytt ned"
+                  <button className="move" disabled={bi === blocks.length - 1} title={t('Flytt ned')}
                           onClick={() => moveBlock(bi, 1)} aria-label="Flytt ned">▼</button>
                 </span>
-                <button className="del" onClick={() => editBlocks((c) => c.splice(bi, 1))} aria-label="Fjern">✕</button>
+                <button className="del" onClick={() => editBlocks((c) => c.splice(bi, 1))} aria-label={t('Fjern')}>✕</button>
               </div>
 
               {b.kind === 'superset' ? (
                 <>
                   {b.exercises.map((ex, ei) => (
                     <div className="ss-exercise" key={ei}>
-                      <input list="exercises" placeholder="Øvelse" value={ex.name}
+                      <input list="exercises" placeholder={t('Øvelse')} value={ex.name}
                              onChange={(e) => editBlocks((c) => { c[bi].exercises[ei].name = e.target.value })} />
                       {ex.sets.map((s, si) => (
                         <div className="set-row" key={si}>
@@ -440,14 +442,14 @@ export default function TrainingView({ session }) {
                           <button className="del" onClick={() => editBlocks((c) => { if (c[bi].exercises[ei].sets.length > 1) c[bi].exercises[ei].sets.splice(si, 1) })}>✕</button>
                         </div>
                       ))}
-                      <button className="mini" onClick={() => editBlocks((c) => c[bi].exercises[ei].sets.push(newSet()))}>+ sett</button>
+                      <button className="mini" onClick={() => editBlocks((c) => c[bi].exercises[ei].sets.push(newSet()))}>{t('+ sett')}</button>
                     </div>
                   ))}
-                  <button className="mini" onClick={() => editBlocks((c) => c[bi].exercises.push({ name: '', sets: [newSet()] }))}>+ øvelse i supersett</button>
+                  <button className="mini" onClick={() => editBlocks((c) => c[bi].exercises.push({ name: '', sets: [newSet()] }))}>{t('+ øvelse i supersett')}</button>
                 </>
               ) : (
                 <>
-                  <input list="exercises" placeholder="Øvelse" value={b.name}
+                  <input list="exercises" placeholder={t('Øvelse')} value={b.name}
                          onChange={(e) => editBlocks((c) => { c[bi].name = e.target.value })} />
                   {(b.kind === 'dropset' ? b.drops : b.sets).map((s, si) => {
                     const key = b.kind === 'dropset' ? 'drops' : 'sets'
@@ -462,7 +464,7 @@ export default function TrainingView({ session }) {
                     )
                   })}
                   <button className="mini" onClick={() => editBlocks((c) => c[bi][b.kind === 'dropset' ? 'drops' : 'sets'].push(newSet()))}>
-                    {b.kind === 'dropset' ? '+ drop' : '+ sett'}
+                    {b.kind === 'dropset' ? t('+ drop') : t('+ sett')}
                   </button>
                 </>
               )}
@@ -470,43 +472,43 @@ export default function TrainingView({ session }) {
           ))}
 
           <div className="builder-add">
-            <button onClick={() => setBlocks((bs) => [...bs, newExercise()])}>+ Øvelse</button>
-            <button onClick={() => setBlocks((bs) => [...bs, newDropset()])}>+ Dropsett</button>
-            <button onClick={() => setBlocks((bs) => [...bs, newSuperset()])}>+ Supersett</button>
+            <button onClick={() => setBlocks((bs) => [...bs, newExercise()])}>{t('+ Øvelse')}</button>
+            <button onClick={() => setBlocks((bs) => [...bs, newDropset()])}>{t('+ Dropsett')}</button>
+            <button onClick={() => setBlocks((bs) => [...bs, newSuperset()])}>{t('+ Supersett')}</button>
           </div>
         </div>
       ) : (
         <div className="cardio-inputs">
           {(CARDIO.includes(type) || type === 'HIKING') && (
-            <label>Distanse (km)<input type="number" min="0" step="0.1" value={cardio.distanceKm}
+            <label>{t('Distanse (km)')}<input type="number" min="0" step="0.1" value={cardio.distanceKm}
                    onChange={(e) => setCardio({ ...cardio, distanceKm: e.target.value })} /></label>
           )}
-          <label>Varighet (min)<input type="number" min="0" value={cardio.durationMin}
+          <label>{t('Varighet (min)')}<input type="number" min="0" value={cardio.durationMin}
                  onChange={(e) => setCardio({ ...cardio, durationMin: e.target.value })} /></label>
           {type === 'HIKING' && (
-            <label>Stigning (m)<input type="number" min="0" value={cardio.ascentM}
+            <label>{t('Stigning (m)')}<input type="number" min="0" value={cardio.ascentM}
                    onChange={(e) => setCardio({ ...cardio, ascentM: e.target.value })} /></label>
           )}
         </div>
       )}
 
-      <label className="notes-label">Notater
-        <textarea rows="2" placeholder="Valgfritt" value={notes} onChange={(e) => setNotes(e.target.value)} />
+      <label className="notes-label">{t('Notater')}
+        <textarea rows="2" placeholder={t('Valgfritt')} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </label>
 
       <div className="log-actions">
-        <button className="primary" onClick={submit} disabled={busy}>{busy ? 'Lagrer …' : 'Lagre økt'}</button>
-        {saved && <span className="success">✓ Økt lagret</span>}
+        <button className="primary" onClick={submit} disabled={busy}>{busy ? t('Lagrer …') : t('Lagre økt')}</button>
+        {saved && <span className="success">{t('✓ Økt lagret')}</span>}
       </div>
       {error && <p className="error">{error}</p>}
 
-      <h3 className="detail-h3">Progresjon (styrke)</h3>
+      <h3 className="detail-h3">{t('Progresjon (styrke)')}</h3>
       <div className="progress-search">
-        <input list="exercises" placeholder="Øvelse, f.eks. Benkpress" value={progressName} onChange={(e) => setProgressName(e.target.value)} />
-        <button onClick={loadProgress}>Vis</button>
+        <input list="exercises" placeholder={t('Øvelse, f.eks. Benkpress')} value={progressName} onChange={(e) => setProgressName(e.target.value)} />
+        <button onClick={loadProgress}>{t('Vis')}</button>
       </div>
       {progress && (progress.length === 0
-        ? <p className="muted">Ingen logget for denne øvelsen ennå.</p>
+        ? <p className="muted">{t('Ingen logget for denne øvelsen ennå.')}</p>
         : (
           <div className="progress">
             {progress.map((p, i) => (
@@ -520,13 +522,13 @@ export default function TrainingView({ session }) {
         ))}
 
       <div className="import-panel">
-        <span className="ai-title">⌚ Importer fra Garmin</span>
+        <span className="ai-title">{t('⌚ Importer fra Garmin')}</span>
         <p className="muted import-hint">
-          Garmin Connect → Aktiviteter → Alle aktiviteter → «Eksporter CSV», og velg fila her.
+          {t('Garmin Connect → Aktiviteter → Alle aktiviteter → «Eksporter CSV», og velg fila her.')}
           Øktene dine havner i dagboka med ekte kalorier, og dagsbalansen bruker dem automatisk.
         </p>
         <label className={`file-btn ${importBusy ? 'busy' : ''}`}>
-          {importBusy ? 'Importerer …' : '📂 Velg CSV-fil'}
+          {importBusy ? t('Importerer …') : t('📂 Velg CSV-fil')}
           <input type="file" accept=".csv,text/csv" hidden disabled={importBusy}
                  onChange={(e) => { importGarmin(e.target.files[0]); e.target.value = '' }} />
         </label>
@@ -537,9 +539,9 @@ export default function TrainingView({ session }) {
         )}
       </div>
 
-      <h3 className="detail-h3">Tidligere økter</h3>
+      <h3 className="detail-h3">{t('Tidligere økter')}</h3>
       {workouts.length === 0 ? (
-        <p className="muted">Ingen økter ennå.</p>
+        <p className="muted">{t('Ingen økter ennå.')}</p>
       ) : (
         <div className="workouts">
           {workouts.map((w) => (
@@ -547,7 +549,7 @@ export default function TrainingView({ session }) {
               <div className="workout-head">
                 <strong>{w.title}</strong>
                 <span className="muted">{(TYPES.find((t) => t.v === w.type)?.t) || w.type} · {w.date}</span>
-                <button className="del" onClick={() => deleteWorkout(w.id)} aria-label="Slett">✕</button>
+                <button className="del" onClick={() => deleteWorkout(w.id)} aria-label={t('Slett')}>✕</button>
               </div>
               <WorkoutBody workout={w} />
             </div>

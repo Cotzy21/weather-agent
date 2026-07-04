@@ -4,6 +4,7 @@ import MealDiary from './MealDiary'
 import { apiUrl, readError } from './api'
 import { authHeaders } from './supabase'
 import { useReveal, pop } from './anim'
+import { useI18n } from './i18n.jsx'
 
 /**
  * Kosthold: utforsk matfamiliene, merk favoritter, og sett sammen egne måltider
@@ -180,13 +181,14 @@ function totalMacros(ingredients) {
 }
 
 export default function NutritionView({ session }) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(null) // åpen familie-id
   const [favs, setFavs] = useState(loadFavs)
   const [meals, setMeals] = useState(loadMeals)
   const [building, setBuilding] = useState(false)
   const [mealName, setMealName] = useState('')
   const [ingredients, setIngredients] = useState([])
-  const [mealSaved, setMealSaved] = useState(false) // kort «✓ Måltid lagret»-kvittering
+  const [mealSaved, setMealSaved] = useState(false) // kort kvittering etter lagring
   const [mealError, setMealError] = useState(null)
   const rootRef = useReveal([])
   const foodsRef = useRef(null)
@@ -359,43 +361,43 @@ export default function NutritionView({ session }) {
 
   return (
     <div className="nutrition" ref={rootRef}>
-      <h2 className="detail-title" data-reveal>🥗 Kosthold</h2>
+      <h2 className="detail-title" data-reveal>{t('🥗 Kosthold')}</h2>
 
       <MealDiary session={session} />
 
       <p className="muted" data-reveal>
-        Utforsk matfamiliene, merk favorittene dine, og sett dem sammen til egne måltider.
+        {t('Utforsk matfamiliene, merk favorittene dine, og sett dem sammen til egne måltider.')}
       </p>
 
       {favs.length > 0 && (
         <div className="fav-shelf" data-reveal>
-          <span className="ai-title">⭐ Favorittene dine</span>
+          <span className="ai-title">{t('⭐ Favorittene dine')}</span>
           <span className="muted sync-hint">
-            {session ? '☁️ synkes til kontoen din' : 'lagres kun i denne nettleseren – logg inn for å ta dem med deg'}
+            {session ? t('☁️ synkes til kontoen din') : t('lagres kun i denne nettleseren – logg inn for å ta dem med deg')}
           </span>
           <div className="fav-chips">
             {favs.map((f) => (
-              <button key={f.key} className="fav-chip" title="Fjern"
+              <button key={f.key} className="fav-chip" title={t('Fjern')}
                       onClick={() => removeFav(f.key)}>
                 <span>{f.e}</span> {f.n} ✕
               </button>
             ))}
           </div>
           <div className="fav-profile">
-            <span className="muted">Samlet energifordeling:</span>
+            <span className="muted">{t('Samlet energifordeling:')}</span>
             <MacroSplit m={favTotals} withLegend />
           </div>
 
           {!building ? (
             <span className="meal-start-row">
               <button className="primary meal-start" onClick={() => setBuilding(true)}>
-                🍽️ Sett sammen måltid av favorittene
+                {t('🍽️ Sett sammen måltid av favorittene')}
               </button>
-              {mealSaved && <span className="success">✓ Måltid lagret</span>}
+              {mealSaved && <span className="success">{t('✓ Måltid lagret')}</span>}
             </span>
           ) : (
             <div className="meal-builder">
-              <p className="food-panel-title">Trykk på favoritter for å legge dem i måltidet:</p>
+              <p className="food-panel-title">{t('Trykk på favoritter for å legge dem i måltidet:')}</p>
               <div className="fav-chips">
                 {favs.filter((f) => !ingredients.some((i) => i.key === f.key)).map((f) => (
                   <button key={f.key} className="fav-chip add"
@@ -418,17 +420,17 @@ export default function NutritionView({ session }) {
               {ingredients.length > 0 && (
                 <p className="meal-total">
                   <strong>~{buildKcal.toFixed(0)} kcal</strong>
-                  {' '}· {buildTotals.p.toFixed(0)} g protein · {buildTotals.k.toFixed(0)} g karbo · {buildTotals.f.toFixed(0)} g fett
+                  {' '}· {buildTotals.p.toFixed(0)} g protein · {buildTotals.k.toFixed(0)} g {t('karbo')} · {buildTotals.f.toFixed(0)} g {t('fett')}
                 </p>
               )}
               <div className="meal-actions">
-                <input placeholder="Navn på måltidet, f.eks. Treningsfrokost"
+                <input placeholder={t('Navn på måltidet, f.eks. Treningsfrokost')}
                        value={mealName} onChange={(e) => setMealName(e.target.value)} />
                 <button className="primary" onClick={saveMeal}
-                        disabled={!mealName.trim() || ingredients.length === 0}>Lagre måltid</button>
-                <button className="mini" onClick={() => { setBuilding(false); setIngredients([]); setMealError(null) }}>Avbryt</button>
+                        disabled={!mealName.trim() || ingredients.length === 0}>{t('Lagre måltid')}</button>
+                <button className="mini" onClick={() => { setBuilding(false); setIngredients([]); setMealError(null) }}>{t('Avbryt')}</button>
               </div>
-              {mealError && <p className="error">Beklager – {mealError}</p>}
+              {mealError && <p className="error">{t('Beklager –')} {mealError}</p>}
             </div>
           )}
         </div>
@@ -436,15 +438,15 @@ export default function NutritionView({ session }) {
 
       {meals.length > 0 && (
         <div className="meal-list" data-reveal>
-          <span className="ai-title">🍽️ Måltidene dine</span>
+          <span className="ai-title">{t('🍽️ Måltidene dine')}</span>
           {meals.map((meal) => {
-            const t = totalMacros(meal.ingredients)
+            const tm = totalMacros(meal.ingredients)
             return (
               <div className="meal-card" key={meal.id}>
                 <div className="meal-head">
                   <strong>{meal.name}</strong>
-                  <span className="muted">~{kcalOf(t).toFixed(0)} kcal</span>
-                  <button className="del" aria-label="Slett"
+                  <span className="muted">~{kcalOf(tm).toFixed(0)} kcal</span>
+                  <button className="del" aria-label={t('Slett')}
                           onClick={() => deleteMeal(meal.id)}>✕</button>
                 </div>
                 <p className="muted meal-ingredients">
@@ -464,11 +466,11 @@ export default function NutritionView({ session }) {
                   style={{ '--family-hue': f.hue }}
                   onClick={() => setOpen(open === f.id ? null : f.id)}>
             <span className="family-icon">{f.icon}</span>
-            <span className="family-name">{f.name}</span>
+            <span className="family-name">{t(f.name)}</span>
             <span className="family-count muted">
               {f.foods.filter((x) => isFav(f.id, x)).length > 0
                 ? `${f.foods.filter((x) => isFav(f.id, x)).length} ⭐`
-                : `${f.foods.length} matvarer`}
+                : `${f.foods.length} ${t('matvarer')}`}
             </span>
           </button>
         ))}
@@ -476,21 +478,21 @@ export default function NutritionView({ session }) {
 
       {family && (
         <div className="food-panel" style={{ '--family-hue': family.hue }}>
-          <p className="food-panel-title">{family.icon} {family.name} – trykk for å merke favoritter</p>
+          <p className="food-panel-title">{family.icon} {t(family.name)} {t('– trykk for å merke favoritter')}</p>
           <div className="food-grid" ref={foodsRef}>
             {family.foods.map((food) => (
               <button key={food.n}
                       className={`food-card ${isFav(family.id, food) ? 'fav' : ''}`}
                       onClick={(e) => toggleFav(food, family.id, e.currentTarget)}>
                 <span className="food-emoji">{food.e}</span>
-                <span className="food-name">{food.n}</span>
+                <span className="food-name">{t(food.n)}</span>
                 <MacroSplit m={food.m} />
                 <span className="food-kcal muted">~{kcalOf(food.m).toFixed(0)} kcal/100 g</span>
                 <span className="food-star">{isFav(family.id, food) ? '⭐' : '☆'}</span>
               </button>
             ))}
           </div>
-          <p className="muted source-note">Makroverdier er ca-tall per 100 g (Matvaretabellen).</p>
+          <p className="muted source-note">{t('Makroverdier er ca-tall per 100 g (Matvaretabellen).')}</p>
         </div>
       )}
     </div>

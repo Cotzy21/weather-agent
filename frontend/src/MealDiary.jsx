@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { apiUrl, readError } from './api'
 import { authHeaders } from './supabase'
+import { useI18n } from './i18n.jsx'
 
 /**
  * Kostholdsdagboka: søk i Matvaretabellen, velg porsjon og mengde, og logg på
@@ -37,6 +38,7 @@ const PACE = [
 const today = () => new Date().toISOString().slice(0, 10)
 
 export default function MealDiary({ session }) {
+  const { t } = useI18n()
   const [date, setDate] = useState(today)
   const [meal, setMeal] = useState('FROKOST')
 
@@ -173,7 +175,7 @@ export default function MealDiary({ session }) {
   }
 
   if (!session) {
-    return <p className="muted" data-reveal>Logg inn for å føre kostholdsdagbok.</p>
+    return <p className="muted" data-reveal>{t('Logg inn for å føre kostholdsdagbok.')}</p>
   }
 
   const lows = week.filter((n) => n.advice)
@@ -181,61 +183,61 @@ export default function MealDiary({ session }) {
   return (
     <div className="diary" data-reveal>
       <div className="diary-controls">
-        <label>Dag
+        <label>{t('Dag')}
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </label>
-        <label>Måltid
+        <label>{t('Måltid')}
           <select value={meal} onChange={(e) => setMeal(e.target.value)}>
-            {MEALS.map((m) => <option key={m.v} value={m.v}>{m.t}</option>)}
+            {MEALS.map((m) => <option key={m.v} value={m.v}>{t(m.t)}</option>)}
           </select>
         </label>
         <button className="linklike goal-toggle" onClick={() => setShowGoal(!showGoal)}>
-          🎯 {goal ? `Mål: ${goal.dailyTargetKcal.toFixed(0)} kcal/dag` : 'Sett opp kalorimål'} {showGoal ? '▾' : '▸'}
+          🎯 {goal ? t('Mål: {n} kcal/dag', { n: goal.dailyTargetKcal.toFixed(0) }) : t('Sett opp kalorimål')} {showGoal ? '▾' : '▸'}
         </button>
       </div>
 
       {showGoal && (
         <div className="goal-form">
-          <label>Vekt (kg)
+          <label>{t('Vekt (kg)')}
             <input type="number" min="30" value={goalForm.weightKg}
                    onChange={(e) => setGoalForm({ ...goalForm, weightKg: e.target.value })} />
           </label>
-          <label>Høyde (cm)
+          <label>{t('Høyde (cm)')}
             <input type="number" min="120" value={goalForm.heightCm}
                    onChange={(e) => setGoalForm({ ...goalForm, heightCm: e.target.value })} />
           </label>
-          <label>Alder
+          <label>{t('Alder')}
             <input type="number" min="15" value={goalForm.age}
                    onChange={(e) => setGoalForm({ ...goalForm, age: e.target.value })} />
           </label>
-          <label>Kjønn
+          <label>{t('Kjønn')}
             <select value={goalForm.sex} onChange={(e) => setGoalForm({ ...goalForm, sex: e.target.value })}>
-              <option value="M">Mann</option>
-              <option value="K">Kvinne</option>
+              <option value="M">{t('Mann')}</option>
+              <option value="K">{t('Kvinne')}</option>
             </select>
           </label>
-          <label>Hverdagsaktivitet
+          <label>{t('Hverdagsaktivitet')}
             <select value={goalForm.activityLevel}
                     onChange={(e) => setGoalForm({ ...goalForm, activityLevel: e.target.value })}>
-              {ACTIVITY.map((a) => <option key={a.v} value={a.v}>{a.t}</option>)}
+              {ACTIVITY.map((a) => <option key={a.v} value={a.v}>{t(a.t)}</option>)}
             </select>
           </label>
-          <label>Mål
+          <label>{t('Mål')}
             <select value={goalForm.goalKgPerWeek}
                     onChange={(e) => setGoalForm({ ...goalForm, goalKgPerWeek: e.target.value })}>
-              {PACE.map((p) => <option key={p.v} value={p.v}>{p.t}</option>)}
+              {PACE.map((p) => <option key={p.v} value={p.v}>{t(p.t)}</option>)}
             </select>
           </label>
           <button className="primary" onClick={saveGoal}
                   disabled={!goalForm.weightKg || !goalForm.heightCm || !goalForm.age}>
-            Lagre mål
+            {t('Lagre mål')}
           </button>
         </div>
       )}
 
       <input
         className="diary-search"
-        placeholder="Søk i Matvaretabellen … (f.eks. havregryn)"
+        placeholder={t('Søk i Matvaretabellen … (f.eks. havregryn)')}
         value={query}
         onChange={(e) => { setQuery(e.target.value); setPicked(null) }}
       />
@@ -256,40 +258,40 @@ export default function MealDiary({ session }) {
         <div className="diary-add">
           <p className="diary-picked"><strong>{picked.name}</strong></p>
           <div className="diary-amount">
-            <label>Mengde
+            <label>{t('Mengde')}
               <input type="number" min="0" step="any" value={amount}
                      onChange={(e) => setAmount(e.target.value)} />
             </label>
-            <label>Enhet
+            <label>{t('Enhet')}
               <select value={portion}
                       onChange={(e) => setPortion(e.target.value === 'g' ? 'g' : Number(e.target.value))}>
-                <option value="g">gram</option>
+                <option value="g">{t('gram')}</option>
                 {picked.portions.map((p, i) => (
                   <option key={i} value={i}>{p.name} ({p.grams.toFixed(0)} g)</option>
                 ))}
               </select>
             </label>
             <span className="muted">= {grams.toFixed(0)} g · ~{previewKcal.toFixed(0)} kcal</span>
-            <button className="primary" onClick={add} disabled={grams <= 0}>Legg til</button>
+            <button className="primary" onClick={add} disabled={grams <= 0}>{t('Legg til')}</button>
           </div>
         </div>
       )}
 
-      {error && <p className="error">Beklager – {error}</p>}
+      {error && <p className="error">{t('Beklager –')} {error}</p>}
 
       {day && (
         <>
           <p className="diary-totals">
             <strong>{day.kcal.toFixed(0)} kcal</strong>
-            {' '}· {day.proteinG.toFixed(0)} g protein · {day.carbG.toFixed(0)} g karbo · {day.fatG.toFixed(0)} g fett
-            {day.burnedKcal > 0 && <> · 🏋️ trening −{day.burnedKcal} kcal</>}
+            {' '}· {day.proteinG.toFixed(0)} g protein · {day.carbG.toFixed(0)} g {t('karbo')} · {day.fatG.toFixed(0)} g {t('fett')}
+            {day.burnedKcal > 0 && <> · 🏋️ {t('trening')} −{day.burnedKcal} kcal</>}
           </p>
           {day.targetKcal != null && (
             <p className="diary-balance">
-              Mål {day.targetKcal.toFixed(0)} − spist {day.kcal.toFixed(0)}
-              {day.burnedKcal > 0 && <> + trening {day.burnedKcal}</>}
+              {t('Mål')} {day.targetKcal.toFixed(0)} − {t('spist')} {day.kcal.toFixed(0)}
+              {day.burnedKcal > 0 && <> + {t('trening')} {day.burnedKcal}</>}
               {' '}= <strong className={day.remainingKcal < 0 ? 'over-budget' : ''}>
-                {day.remainingKcal.toFixed(0)} kcal igjen
+                {day.remainingKcal.toFixed(0)} {t('kcal igjen')}
               </strong>
             </p>
           )}
@@ -303,14 +305,14 @@ export default function MealDiary({ session }) {
                     {e.foodName} <span className="muted">
                       {e.grams.toFixed(0)} g · {e.kcal.toFixed(0)} kcal
                     </span>
-                    <button className="del" onClick={() => remove(e.id)} aria-label="Slett">✕</button>
+                    <button className="del" onClick={() => remove(e.id)} aria-label={t('Slett')}>✕</button>
                   </li>
                 ))}
               </ul>
             </div>
           ))}
           {day.entries.length === 0 && (
-            <p className="muted">Ingenting logget denne dagen ennå.</p>
+            <p className="muted">{t('Ingenting logget denne dagen ennå.')}</p>
           )}
         </>
       )}
@@ -318,7 +320,7 @@ export default function MealDiary({ session }) {
       {week.length > 0 && (
         <div className="week-panel">
           <button className="linklike week-toggle" onClick={() => setShowWeek(!showWeek)}>
-            🧪 Ukas vitaminer og mineraler {lows.length > 0 ? `– ${lows.length} å se på` : '– ser bra ut'} {showWeek ? '▾' : '▸'}
+            {t('🧪 Ukas vitaminer og mineraler')} {lows.length > 0 ? t('– {n} å se på', { n: lows.length }) : t('– ser bra ut')} {showWeek ? '▾' : '▸'}
           </button>
           {showWeek && (
             <div className="macro-bars">
@@ -344,7 +346,7 @@ export default function MealDiary({ session }) {
         </div>
       )}
 
-      <p className="muted source-note">Kilde: Matvaretabellen, Mattilsynet (matvaretabellen.no)</p>
+      <p className="muted source-note">{t('Kilde: Matvaretabellen, Mattilsynet (matvaretabellen.no)')}</p>
     </div>
   )
 }
