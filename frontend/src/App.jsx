@@ -8,7 +8,7 @@ import RecoveryView from './RecoveryView'
 import Dashboard from './Dashboard'
 import AuthView from './AuthView'
 import { supabase } from './supabase'
-import { apiUrl, readError } from './api'
+import { apiUrl, readError, clearCache } from './api'
 import { useI18n } from './i18n.jsx'
 import { useTabTransition } from './anim'
 import './App.css'
@@ -258,7 +258,14 @@ export default function App() {
   useEffect(() => {
     if (!supabase) return undefined
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    // Tøm data-cachen når brukeren endres (inn/ut-logging), så ingen ser
+    // forrige brukers cachede økter/kosthold.
+    let lastUser = null
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      const uid = s?.user?.id ?? null
+      if (uid !== lastUser) { clearCache(); lastUser = uid }
+      setSession(s)
+    })
     return () => sub.subscription.unsubscribe()
   }, [])
 

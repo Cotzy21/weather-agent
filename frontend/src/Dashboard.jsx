@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { authHeaders } from './supabase'
-import { apiUrl } from './api'
+import { cachedGet, getCached } from './api'
 import { useReveal, useCountUp } from './anim'
 import { useI18n } from './i18n.jsx'
 
@@ -24,9 +24,10 @@ const isoToday = () => new Date().toISOString().slice(0, 10)
  */
 export default function Dashboard({ session, onNavigate }) {
   const { t } = useI18n()
-  const [workouts, setWorkouts] = useState([])
-  const [day, setDay] = useState(null)   // dagens kaloribalanse
-  const [lows, setLows] = useState([])   // næringsstoffer med lavt ukesinntak
+  // Hydrer fra cachen så fanen tegnes med forrige data straks (ingen tomt glimt).
+  const [workouts, setWorkouts] = useState(() => getCached('/api/treningsokter') ?? [])
+  const [day, setDay] = useState(() => getCached(`/api/kosthold/dag?dato=${isoToday()}`) ?? null)
+  const [lows, setLows] = useState(() => (getCached(`/api/kosthold/uke?til=${isoToday()}`) ?? []).filter((n) => n.advice))
 
   useEffect(() => {
     if (!session) { setWorkouts([]); setDay(null); setLows([]); return }
@@ -37,21 +38,21 @@ export default function Dashboard({ session, onNavigate }) {
 
   async function loadWorkouts() {
     try {
-      const res = await fetch(apiUrl('/api/treningsokter'), { headers: await authHeaders() })
-      if (res.ok) setWorkouts(await res.json())
-    } catch { /* hjem er sekundært */ }
+      setWorkouts(await cachedGet('/api/treningsokter', await authHeaders()))
+    } catch { /* hjem er sekundært – behold cachet */ }
   }
 
   async function loadNutrition() {
     const iso = isoToday()
+    const headers = await authHeaders()
     try {
-      const [dagRes, ukeRes] = await Promise.all([
-        fetch(apiUrl(`/api/kosthold/dag?dato=${iso}`), { headers: await authHeaders() }),
-        fetch(apiUrl(`/api/kosthold/uke?til=${iso}`), { headers: await authHeaders() }),
+      const [dag, uke] = await Promise.all([
+        cachedGet(`/api/kosthold/dag?dato=${iso}`, headers),
+        cachedGet(`/api/kosthold/uke?til=${iso}`, headers),
       ])
-      if (dagRes.ok) setDay(await dagRes.json())
-      if (ukeRes.ok) setLows((await ukeRes.json()).filter((n) => n.advice))
-    } catch { /* hjem er sekundært */ }
+      setDay(dag)
+      setLows(uke.filter((n) => n.advice))
+    } catch { /* hjem er sekundært – behold cachet */ }
   }
 
   const revealRef = useReveal([session, workouts.length])

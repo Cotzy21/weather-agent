@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { authHeaders } from './supabase'
-import { apiUrl, readError } from './api'
+import { apiUrl, readError, cachedGet, getCached } from './api'
 import MusclePicker from './MusclePicker'
 import { useReveal } from './anim'
 import { useI18n } from './i18n.jsx'
@@ -64,7 +64,8 @@ export default function TrainingView({ session }) {
   const [blocks, setBlocks] = useState([newExercise()])
   const [cardio, setCardio] = useState({ distanceKm: '', durationMin: '', ascentM: '' })
 
-  const [workouts, setWorkouts] = useState([])
+  // Hydrer fra cachen (delt nøkkel med Hjem) så fanen tegnes med data straks.
+  const [workouts, setWorkouts] = useState(() => getCached('/api/treningsokter') ?? [])
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState(false) // kort kvittering etter lagring
@@ -85,7 +86,7 @@ export default function TrainingView({ session }) {
   const [aiError, setAiError] = useState(null)
   const [suggestion, setSuggestion] = useState(null)
 
-  const [plans, setPlans] = useState([])
+  const [plans, setPlans] = useState(() => getCached('/api/trening/planer') ?? [])
 
   useEffect(() => {
     if (session) { loadWorkouts(); loadPlans() }
@@ -95,16 +96,14 @@ export default function TrainingView({ session }) {
 
   async function loadWorkouts() {
     try {
-      const res = await fetch(apiUrl('/api/treningsokter'), { headers: await authHeaders() })
-      if (res.ok) setWorkouts(await res.json())
-    } catch { /* sekundært */ }
+      setWorkouts(await cachedGet('/api/treningsokter', await authHeaders()))
+    } catch { /* sekundært – behold cachet */ }
   }
 
   async function loadPlans() {
     try {
-      const res = await fetch(apiUrl('/api/trening/planer'), { headers: await authHeaders() })
-      if (res.ok) setPlans(await res.json())
-    } catch { /* sekundært */ }
+      setPlans(await cachedGet('/api/trening/planer', await authHeaders()))
+    } catch { /* sekundært – behold cachet */ }
   }
 
   // Lagre AI-forslaget i profilen så det kan gjenbrukes senere.
