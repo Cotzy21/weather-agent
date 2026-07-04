@@ -1,0 +1,13 @@
+# Hold byggekonteksten liten og ren. Alt dette bygges/genereres i containeren.
+target/
+frontend/node_modules/
+frontend/dist/
+src/main/resources/static/
+.git/
+.idea/
+.mvn/
+*.iml
+docs/
+.env
+frontend/.env
+application-local.properties
