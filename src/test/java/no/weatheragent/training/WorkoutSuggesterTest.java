@@ -50,4 +50,50 @@ class WorkoutSuggesterTest {
 
         assertThrows(AiSuggestionException.class, () -> suggester.suggest(user, "fokus", null));
     }
+
+    @Test
+    void planParsesMultipleWorkouts() {
+        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("""
+                {"title":"Push/Pull/Legs","summary":"3-dagers split.",
+                 "workouts":[
+                   {"title":"Push","type":"styrke","content":{"blocks":[{"kind":"exercise","name":"Benkpress","sets":[{"reps":8,"weightKg":70}]}]},"rationale":"Bryst/skulder/triceps."},
+                   {"title":"Pull","type":"STYRKE","content":{"blocks":[]},"rationale":"Rygg/biceps."},
+                   {"title":"Legs","type":"STYRKE","content":{"blocks":[]},"rationale":"Bein."}
+                 ]}
+                """);
+
+        PlanSuggestion plan = suggester.suggestPlan(user, "lag en push pull legs split");
+
+        assertEquals("Push/Pull/Legs", plan.title());
+        assertEquals(3, plan.workouts().size());
+        assertEquals("Push", plan.workouts().getFirst().title());
+        assertEquals("STYRKE", plan.workouts().getFirst().type()); // normalisert
+        assertEquals("Benkpress", plan.workouts().getFirst().content()
+                .path("blocks").get(0).path("name").asText());
+    }
+
+    @Test
+    void planCapsNumberOfWorkouts() {
+        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        StringBuilder ws = new StringBuilder();
+        for (int i = 0; i < 12; i++) {
+            ws.append(i > 0 ? "," : "").append("{\"title\":\"Økt ").append(i).append("\",\"type\":\"STYRKE\",\"content\":{}}");
+        }
+        when(llm.complete(eq(LlmTier.SMART), any(), any()))
+                .thenReturn("{\"title\":\"Stor plan\",\"summary\":\"\",\"workouts\":[" + ws + "]}");
+
+        PlanSuggestion plan = suggester.suggestPlan(user, "gi meg 12 økter");
+
+        assertTrue(plan.workouts().size() <= 7);
+    }
+
+    @Test
+    void planThrowsWhenNoWorkouts() {
+        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(llm.complete(eq(LlmTier.SMART), any(), any()))
+                .thenReturn("{\"title\":\"Tom\",\"summary\":\"\",\"workouts\":[]}");
+
+        assertThrows(AiSuggestionException.class, () -> suggester.suggestPlan(user, "noe"));
+    }
 }

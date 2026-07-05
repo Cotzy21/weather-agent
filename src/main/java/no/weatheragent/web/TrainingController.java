@@ -10,6 +10,7 @@ import no.weatheragent.training.WorkoutService;
 import no.weatheragent.training.WorkoutSuggester;
 import no.weatheragent.web.dto.ImportResultDto;
 import no.weatheragent.web.dto.LogWorkoutRequest;
+import no.weatheragent.web.dto.PlanSuggestionDto;
 import no.weatheragent.web.dto.ProgressPointDto;
 import no.weatheragent.web.dto.SavePlanRequest;
 import no.weatheragent.web.dto.SuggestionDto;
@@ -100,6 +101,17 @@ public class TrainingController {
     public SuggestionDto suggest(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SuggestionRequest request) {
         Suggestion s = suggester.suggest(UUID.fromString(jwt.getSubject()), request.focus(), request.type());
         return SuggestionDto.from(s);
+    }
+
+    /**
+     * AI-plan: én ELLER FLERE økter ut fra en fritekst-forespørsel («lag en push
+     * pull legs split»). Brukeren aksepterer (lagrer via /api/trening/planer) eller
+     * forkaster i frontenden.
+     */
+    @PostMapping("/api/trening/plan-forslag")
+    public PlanSuggestionDto suggestPlan(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SuggestionRequest request) {
+        return PlanSuggestionDto.from(
+                suggester.suggestPlan(UUID.fromString(jwt.getSubject()), request.focus()));
     }
 
     /** Lagre en plan i profilen - typisk et forslag brukeren likte. */

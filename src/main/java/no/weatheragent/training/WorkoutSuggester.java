@@ -20,6 +20,8 @@ import java.util.UUID;
 public class WorkoutSuggester {
 
     private static final int HISTORY_LIMIT = 8;
+    /** Tak på antall økter i en generert plan (mot både uhell og misbruk av tokens). */
+    private static final int MAX_PLAN_WORKOUTS = 7;
 
     private final WorkoutRepository repository;
     private final OpenAiCompatibleChatClient llm;
@@ -48,6 +50,43 @@ public class WorkoutSuggester {
                     json.path("rationale").asText(""));
         } catch (Exception e) {
             throw new AiSuggestionException("Klarte ikke å tolke AI-forslaget. Prøv igjen.");
+        }
+    }
+
+    /**
+     * Lag en KOMPLETT plan med én eller flere økter ut fra en fritekst-forespørsel
+     * («lag en push pull legs split», «upper/lower, mer cardio»). Bruker historikken
+     * for progressiv overload. Titler/begrunnelser kommer på samme språk som
+     * forespørselen (modellen speiler språket - backend-i18n kommer senere).
+     */
+    public PlanSuggestion suggestPlan(UUID userId, String request) {
+        String history = recentHistory(userId);
+        String raw = llm.complete(LlmTier.SMART, planSystemPrompt(), planUserPrompt(request, history));
+        try {
+            JsonNode json = mapper.readTree(extractJson(raw));
+            List<Suggestion> workouts = new ArrayList<>();
+            for (JsonNode w : json.path("workouts")) {
+                if (workouts.size() >= MAX_PLAN_WORKOUTS) {
+                    break;
+                }
+                String type = w.path("type").asText("STYRKE");
+                workouts.add(new Suggestion(
+                        w.path("title").asText("Økt"),
+                        type.toUpperCase(Locale.ROOT),
+                        w.has("content") ? w.get("content") : mapper.createObjectNode(),
+                        w.path("rationale").asText("")));
+            }
+            if (workouts.isEmpty()) {
+                throw new AiSuggestionException("Klarte ikke å lage en plan. Beskriv ønsket tydeligere.");
+            }
+            return new PlanSuggestion(
+                    json.path("title").asText("Treningsplan"),
+                    json.path("summary").asText(""),
+                    workouts);
+        } catch (AiSuggestionException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new AiSuggestionException("Klarte ikke å tolke planen. Prøv igjen.");
         }
     }
 
@@ -112,6 +151,50 @@ public class WorkoutSuggester {
                   {"kind":"superset","exercises":[{"name":"...","sets":[{"reps":8,"weightKg":20}]}]}
                 For kondisjon: {"distanceKm":5,"durationMin":30} (HIKING kan ha "ascentM").
                 """;
+    }
+
+    private static String planSystemPrompt() {
+        return """
+                Du er en erfaren personlig trener. Brukeren beskriver hva de vil, og du
+                lager en KOMPLETT treningsplan med ÉN ELLER FLERE økter. Antall økter skal
+                passe forespørselen:
+                  - "push pull legs" / "ppl"     -> 3 økter (push, pull, bein)
+                  - "upper/lower" / "overkropp/underkropp" -> 2 økter
+                  - "helkropp 3x"                -> 3 balanserte helkroppsøkter
+                  - en enkelt økt                -> 1 økt
+                Legg til kondisjonsøkt(er) hvis brukeren nevner mer cardio/utholdenhet.
+
+                Regler:
+                  - Bruk brukerens nylige økter til progressiv overload (litt mer enn sist
+                    på øvelser de allerede gjør). IKKE default til bryst/push om de ikke ba om det.
+                  - Balanser muskelgrupper fornuftig innen og på tvers av øktene.
+                  - Skriv "title", "summary" og alle "rationale" på SAMME SPRÅK som brukerens
+                    forespørsel (engelsk forespørsel -> engelsk svar).
+
+                Svar KUN med ett JSON-objekt, ingen tekst utenfor:
+                {
+                  "title": "kort navn på planen",
+                  "summary": "1-2 setninger om planen",
+                  "workouts": [
+                    {
+                      "title": "...",
+                      "type": "STYRKE | LØPING | SVØMMING | SYKKEL | BULDRING | HIKING | FRISTIL",
+                      "content": { ... },
+                      "rationale": "kort begrunnelse"
+                    }
+                  ]
+                }
+                For STYRKE skal content være {"blocks":[ ... ]} der hver blokk er én av:
+                  {"kind":"exercise","name":"...","sets":[{"reps":8,"weightKg":60}]}
+                  {"kind":"dropset","name":"...","drops":[{"reps":10,"weightKg":20}]}
+                  {"kind":"superset","rounds":3,"exercises":[{"name":"...","sets":[{"reps":10,"weightKg":15}]}]}
+                For kondisjon: {"distanceKm":5,"durationMin":30} (HIKING kan ha "ascentM").
+                """;
+    }
+
+    private static String planUserPrompt(String request, String history) {
+        return "Forespørsel: " + (request == null ? "" : request)
+                + "\n\nNylige økter:\n" + history;
     }
 
     private static String userPrompt(String focus, String type, String history) {

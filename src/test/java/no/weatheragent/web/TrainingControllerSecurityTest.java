@@ -69,6 +69,13 @@ class TrainingControllerSecurityTest {
     }
 
     @Test
+    void planSuggestionRequiresAuthentication() throws Exception {
+        mvc.perform(post("/api/trening/plan-forslag")
+                        .contentType("application/json").content("{\"focus\":\"ppl split\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void garminImportRequiresAuthentication() throws Exception {
         mvc.perform(post("/api/trening/import/garmin").contentType("text/plain").content("a,b"))
                 .andExpect(status().isUnauthorized());
