@@ -7,8 +7,8 @@ import NutritionView from './NutritionView'
 import RecoveryView from './RecoveryView'
 import Dashboard from './Dashboard'
 import AuthView from './AuthView'
-import { supabase } from './supabase'
-import { apiUrl, readError, clearCache } from './api'
+import { supabase, authHeaders } from './supabase'
+import { apiUrl, readError, clearCache, cachedGet } from './api'
 import { useI18n } from './i18n.jsx'
 import { useTabTransition } from './anim'
 import './App.css'
@@ -268,6 +268,40 @@ export default function App() {
     })
     return () => sub.subscription.unsubscribe()
   }, [])
+
+  // Forhåndshent all fane-data ÉN gang når brukeren logger inn, så hver fane
+  // tegnes umiddelbart fra cachen (getCached) i stedet for å hente ved besøk.
+  // Rekkefølge: siste uke med økter FØRST (rask, liten), så resten i bakgrunnen.
+  useEffect(() => {
+    if (!session) return
+    let alive = true
+    ;(async () => {
+      try {
+        const headers = await authHeaders()
+        if (!alive) return
+        const iso = new Date().toISOString().slice(0, 10)
+        const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
+        // Rask først: siste ukes økter (fremsiden blir klar raskt).
+        await cachedGet(`/api/treningsokter?siden=${weekAgo}`, headers).catch(() => {})
+        if (!alive) return
+        // Så resten i bakgrunnen (rekkefølgen er ikke kritisk).
+        const rest = [
+          '/api/treningsokter',
+          `/api/kosthold/dag?dato=${iso}`,
+          `/api/kosthold/uke?til=${iso}`,
+          '/api/recovery',
+          '/api/trening/planer',
+          '/api/kosthold/favoritter',
+          '/api/kosthold/maaltider',
+        ]
+        for (const path of rest) {
+          if (!alive) return
+          cachedGet(path, headers).catch(() => {})
+        }
+      } catch { /* prefetch er best-effort */ }
+    })()
+    return () => { alive = false }
+  }, [session])
 
   const mainRef = useTabTransition(tab)
 

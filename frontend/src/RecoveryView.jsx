@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import HabitTracker from './HabitTracker'
 import { authHeaders } from './supabase'
-import { apiUrl } from './api'
+import { cachedGet, getCached } from './api'
 import { useReveal } from './anim'
 import { useI18n } from './i18n.jsx'
 
@@ -20,7 +20,8 @@ const label = (type) => TYPE_LABELS[type] || type
 
 export default function RecoveryView({ session }) {
   const { t } = useI18n()
-  const [report, setReport] = useState(null)
+  // Hydrer fra cachen (forhåndshentet ved innlogging) så fanen tegnes straks.
+  const [report, setReport] = useState(() => getCached('/api/recovery') ?? null)
   const revealRef = useReveal([session, report])
 
   useEffect(() => {
@@ -31,9 +32,8 @@ export default function RecoveryView({ session }) {
 
   async function load() {
     try {
-      const res = await fetch(apiUrl('/api/recovery'), { headers: await authHeaders() })
-      if (res.ok) setReport(await res.json())
-    } catch { /* viser bare tom tilstand */ }
+      setReport(await cachedGet('/api/recovery', await authHeaders()))
+    } catch { /* behold cachet / tom tilstand */ }
   }
 
   if (!session) {

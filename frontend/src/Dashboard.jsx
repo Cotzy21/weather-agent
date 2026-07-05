@@ -24,8 +24,11 @@ const isoToday = () => new Date().toISOString().slice(0, 10)
  */
 export default function Dashboard({ session, onNavigate }) {
   const { t } = useI18n()
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
   // Hydrer fra cachen så fanen tegnes med forrige data straks (ingen tomt glimt).
-  const [workouts, setWorkouts] = useState(() => getCached('/api/treningsokter') ?? [])
+  // Foretrekk full liste hvis den finnes, ellers siste-uke-slicen (forhåndshentet).
+  const [workouts, setWorkouts] = useState(() =>
+    getCached('/api/treningsokter') ?? getCached(`/api/treningsokter?siden=${weekAgo}`) ?? [])
   const [day, setDay] = useState(() => getCached(`/api/kosthold/dag?dato=${isoToday()}`) ?? null)
   const [lows, setLows] = useState(() => (getCached(`/api/kosthold/uke?til=${isoToday()}`) ?? []).filter((n) => n.advice))
 
@@ -37,9 +40,14 @@ export default function Dashboard({ session, onNavigate }) {
   }, [session])
 
   async function loadWorkouts() {
-    try {
-      setWorkouts(await cachedGet('/api/treningsokter', await authHeaders()))
-    } catch { /* hjem er sekundært – behold cachet */ }
+    const headers = await authHeaders()
+    // Rask: siste ukes økter først (ukesoppsummering + siste økt tegnes straks),
+    // hopp over hvis full liste alt er hentet (prefetch/tidligere besøk).
+    if (!getCached('/api/treningsokter')) {
+      try { setWorkouts(await cachedGet(`/api/treningsokter?siden=${weekAgo}`, headers)) } catch { /* behold cachet */ }
+    }
+    // Så hele historikken (fyller feed + totalen).
+    try { setWorkouts(await cachedGet('/api/treningsokter', headers)) } catch { /* behold cachet */ }
   }
 
   async function loadNutrition() {
