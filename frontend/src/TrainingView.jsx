@@ -542,13 +542,53 @@ export default function TrainingView({ session }) {
       {workouts.length === 0 ? (
         <p className="muted">{t('Ingen økter ennå.')}</p>
       ) : (
+        <div className="workout-groups">
+          {groupByType(workouts).map((g) => (
+            <WorkoutGroup key={g.type} group={g} onDelete={deleteWorkout} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Grupper øktene etter type, i TYPES-rekkefølgen, og ta bare med typer som
+// faktisk finnes (ingen tomme containere). Ukjente typer havner sist.
+function groupByType(workouts) {
+  const order = TYPES.map((tp) => tp.v)
+  const present = [...new Set(workouts.map((w) => w.type))]
+    .sort((a, b) => {
+      const ia = order.indexOf(a); const ib = order.indexOf(b)
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
+    })
+  return present.map((type) => ({
+    type,
+    label: TYPES.find((tp) => tp.v === type)?.t || type,
+    items: workouts.filter((w) => w.type === type),
+  }))
+}
+
+// Én sammenleggbar container per treningstype (Garmin-stil kategorier).
+function WorkoutGroup({ group, onDelete }) {
+  const { t } = useI18n()
+  const [open, setOpen] = useState(false)
+  const latest = group.items[0]?.date
+  return (
+    <div className="workout-group">
+      <button className="workout-group-head" onClick={() => setOpen(!open)}>
+        <span className="wg-title">{t(group.label)}</span>
+        <span className="wg-count">{group.items.length}</span>
+        {latest && <span className="wg-latest muted">{t('sist')} {latest}</span>}
+        <span className="wg-chevron">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && (
         <div className="workouts">
-          {workouts.map((w) => (
+          {group.items.map((w) => (
             <div className="workout" key={w.id}>
               <div className="workout-head">
                 <strong>{w.title}</strong>
-                <span className="muted">{(TYPES.find((t) => t.v === w.type)?.t) || w.type} · {w.date}</span>
-                <button className="del" onClick={() => deleteWorkout(w.id)} aria-label={t('Slett')}>✕</button>
+                <span className="muted">{w.date}</span>
+                <button className="del" onClick={() => onDelete(w.id)} aria-label={t('Slett')}>✕</button>
               </div>
               <WorkoutBody workout={w} />
             </div>

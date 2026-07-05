@@ -911,6 +911,44 @@ header .sub { margin-top: 6px; color: var(--muted); }
 }
 @keyframes grow-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .prog-val { text-align: right; font-weight: 700; }
+/* Dynamiske type-kategorier (kun typer som finnes) - sammenleggbare. */
+.workout-groups { display: flex; flex-direction: column; gap: 8px; }
+.workout-group {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: var(--elev);
+  overflow: hidden;
+}
+.workout-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  font-size: var(--fs-base);
+  transition: background 0.15s;
+}
+.workout-group-head:hover { background: var(--tint); }
+.wg-title { font-weight: 700; }
+.wg-count {
+  min-width: 24px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-align: center;
+}
+.wg-latest { font-size: var(--fs-sm); }
+.wg-chevron { margin-left: auto; color: var(--muted); }
+.workout-group .workouts { padding: 0 12px 12px; }
+
 .workouts { display: flex; flex-direction: column; gap: 10px; }
 .workout {
   box-shadow: var(--elev);
@@ -923,6 +961,16 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .workout-head .del { margin-left: auto; }
 .workout ul { margin: 6px 0 0; padding-left: 18px; }
 .workout li { font-size: 14px; margin: 2px 0; }
+/* Øktkort inne i en kategori: flate (ingen nøstede skygger), bare skillelinjer. */
+.workout-group .workout {
+  box-shadow: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  padding: 10px 2px;
+  background: none;
+}
+.workout-group .workout:hover { transform: none; background: none; border-top-color: var(--border-strong); }
 
 /* ---------- Kosthold ---------- */
 .nutrition { padding: 16px 0 32px; max-width: 720px; }
@@ -1162,15 +1210,39 @@ header .sub { margin-top: 6px; color: var(--muted); }
 
 /* ---------- Kostholdsdagbok ---------- */
 .diary {
-  background: var(--tint);
+  background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 14px;
+  border-radius: 16px;
+  padding: 16px;
   margin-bottom: 18px;
+  box-shadow: var(--elev);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
-.diary-controls { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
-.diary-controls label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
-.diary-search { width: 100%; margin-bottom: 8px; }
+.diary-controls { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; align-items: end; }
+.diary-controls label { display: flex; flex-direction: column; gap: 5px; font-size: var(--fs-sm); font-weight: 600; color: var(--muted); }
+
+/* Alle dagbok-felter (dato, select, søk, mengde, mål) far appens input-look -
+   uten dette fikk de stygge native-kontroller som ikke matcher resten. */
+.diary-controls input, .diary-controls select, .diary-search,
+.diary-amount input, .diary-amount select,
+.goal-form input, .goal-form select {
+  padding: 9px 12px;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-2);
+  color: var(--text);
+  font-size: var(--fs-base);
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.diary-controls input:focus, .diary-controls select:focus, .diary-search:focus,
+.diary-amount input:focus, .diary-amount select:focus,
+.goal-form input:focus, .goal-form select:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.diary-search { width: 100%; margin-bottom: 10px; }
 /* Søkeresultatene er en popover-liste: eget kort med sterkere skygge. */
 .food-results {
   list-style: none;
@@ -1186,18 +1258,34 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .food-results li { padding: 3px 0; }
 .food-results .linklike { padding: 4px 6px; border-radius: 8px; display: block; width: 100%; text-align: left; }
 .food-results .linklike:hover { background: var(--accent-soft); text-decoration: none; }
-.diary-add { border-top: 1px solid var(--border); padding-top: 10px; margin-bottom: 10px; }
-.diary-picked { margin: 0 0 8px; }
+/* Boksen der man velger mengde og logger den valgte matvaren - tydelig
+   innfelt kort med aksent-tone, ikke bare en toppkant. */
+.diary-add {
+  background: var(--accent-soft);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.diary-picked { margin: 0 0 10px; font-size: var(--fs-md); }
 .diary-amount { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
-.diary-amount label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
-.diary-amount input { width: 90px; }
+.diary-amount label { display: flex; flex-direction: column; gap: 5px; font-size: var(--fs-sm); font-weight: 600; color: var(--muted); }
+.diary-amount input { width: 100px; }
+.diary-amount .muted { align-self: center; font-size: var(--fs-sm); }
 .diary-totals { font-size: 15px; margin: 10px 0 4px; }
 .diary-balance { font-size: 14px; margin: 0 0 8px; color: var(--muted); }
 .diary-balance .over-budget { color: var(--danger); }
 .goal-toggle { align-self: end; font-weight: 600; }
-.goal-form { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; border-top: 1px solid var(--border); padding-top: 10px; margin-bottom: 10px; }
-.goal-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
-.goal-form input { width: 80px; }
+.goal-form {
+  display: flex; gap: 12px; align-items: end; flex-wrap: wrap;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.goal-form label { display: flex; flex-direction: column; gap: 5px; font-size: var(--fs-sm); font-weight: 600; color: var(--muted); }
+.goal-form input { width: 90px; }
 .recovery-tip {
   background: var(--accent-soft);
   border: 1px solid rgba(52, 211, 153, 0.25);

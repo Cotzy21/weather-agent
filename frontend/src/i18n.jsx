@@ -338,6 +338,7 @@ const EN = {
   '📂 Velg CSV-fil': '📂 Choose CSV file',
   'Tidligere økter': 'Previous workouts',
   'Ingen økter ennå.': 'No workouts yet.',
+  'sist': 'latest',
   'Henter varsel': 'Fetching forecast',
 }
 
