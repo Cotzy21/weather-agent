@@ -3,11 +3,14 @@ package no.weatheragent.web;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import jakarta.validation.Valid;
+import no.weatheragent.training.ChatTurn;
 import no.weatheragent.training.Suggestion;
 import no.weatheragent.training.TrainingPlanService;
 import no.weatheragent.training.WorkoutImportService;
 import no.weatheragent.training.WorkoutService;
 import no.weatheragent.training.WorkoutSuggester;
+import no.weatheragent.web.dto.AssistantReplyDto;
+import no.weatheragent.web.dto.AssistantRequest;
 import no.weatheragent.web.dto.ImportResultDto;
 import no.weatheragent.web.dto.LogWorkoutRequest;
 import no.weatheragent.web.dto.PlanSuggestionDto;
@@ -124,6 +127,19 @@ public class TrainingController {
     public PlanSuggestionDto suggestPlan(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SuggestionRequest request) {
         return PlanSuggestionDto.from(
                 suggester.suggestPlan(UUID.fromString(jwt.getSubject()), request.focus()));
+    }
+
+    /**
+     * Samtale-basert assistent: send samtalen så langt, få enten oppfølgingsspørsmål
+     * eller en ferdig plan tilbake. Bruker historikk til progressiv overload.
+     */
+    @PostMapping("/api/trening/assistent")
+    public AssistantReplyDto assistant(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody AssistantRequest request) {
+        List<ChatTurn> turns = request.messages().stream()
+                .map(m -> new ChatTurn(m.role(), m.content()))
+                .toList();
+        return AssistantReplyDto.from(
+                suggester.chat(UUID.fromString(jwt.getSubject()), turns));
     }
 
     /** Lagre en plan i profilen - typisk et forslag brukeren likte. */

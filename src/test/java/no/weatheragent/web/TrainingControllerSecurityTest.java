@@ -76,6 +76,14 @@ class TrainingControllerSecurityTest {
     }
 
     @Test
+    void assistantRequiresAuthentication() throws Exception {
+        mvc.perform(post("/api/trening/assistent")
+                        .contentType("application/json")
+                        .content("{\"messages\":[{\"role\":\"user\",\"content\":\"lag et program\"}]}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void garminImportRequiresAuthentication() throws Exception {
         mvc.perform(post("/api/trening/import/garmin").contentType("text/plain").content("a,b"))
                 .andExpect(status().isUnauthorized());

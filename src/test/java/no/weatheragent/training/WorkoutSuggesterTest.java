@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -95,5 +96,52 @@ class WorkoutSuggesterTest {
                 .thenReturn("{\"title\":\"Tom\",\"summary\":\"\",\"workouts\":[]}");
 
         assertThrows(AiSuggestionException.class, () -> suggester.suggestPlan(user, "noe"));
+    }
+
+    @Test
+    void chatReturnsFollowUpQuestionsWhenModelAsks() {
+        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("""
+                {"reply":"Så klart! Et par spørsmål først.",
+                 "questions":["Hvor mange dager i uka?","Har du tilgang til vektstang?"],
+                 "plan":null}
+                """);
+
+        AssistantReply r = suggester.chat(user, List.of(new ChatTurn("user", "lag et program")));
+
+        assertEquals(2, r.questions().size());
+        assertNull(r.plan());
+        assertTrue(r.reply().startsWith("Så klart"));
+    }
+
+    @Test
+    void chatReturnsPlanWithSuggestedDay() {
+        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("""
+                {"reply":"Her er et opplegg.","questions":[],
+                 "plan":{"title":"Upper/Lower","summary":"2-dagers.","workouts":[
+                   {"title":"Upper","day":"mandag","type":"STYRKE","content":{"blocks":[]},"rationale":"Overkropp."},
+                   {"title":"Lower","day":"torsdag","type":"STYRKE","content":{"blocks":[]},"rationale":"Underkropp."}
+                 ]}}
+                """);
+
+        AssistantReply r = suggester.chat(user, List.of(
+                new ChatTurn("user", "lag en upper lower split"),
+                new ChatTurn("assistant", "Hvor mange dager?"),
+                new ChatTurn("user", "to")));
+
+        assertTrue(r.questions().isEmpty());
+        assertEquals("Upper/Lower", r.plan().title());
+        assertEquals(2, r.plan().workouts().size());
+        assertEquals("mandag", r.plan().workouts().getFirst().content().path("day").asText());
+    }
+
+    @Test
+    void chatThrowsWhenModelReturnsNonJson() {
+        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("???");
+
+        assertThrows(AiSuggestionException.class,
+                () -> suggester.chat(user, List.of(new ChatTurn("user", "hei"))));
     }
 }
