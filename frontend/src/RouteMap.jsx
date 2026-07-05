@@ -24,10 +24,24 @@ export default function RouteMap({ waypoints, route = [], onAdd, focus = null })
       // Zoom-knappene til høyre (à la AllTrails) - panelet ligger oppe til venstre.
       mapRef.current = L.map(elRef.current, { zoomControl: false }).setView([64.5, 12], 4)
       L.control.zoom({ position: 'topright' }).addTo(mapRef.current)
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap-bidragsytere',
-        maxZoom: 17,
-      }).addTo(mapRef.current)
+
+      // Kartlag brukeren kan bytte mellom (som Google Maps: kart/terreng/satellitt).
+      // Alle er gratis og uten nøkkel; terreng (OpenTopoMap) er fint for turplanlegging.
+      const standard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap-bidragsytere', maxZoom: 19,
+      })
+      const terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenTopoMap (CC-BY-SA)', maxZoom: 17,
+      })
+      const satellite = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles © Esri', maxZoom: 19,
+        })
+      standard.addTo(mapRef.current)
+      L.control.layers(
+        { Map: standard, Terrain: terrain, Satellite: satellite },
+        null, { position: 'topright' },
+      ).addTo(mapRef.current)
       layerRef.current = L.layerGroup().addTo(mapRef.current)
       mapRef.current.on('click', (e) => onAddRef.current(e.latlng.lat, e.latlng.lng))
     }
