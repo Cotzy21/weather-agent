@@ -32,6 +32,15 @@ class WorkoutServiceTest {
     }
 
     @Test
+    void listSinceDelegatesToDateScopedQuery() {
+        LocalDate since = LocalDate.of(2026, 6, 29);
+        when(repo.findByUserIdAndDateGreaterThanEqualOrderByDateDescCreatedAtDesc(user, since))
+                .thenReturn(List.of());
+        service.listSince(user, since);
+        verify(repo).findByUserIdAndDateGreaterThanEqualOrderByDateDescCreatedAtDesc(user, since);
+    }
+
+    @Test
     void deleteReturnsTrueWhenRemoved() {
         when(repo.deleteByIdAndUserId(any(), eq(user))).thenReturn(1L);
         assertTrue(service.delete(UUID.randomUUID(), user));

@@ -25,7 +25,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.time.LocalDate;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -76,11 +79,20 @@ public class TrainingController {
                 workouts.log(userId, request.date(), request.title(), request.type(), content, request.notes()));
     }
 
+    /**
+     * Egne økter. Med {@code ?siden=YYYY-MM-DD} returneres kun økter på/etter den
+     * datoen - fremsiden henter siste uke først (raskt), så hele historikken.
+     */
     @GetMapping("/api/treningsokter")
-    public List<WorkoutDto> mine(@AuthenticationPrincipal Jwt jwt) {
-        return workouts.listFor(UUID.fromString(jwt.getSubject())).stream()
-                .map(WorkoutDto::from)
-                .toList();
+    public List<WorkoutDto> mine(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(value = "siden", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate siden) {
+        UUID userId = UUID.fromString(jwt.getSubject());
+        var list = siden == null
+                ? workouts.listFor(userId)
+                : workouts.listSince(userId, siden);
+        return list.stream().map(WorkoutDto::from).toList();
     }
 
     @DeleteMapping("/api/treningsokter/{id}")

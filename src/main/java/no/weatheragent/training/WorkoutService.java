@@ -37,6 +37,12 @@ public class WorkoutService {
         return repository.findByUserIdOrderByDateDescCreatedAtDesc(userId);
     }
 
+    /** Økter på/etter {@code since} - for rask «siste uke først»-lasting. */
+    @Transactional(readOnly = true)
+    public List<Workout> listSince(UUID userId, LocalDate since) {
+        return repository.findByUserIdAndDateGreaterThanEqualOrderByDateDescCreatedAtDesc(userId, since);
+    }
+
     @Transactional
     public boolean delete(UUID id, UUID userId) {
         return repository.deleteByIdAndUserId(id, userId) > 0;
