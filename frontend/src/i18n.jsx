@@ -341,6 +341,16 @@ const EN = {
   'Tidligere økter': 'Previous workouts',
   'Ingen økter ennå.': 'No workouts yet.',
   'sist': 'latest',
+  // Trening-oversikt
+  'Lag en økt': 'Create a workout',
+  'Bygg fra kroppen, en mal, eller fra bunnen av': 'Build from the body, a template, or from scratch',
+  'Til oversikt': 'To overview',
+  'Oppsummering (siste 7 dager)': 'Summary (last 7 days)',
+  'Logg noen økter, så ser du progresjonen din her.': 'Log some workouts to see your progress here.',
+  'volum denne uka': 'volume this week',
+  'denne uka': 'this week',
+  'økter denne uka': 'workouts this week',
+  'vs forrige uke': 'vs last week',
   'Henter varsel': 'Fetching forecast',
 }
 

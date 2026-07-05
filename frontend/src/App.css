@@ -941,6 +941,59 @@ header .sub { margin-top: 6px; color: var(--muted); }
 }
 @keyframes grow-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .prog-val { text-align: right; font-weight: 700; }
+/* Trening-oversikt: "Lag en økt"-container (à la Garmins Create-knapp). */
+.create-workout {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.12), rgba(13, 148, 136, 0.06)), var(--card);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: var(--elev);
+  transition: transform 0.15s, border-color 0.2s, box-shadow 0.25s;
+}
+.create-workout:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 8px 26px rgba(52, 211, 153, 0.2); }
+.cw-icon {
+  font-size: 20px; width: 42px; height: 42px; flex-shrink: 0;
+  display: grid; place-items: center;
+  background: var(--gradient); color: #06251a; border-radius: 12px;
+}
+.cw-text { display: flex; flex-direction: column; gap: 2px; }
+.cw-text strong { font-size: var(--fs-md); }
+.cw-text .muted { font-size: var(--fs-sm); }
+.cw-arrow { margin-left: auto; font-size: 20px; color: var(--accent-strong); }
+
+/* Per-sport oppsummering (progresjon i volum/km, trend mot forrige uke). */
+.train-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.summary-card {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--elev);
+}
+.sc-label { font-size: var(--fs-sm); font-weight: 700; color: var(--muted); }
+.sc-value {
+  font-size: var(--fs-lg); font-weight: 800; letter-spacing: -0.3px;
+  background: var(--gradient); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.sc-sub { font-size: var(--fs-xs); }
+.sc-trend { font-size: var(--fs-sm); font-weight: 700; margin-top: 4px; color: var(--muted); }
+.sc-trend.up { color: var(--accent-strong); }
+.sc-trend.down { color: var(--danger); }
+
 /* Dynamiske type-kategorier (kun typer som finnes) - sammenleggbare. */
 .workout-groups { display: flex; flex-direction: column; gap: 8px; }
 .workout-group {

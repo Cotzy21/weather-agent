@@ -87,6 +87,11 @@ export default function TrainingView({ session }) {
   const [aiPlan, setAiPlan] = useState(null)   // generert plan (én eller flere økter)
   const [aiSaving, setAiSaving] = useState(false)
 
+  // Training-fanen har to moduser: 'overview' (landing med oppsummering + logg)
+  // og 'builder' (der man faktisk lager/logger en økt). Bygg-fra-kroppen vises
+  // bare i byggeren, ikke som det første man møter.
+  const [mode, setMode] = useState('overview')
+
   const [plans, setPlans] = useState(() => getCached('/api/trening/planer') ?? [])
 
   useEffect(() => {
@@ -203,6 +208,7 @@ export default function TrainingView({ session }) {
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
       loadWorkouts()
+      setMode('overview') // tilbake til oversikten, der den nye økta + oppsummeringen vises
     } catch (e) {
       setError(e.message)
     } finally {
@@ -314,10 +320,10 @@ export default function TrainingView({ session }) {
     } else {
       setCardio({ distanceKm: c.distanceKm ?? '', durationMin: c.durationMin ?? '', ascentM: c.ascentM ?? '' })
     }
-    // Behold planen synlig - brukeren kan sende flere av øktene til byggeren.
+    setMode('builder') // ta brukeren til byggeren med økta forhåndsutfylt
   }
 
-  const revealRef = useReveal([session])
+  const revealRef = useReveal([session, mode])
 
   if (!session) {
     return (
@@ -332,13 +338,34 @@ export default function TrainingView({ session }) {
   }
 
   const maxW = progress && progress.length ? Math.max(...progress.map((p) => p.maxWeight)) : 0
+  const summaries = computeSummaries(workouts)
 
   return (
     <div className="training" ref={revealRef}>
       <datalist id="exercises">{EXERCISES.map((e) => <option key={e} value={e} />)}</datalist>
 
-      <MusclePicker onCreate={applyMuscles} />
+      {mode === 'overview' && (
+        <>
+          <h2 className="detail-title" data-reveal>{t('Trening')}</h2>
+          <button className="create-workout" data-reveal onClick={() => setMode('builder')}>
+            <span className="cw-icon">➕</span>
+            <span className="cw-text">
+              <strong>{t('Lag en økt')}</strong>
+              <span className="muted">{t('Bygg fra kroppen, en mal, eller fra bunnen av')}</span>
+            </span>
+            <span className="cw-arrow">→</span>
+          </button>
+        </>
+      )}
 
+      {mode === 'builder' && (
+        <>
+          <button className="back" data-reveal onClick={() => setMode('overview')}>← {t('Til oversikt')}</button>
+          <MusclePicker onCreate={applyMuscles} />
+        </>
+      )}
+
+      {mode === 'overview' && (
       <div className="ai-panel" data-reveal>
         <span className="ai-title">{t('🤖 AI-treningsplan')}</span>
         <div className="ai-row">
@@ -396,7 +423,10 @@ export default function TrainingView({ session }) {
           </div>
         )}
       </div>
+      )}
 
+      {mode === 'builder' && (
+      <>
       <h2 className="detail-title" data-reveal>{t('Ny økt')}</h2>
       <div className="type-select" data-reveal>
         {TYPES.map((tp) => (
@@ -549,6 +579,19 @@ export default function TrainingView({ session }) {
             ))}
           </div>
         ))}
+      </>
+      )}
+
+      {mode === 'overview' && (
+      <>
+      <h3 className="detail-h3" data-reveal>{t('Oppsummering (siste 7 dager)')}</h3>
+      {summaries.length > 0 ? (
+        <div className="train-summary" data-reveal>
+          {summaries.map((s) => <SummaryCard key={s.type} s={s} />)}
+        </div>
+      ) : (
+        <p className="muted" data-reveal>{t('Logg noen økter, så ser du progresjonen din her.')}</p>
+      )}
 
       <div className="import-panel">
         <span className="ai-title">{t('⌚ Importer fra Garmin')}</span>
@@ -577,6 +620,94 @@ export default function TrainingView({ session }) {
             <WorkoutGroup key={g.type} group={g} onDelete={deleteWorkout} />
           ))}
         </div>
+      )}
+      </>
+      )}
+    </div>
+  )
+}
+
+const CARDIO_TYPES = ['LØPING', 'SYKKEL', 'SVØMMING', 'HIKING']
+
+// Samlet styrkevolum (Σ reps×kg) i en økt, inkl. supersett-runder.
+function strengthVolume(content) {
+  let vol = 0
+  for (const b of content?.blocks ?? []) {
+    if (b.kind === 'superset') {
+      let sv = 0
+      for (const ex of b.exercises ?? []) {
+        for (const s of ex.sets ?? []) sv += (Number(s.reps) || 0) * (Number(s.weightKg) || 0)
+      }
+      vol += sv * (Number(b.rounds) || 1)
+    } else {
+      const sets = b.kind === 'dropset' ? (b.drops ?? []) : (b.sets ?? [])
+      for (const s of sets) vol += (Number(s.reps) || 0) * (Number(s.weightKg) || 0)
+    }
+  }
+  return vol
+}
+
+// Per-sport-oppsummering: siste 7 dager mot de 7 før, med den relevante
+// metrikken (styrke = volum i kg, kondisjon = km, ellers antall økter).
+function computeSummaries(workouts) {
+  const dayMs = 86400000
+  const now = new Date(); now.setHours(0, 0, 0, 0)
+  const thisStart = now.getTime() - 6 * dayMs
+  const prevStart = now.getTime() - 13 * dayMs
+  const prevEnd = now.getTime() - 7 * dayMs
+  const at = (w) => new Date(`${w.date}T00:00:00`).getTime()
+  const metric = (w) => {
+    if (w.type === 'STYRKE') return strengthVolume(w.content)
+    if (CARDIO_TYPES.includes(w.type)) return Number(w.content?.distanceKm) || 0
+    return 1 // antall økter for øvrige typer
+  }
+  const order = TYPES.map((tp) => tp.v)
+  const present = [...new Set(workouts.map((w) => w.type))]
+    .sort((a, b) => (order.indexOf(a) < 0 ? 99 : order.indexOf(a)) - (order.indexOf(b) < 0 ? 99 : order.indexOf(b)))
+
+  return present.map((type) => {
+    const items = workouts.filter((w) => w.type === type)
+    const thisItems = items.filter((w) => at(w) >= thisStart)
+    const sum = (arr) => arr.reduce((s, w) => s + metric(w), 0)
+    const thisVal = sum(thisItems)
+    const prevVal = sum(items.filter((w) => at(w) >= prevStart && at(w) <= prevEnd))
+    const kind = type === 'STYRKE' ? 'volume' : CARDIO_TYPES.includes(type) ? 'distance' : 'sessions'
+    const deltaPct = prevVal > 0 ? Math.round(((thisVal - prevVal) / prevVal) * 100) : null
+    return {
+      type,
+      label: TYPES.find((tp) => tp.v === type)?.t || type,
+      sessions: thisItems.length,
+      total: items.length,
+      thisVal,
+      kind,
+      deltaPct,
+    }
+  })
+}
+
+// Ett oppsummeringskort per sport, med hovedtall + trend mot forrige uke.
+function SummaryCard({ s }) {
+  const { t } = useI18n()
+  const value = s.kind === 'volume'
+    ? `${Math.round(s.thisVal).toLocaleString('nb-NO')} kg`
+    : s.kind === 'distance'
+      ? `${s.thisVal.toFixed(1)} km`
+      : `${s.sessions}`
+  const metricLabel = s.kind === 'volume' ? t('volum denne uka')
+    : s.kind === 'distance' ? t('denne uka')
+      : t('økter denne uka')
+  const trendCls = s.deltaPct == null ? '' : s.deltaPct > 0 ? 'up' : s.deltaPct < 0 ? 'down' : ''
+  return (
+    <div className="summary-card">
+      <span className="sc-label">{t(s.label)}</span>
+      <span className="sc-value">{value}</span>
+      <span className="sc-sub muted">
+        {s.kind !== 'sessions' && <>{t('{n} økter', { n: s.sessions })} · </>}{metricLabel}
+      </span>
+      {s.deltaPct != null && s.kind !== 'sessions' && (
+        <span className={`sc-trend ${trendCls}`}>
+          {s.deltaPct > 0 ? '▲' : s.deltaPct < 0 ? '▼' : '–'} {Math.abs(s.deltaPct)}% {t('vs forrige uke')}
+        </span>
       )}
     </div>
   )
