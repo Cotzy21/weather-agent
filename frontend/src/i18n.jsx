@@ -292,13 +292,15 @@ const EN = {
   'hoppet over (fantes fra før)': 'skipped (already imported)',
   'Logg inn for å lagre økter, se progresjon og få AI-forslag – men prøv gjerne kroppsmodellen:':
       'Log in to save workouts, see progression and get AI suggestions – but feel free to try the body model:',
-  '🤖 AI-forslag': '🤖 AI suggestion',
-  'Fokus, f.eks. større bein, bedre cardio, forberede BJJ':
-      'Focus, e.g. bigger legs, better cardio, BJJ prep',
-  'Tenker …': 'Thinking …',
-  'Foreslå økt': 'Suggest a workout',
-  'Bruk i bygger ↓': 'Use in builder ↓',
-  '💾 Lagre som plan': '💾 Save as plan',
+  '🤖 AI-treningsplan': '🤖 AI training plan',
+  'Beskriv ønsket, f.eks. «push pull legs split» eller «upper/lower + mer cardio»':
+      'Describe what you want, e.g. “push pull legs split” or “upper/lower + more cardio”',
+  'Lager plan …': 'Building plan …',
+  'Lag plan': 'Build plan',
+  '{n} økter': '{n} workouts',
+  'Til bygger ↓': 'To builder ↓',
+  '✓ Aksepter og lagre planen': '✓ Accept & save the plan',
+  'Forkast': 'Discard',
   '📋 Mine planer': '📋 My plans',
   'Bruk i ny økt': 'Use in a new workout',
   'Slett plan': 'Delete plan',

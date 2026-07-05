@@ -84,7 +84,8 @@ export default function TrainingView({ session }) {
   const [aiFocus, setAiFocus] = useState('')
   const [aiBusy, setAiBusy] = useState(false)
   const [aiError, setAiError] = useState(null)
-  const [suggestion, setSuggestion] = useState(null)
+  const [aiPlan, setAiPlan] = useState(null)   // generert plan (én eller flere økter)
+  const [aiSaving, setAiSaving] = useState(false)
 
   const [plans, setPlans] = useState(() => getCached('/api/trening/planer') ?? [])
 
@@ -106,20 +107,27 @@ export default function TrainingView({ session }) {
     } catch { /* sekundært – behold cachet */ }
   }
 
-  // Lagre AI-forslaget i profilen så det kan gjenbrukes senere.
-  async function savePlan(s) {
+  // Aksepter planen: lagre HVER økt som en gjenbrukbar plan i profilen.
+  async function acceptPlan() {
+    if (!aiPlan) return
+    setAiSaving(true)
     setAiError(null)
     try {
-      const res = await fetch(apiUrl('/api/trening/planer'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({ title: s.title, type: s.type, content: s.content, rationale: s.rationale || null }),
-      })
-      if (!res.ok) throw new Error(await readError(res))
-      setSuggestion(null)
+      for (const w of aiPlan.workouts) {
+        const res = await fetch(apiUrl('/api/trening/planer'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+          body: JSON.stringify({ title: w.title, type: w.type, content: w.content, rationale: w.rationale || null }),
+        })
+        if (!res.ok) throw new Error(await readError(res))
+      }
+      setAiPlan(null)
+      setAiFocus('')
       loadPlans()
     } catch (e) {
       setAiError(e.message)
+    } finally {
+      setAiSaving(false)
     }
   }
 
@@ -244,19 +252,20 @@ export default function TrainingView({ session }) {
     } catch { setProgress([]) }
   }
 
-  async function suggest() {
+  // Be AI-en om en KOMPLETT plan (én eller flere økter) ut fra fritekst.
+  async function generatePlan() {
     if (!aiFocus.trim()) return
     setAiBusy(true)
     setAiError(null)
-    setSuggestion(null)
+    setAiPlan(null)
     try {
-      const res = await fetch(apiUrl('/api/trening/forslag'), {
+      const res = await fetch(apiUrl('/api/trening/plan-forslag'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ focus: aiFocus.trim(), type: '' }),
       })
       if (!res.ok) throw new Error(await readError(res))
-      setSuggestion(await res.json())
+      setAiPlan(await res.json())
     } catch (e) {
       setAiError(e.message)
     } finally {
@@ -305,7 +314,7 @@ export default function TrainingView({ session }) {
     } else {
       setCardio({ distanceKm: c.distanceKm ?? '', durationMin: c.durationMin ?? '', ascentM: c.ascentM ?? '' })
     }
-    setSuggestion(null)
+    // Behold planen synlig - brukeren kan sende flere av øktene til byggeren.
   }
 
   const revealRef = useReveal([session])
@@ -331,22 +340,43 @@ export default function TrainingView({ session }) {
       <MusclePicker onCreate={applyMuscles} />
 
       <div className="ai-panel" data-reveal>
-        <span className="ai-title">{t('🤖 AI-forslag')}</span>
+        <span className="ai-title">{t('🤖 AI-treningsplan')}</span>
         <div className="ai-row">
-          <input placeholder={t('Fokus, f.eks. større bein, bedre cardio, forberede BJJ')}
-                 value={aiFocus} onChange={(e) => setAiFocus(e.target.value)} />
-          <button className="primary" onClick={suggest} disabled={aiBusy || !aiFocus.trim()}>
-            {aiBusy ? t('Tenker …') : t('Foreslå økt')}
+          <input placeholder={t('Beskriv ønsket, f.eks. «push pull legs split» eller «upper/lower + mer cardio»')}
+                 value={aiFocus} onChange={(e) => setAiFocus(e.target.value)}
+                 onKeyDown={(e) => { if (e.key === 'Enter') generatePlan() }} />
+          <button className="primary" onClick={generatePlan} disabled={aiBusy || !aiFocus.trim()}>
+            {aiBusy ? t('Lager plan …') : t('Lag plan')}
           </button>
         </div>
         {aiError && <p className="error">{aiError}</p>}
-        {suggestion && (
-          <div className="ai-result">
-            <strong>{suggestion.title}</strong>{' '}
-            <span className="muted">({(TYPES.find((t) => t.v === suggestion.type)?.t) || suggestion.type})</span>
-            {suggestion.rationale && <p className="muted">{suggestion.rationale}</p>}
-            <button className="mini" onClick={() => applySuggestion(suggestion)}>{t('Bruk i bygger ↓')}</button>
-            <button className="mini" onClick={() => savePlan(suggestion)}>{t('💾 Lagre som plan')}</button>
+
+        {aiPlan && (
+          <div className="ai-plan">
+            <div className="ai-plan-head">
+              <strong>{aiPlan.title}</strong>
+              <span className="ai-plan-count muted">{t('{n} økter', { n: aiPlan.workouts.length })}</span>
+            </div>
+            {aiPlan.summary && <p className="muted ai-plan-summary">{aiPlan.summary}</p>}
+
+            {aiPlan.workouts.map((w, i) => (
+              <div className="ai-workout" key={i}>
+                <div className="ai-workout-head">
+                  <strong>{w.title}</strong>
+                  <span className="ai-workout-type">{t((TYPES.find((tp) => tp.v === w.type)?.t) || w.type)}</span>
+                  <button className="mini" onClick={() => applySuggestion(w)}>{t('Til bygger ↓')}</button>
+                </div>
+                {w.rationale && <p className="muted ai-workout-why">{w.rationale}</p>}
+                <WorkoutBody workout={w} />
+              </div>
+            ))}
+
+            <div className="ai-plan-actions">
+              <button className="primary" onClick={acceptPlan} disabled={aiSaving}>
+                {aiSaving ? t('Lagrer …') : t('✓ Aksepter og lagre planen')}
+              </button>
+              <button className="mini" onClick={() => setAiPlan(null)} disabled={aiSaving}>{t('Forkast')}</button>
+            </div>
           </div>
         )}
 

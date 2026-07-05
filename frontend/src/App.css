@@ -522,6 +522,36 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .ai-result { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .ai-result .mini { margin-top: 6px; }
 
+/* Generert AI-plan: oppsummering + ett kort per økt + aksepter/forkast. */
+.ai-plan { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.ai-plan-head { display: flex; align-items: baseline; gap: 10px; }
+.ai-plan-head strong { font-size: var(--fs-md); }
+.ai-plan-count { font-size: var(--fs-sm); }
+.ai-plan-summary { margin: 4px 0 12px; font-size: var(--fs-sm); }
+.ai-workout {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.ai-workout-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ai-workout-head strong { font-size: var(--fs-base); }
+.ai-workout-type {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  padding: 1px 8px;
+  border-radius: 999px;
+}
+.ai-workout-head .mini { margin-left: auto; }
+.ai-workout-why { margin: 6px 0 4px; font-size: var(--fs-sm); }
+.ai-workout ul { margin: 4px 0 0; padding-left: 18px; font-size: var(--fs-sm); }
+.ai-plan-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.ai-plan-actions .primary { border-radius: 12px; padding: 10px 18px; }
+
 /* ---------- Muskel-velger ---------- */
 .muscle-picker {
   box-shadow: var(--elev);
