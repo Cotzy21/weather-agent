@@ -292,11 +292,13 @@ const EN = {
   'hoppet over (fantes fra før)': 'skipped (already imported)',
   'Logg inn for å lagre økter, se progresjon og få AI-forslag – men prøv gjerne kroppsmodellen:':
       'Log in to save workouts, see progression and get AI suggestions – but feel free to try the body model:',
-  '🤖 AI-treningsplan': '🤖 AI training plan',
-  'Beskriv ønsket, f.eks. «push pull legs split» eller «upper/lower + mer cardio»':
-      'Describe what you want, e.g. “push pull legs split” or “upper/lower + more cardio”',
-  'Lager plan …': 'Building plan …',
-  'Lag plan': 'Build plan',
+  '🤖 AI-treningsassistent': '🤖 AI training assistant',
+  'Ny samtale': 'New chat',
+  'Be om et opplegg – f.eks. «lag en push pull legs split» eller «jeg vil begynne med mer cardio». Assistenten spør om det trenger mer, og bruker historikken din til progressiv overload.':
+      'Ask for a program – e.g. “make a push pull legs split” or “I want to start doing more cardio”. The assistant asks follow-ups if it needs more, and uses your history for progressive overload.',
+  'Beskriv ønsket, f.eks. «push pull legs split»': 'Describe what you want, e.g. “push pull legs split”',
+  'Svar assistenten …': 'Answer the assistant …',
+  'Assistenten tenker': 'The assistant is thinking',
   '{n} økter': '{n} workouts',
   'Til bygger ↓': 'To builder ↓',
   '✓ Aksepter og lagre planen': '✓ Accept & save the plan',

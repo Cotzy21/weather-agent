@@ -84,8 +84,9 @@ export default function TrainingView({ session }) {
   const [aiFocus, setAiFocus] = useState('')
   const [aiBusy, setAiBusy] = useState(false)
   const [aiError, setAiError] = useState(null)
-  const [aiPlan, setAiPlan] = useState(null)   // generert plan (én eller flere økter)
+  const [aiPlan, setAiPlan] = useState(null)   // planen når assistenten har levert den
   const [aiSaving, setAiSaving] = useState(false)
+  const [aiMessages, setAiMessages] = useState([]) // samtalen med assistenten
 
   // Training-fanen har to moduser: 'overview' (landing med oppsummering + logg)
   // og 'builder' (der man faktisk lager/logger en økt). Bygg-fra-kroppen vises
@@ -128,6 +129,7 @@ export default function TrainingView({ session }) {
       }
       setAiPlan(null)
       setAiFocus('')
+      setAiMessages([])
       loadPlans()
     } catch (e) {
       setAiError(e.message)
@@ -258,25 +260,35 @@ export default function TrainingView({ session }) {
     } catch { setProgress([]) }
   }
 
-  // Be AI-en om en KOMPLETT plan (én eller flere økter) ut fra fritekst.
-  async function generatePlan() {
-    if (!aiFocus.trim()) return
+  // Send én melding i samtalen med assistenten. Svaret er ENTEN oppfølgings-
+  // spørsmål (vises i chatten) ELLER en ferdig plan (vises med aksepter/forkast).
+  async function sendMessage() {
+    const text = aiFocus.trim()
+    if (!text || aiBusy) return
+    const next = [...aiMessages, { role: 'user', content: text }]
+    setAiMessages(next)
+    setAiFocus('')
     setAiBusy(true)
     setAiError(null)
-    setAiPlan(null)
     try {
-      const res = await fetch(apiUrl('/api/trening/plan-forslag'), {
+      const res = await fetch(apiUrl('/api/trening/assistent'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({ focus: aiFocus.trim(), type: '' }),
+        body: JSON.stringify({ messages: next.map((m) => ({ role: m.role, content: m.content })) }),
       })
       if (!res.ok) throw new Error(await readError(res))
-      setAiPlan(await res.json())
+      const data = await res.json()
+      setAiMessages([...next, { role: 'assistant', content: data.reply, questions: data.questions || [] }])
+      setAiPlan(data.plan || null)
     } catch (e) {
       setAiError(e.message)
     } finally {
       setAiBusy(false)
     }
+  }
+
+  function resetChat() {
+    setAiMessages([]); setAiPlan(null); setAiError(null); setAiFocus('')
   }
 
   // Fra muskel-velgeren: øvelsene inn i byggeren med valgt antall sett, og
@@ -367,13 +379,35 @@ export default function TrainingView({ session }) {
 
       {mode === 'overview' && (
       <div className="ai-panel" data-reveal>
-        <span className="ai-title">{t('🤖 AI-treningsplan')}</span>
+        <div className="ai-panel-head">
+          <span className="ai-title">{t('🤖 AI-treningsassistent')}</span>
+          {aiMessages.length > 0 && (
+            <button className="mini" onClick={resetChat} disabled={aiBusy || aiSaving}>{t('Ny samtale')}</button>
+          )}
+        </div>
+
+        {aiMessages.length === 0 && (
+          <p className="muted ai-intro">{t('Be om et opplegg – f.eks. «lag en push pull legs split» eller «jeg vil begynne med mer cardio». Assistenten spør om det trenger mer, og bruker historikken din til progressiv overload.')}</p>
+        )}
+
+        {aiMessages.map((m, i) => (
+          <div key={i} className={`ai-msg ${m.role}`}>
+            {m.content && <p className="ai-msg-text">{m.content}</p>}
+            {m.questions?.length > 0 && (
+              <ul className="ai-questions">{m.questions.map((q, qi) => <li key={qi}>{q}</li>)}</ul>
+            )}
+          </div>
+        ))}
+        {aiBusy && <p className="muted typing">{t('Assistenten tenker')} <span>·</span><span>·</span><span>·</span></p>}
+
         <div className="ai-row">
-          <input placeholder={t('Beskriv ønsket, f.eks. «push pull legs split» eller «upper/lower + mer cardio»')}
+          <input placeholder={aiMessages.length === 0
+            ? t('Beskriv ønsket, f.eks. «push pull legs split»')
+            : t('Svar assistenten …')}
                  value={aiFocus} onChange={(e) => setAiFocus(e.target.value)}
-                 onKeyDown={(e) => { if (e.key === 'Enter') generatePlan() }} />
-          <button className="primary" onClick={generatePlan} disabled={aiBusy || !aiFocus.trim()}>
-            {aiBusy ? t('Lager plan …') : t('Lag plan')}
+                 onKeyDown={(e) => { if (e.key === 'Enter') sendMessage() }} />
+          <button className="primary" onClick={sendMessage} disabled={aiBusy || !aiFocus.trim()}>
+            {t('Send')}
           </button>
         </div>
         {aiError && <p className="error">{aiError}</p>}
@@ -389,6 +423,7 @@ export default function TrainingView({ session }) {
             {aiPlan.workouts.map((w, i) => (
               <div className="ai-workout" key={i}>
                 <div className="ai-workout-head">
+                  {w.content?.day && <span className="ai-workout-day">{w.content.day}</span>}
                   <strong>{w.title}</strong>
                   <span className="ai-workout-type">{t((TYPES.find((tp) => tp.v === w.type)?.t) || w.type)}</span>
                   <button className="mini" onClick={() => applySuggestion(w)}>{t('Til bygger ↓')}</button>
@@ -413,8 +448,9 @@ export default function TrainingView({ session }) {
             <ul>
               {plans.map((p) => (
                 <li key={p.id}>
+                  {p.content?.day && <span className="plan-day">{p.content.day}</span>}
                   <strong>{p.title}</strong>{' '}
-                  <span className="muted">({(TYPES.find((t) => t.v === p.type)?.t) || p.type})</span>
+                  <span className="muted">({t((TYPES.find((tp) => tp.v === p.type)?.t) || p.type)})</span>
                   <button className="mini" onClick={() => applySuggestion(p)}>{t('Bruk i ny økt')}</button>
                   <button className="del" onClick={() => deletePlan(p.id)} aria-label={t('Slett plan')}>✕</button>
                 </li>

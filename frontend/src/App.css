@@ -522,6 +522,35 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .ai-result { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .ai-result .mini { margin-top: 6px; }
 
+/* Samtale med assistenten (chat-bobler + oppfølgingsspørsmål). */
+.ai-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ai-intro { font-size: var(--fs-sm); margin: 8px 0 4px; }
+.ai-msg { margin: 8px 0; max-width: 88%; }
+.ai-msg.user { margin-left: auto; }
+.ai-msg-text {
+  margin: 0;
+  padding: 9px 13px;
+  border-radius: 14px;
+  font-size: var(--fs-sm);
+  white-space: pre-wrap;
+}
+.ai-msg.user .ai-msg-text {
+  background: var(--gradient); color: #06251a; font-weight: 600;
+  border-bottom-right-radius: 4px;
+}
+.ai-msg.assistant .ai-msg-text {
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+.ai-questions {
+  margin: 6px 0 0; padding: 8px 12px 8px 28px;
+  background: var(--accent-soft);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  border-radius: 12px;
+  font-size: var(--fs-sm);
+}
+.ai-questions li { margin: 3px 0; }
+
 /* Generert AI-plan: oppsummering + ett kort per økt + aksepter/forkast. */
 .ai-plan { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 .ai-plan-head { display: flex; align-items: baseline; gap: 10px; }
@@ -547,6 +576,13 @@ header .sub { margin-top: 6px; color: var(--muted); }
   border-radius: 999px;
 }
 .ai-workout-head .mini { margin-left: auto; }
+.ai-workout-day, .plan-day {
+  font-size: var(--fs-xs); font-weight: 700; text-transform: capitalize;
+  color: var(--accent-2);
+  background: rgba(13, 148, 136, 0.14);
+  padding: 1px 8px; border-radius: 999px;
+}
+.plan-day { margin-right: 6px; }
 .ai-workout-why { margin: 6px 0 4px; font-size: var(--fs-sm); }
 .ai-workout ul { margin: 4px 0 0; padding-left: 18px; font-size: var(--fs-sm); }
 .ai-plan-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
