@@ -13,19 +13,33 @@ export function apiUrl(path) {
 // viser vi FORRIGE data straks (getCached), og cachedGet oppdaterer i bakgrunnen.
 // Nøkkelen er hele API-stien (inkl. query), så f.eks. hver dato caches for seg.
 const cache = new Map()
+const inFlight = new Map() // pågående hentinger, så samtidige kall deler forespørsel
 
 /** Sist kjente svar for en sti, eller undefined. Bruk til å hydrere state ved mount. */
 export function getCached(key) {
   return cache.get(key)
 }
 
-/** Hent + oppdater cachen. Kaster ved feil, så kalleren kan beholde stale data. */
+/**
+ * Hent + oppdater cachen. Kaster ved feil, så kalleren kan beholde stale data.
+ * Deduplikerer samtidige kall for samme nøkkel (ved innlogging ber prefetch,
+ * Hjem og Trening om øktene samtidig -> én forespørsel, ikke tre).
+ */
 export async function cachedGet(key, headers = {}) {
-  const res = await fetch(apiUrl(key), { headers })
-  if (!res.ok) throw new Error(await readError(res))
-  const data = await res.json()
-  cache.set(key, data)
-  return data
+  if (inFlight.has(key)) return inFlight.get(key)
+  const promise = (async () => {
+    const res = await fetch(apiUrl(key), { headers })
+    if (!res.ok) throw new Error(await readError(res))
+    const data = await res.json()
+    cache.set(key, data)
+    return data
+  })()
+  inFlight.set(key, promise)
+  try {
+    return await promise
+  } finally {
+    inFlight.delete(key)
+  }
 }
 
 /** Tøm cachen (alt, eller nøkler som starter med prefix). Ved bytte av bruker. */
