@@ -42,13 +42,33 @@ const SHAPES = {
   ],
 }
 
-/** Silhuett (hode, torso, armer, bein) – tegnes som glødende kontur. */
-function Silhouette() {
+/**
+ * Silhuett (hode, torso, armer, bein) – tegnes som glødende kontur.
+ * Jente og gutt har FAKTISK ulik figur: jenta har smalere skuldre, innsvingt
+ * midje og bredere hofter; gutten bredere skuldre og rettere torso.
+ */
+function Silhouette({ gender }) {
+  if (gender === 'jente') {
+    return (
+      <g className="body-outline">
+        <circle cx="110" cy="36" r="20" />
+        <path d="M104 55 L104 68 L116 68 L116 55" />
+        {/* torso: smale skuldre -> innsvingt midje -> brede hofter */}
+        <path d="M82 82 Q110 72 138 82 Q134 118 132 146 Q140 188 146 226 Q147 246 126 255 Q110 259 94 255 Q73 246 74 226 Q80 188 88 146 Q86 118 82 82 Z" />
+        {/* armer (smalere) */}
+        <path d="M82 84 Q66 102 68 140 Q68 170 62 202 L71 206 Q80 176 80 146" />
+        <path d="M138 84 Q154 102 152 140 Q152 170 158 202 L149 206 Q140 176 140 146" />
+        {/* bein (fra brede hofter) */}
+        <path d="M90 252 Q92 312 96 352 Q98 398 96 434 L109 434 Q111 394 111 352 L112 300" />
+        <path d="M130 252 Q128 312 124 352 Q126 398 128 434 L115 434 Q113 394 113 352 L108 300" />
+      </g>
+    )
+  }
   return (
     <g className="body-outline">
       <circle cx="110" cy="36" r="21" />
       <path d="M102 56 L102 68 L118 68 L118 56" />
-      {/* torso: skuldre -> midje -> hofter */}
+      {/* torso: brede skuldre -> midje -> hofter */}
       <path d="M70 80 Q110 68 150 80 L146 150 Q142 190 138 210 L142 236 Q128 252 110 252 Q92 252 78 236 L82 210 Q78 190 74 150 Z" />
       {/* armer */}
       <path d="M70 82 Q52 100 54 140 Q54 172 48 204 L58 208 Q68 176 68 144" />
@@ -145,11 +165,6 @@ export default function MusclePicker({ onCreate }) {
     setTimeout(() => setCreated(false), 2500)
   }
 
-  // Jente/gutt: samme muskler, litt andre proporsjoner (smalere skuldre, bredere hofter).
-  const proportions = gender === 'jente'
-    ? 'translate(110 0) scale(0.94 1) translate(-110 0)'
-    : undefined
-
   const active = hovered ?? selected[selected.length - 1]
 
   return (
@@ -171,12 +186,8 @@ export default function MusclePicker({ onCreate }) {
       <div className="mp-body">
         <svg ref={svgRef} viewBox="0 0 220 460" className={`body ${gender}`} role="img"
              aria-label={`Kroppsmodell (${gender}, ${view === 'front' ? 'forfra' : 'bakfra'})`}>
-          <g transform={proportions}>
-            <Silhouette />
-            {gender === 'jente' && (
-              /* antydning av hofteparti for jente-silhuetten */
-              <path className="body-outline" d="M80 226 Q74 244 78 252 M140 226 Q146 244 142 252" />
-            )}
+          <g>
+            <Silhouette gender={gender} />
             {SHAPES[view].map((s) => (
               <MuscleShape key={s.id} shape={s}
                            selected={selected.includes(s.id)}
