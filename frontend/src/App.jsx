@@ -1,17 +1,20 @@
-import { useState, useRef, useEffect } from 'react'
-import ResultMap from './ResultMap'
-import PlaceDetail from './PlaceDetail'
-import RoutePlanner from './RoutePlanner'
-import TrainingView from './TrainingView'
-import NutritionView from './NutritionView'
-import RecoveryView from './RecoveryView'
-import Dashboard from './Dashboard'
-import AuthView from './AuthView'
+import { useState, useRef, useEffect, lazy, Suspense } from 'react'
 import { supabase, authHeaders } from './supabase'
 import { apiUrl, readError, clearCache, cachedGet } from './api'
 import { useI18n } from './i18n.jsx'
 import { useTabTransition } from './anim'
 import './App.css'
+
+// Kodedeling: de tunge fanene (og Leaflet-kartene) lastes on-demand som egne
+// chunks, så første innlasting (hjem/innlogging) blir vesentlig lettere.
+const ResultMap = lazy(() => import('./ResultMap'))
+const PlaceDetail = lazy(() => import('./PlaceDetail'))
+const RoutePlanner = lazy(() => import('./RoutePlanner'))
+const TrainingView = lazy(() => import('./TrainingView'))
+const NutritionView = lazy(() => import('./NutritionView'))
+const RecoveryView = lazy(() => import('./RecoveryView'))
+const Dashboard = lazy(() => import('./Dashboard'))
+const AuthView = lazy(() => import('./AuthView'))
 
 // De fire faktorene brukeren kan vekte, og nivåene.
 const FACTORS = [
@@ -83,7 +86,9 @@ function Answer({ result, onSelectPlace, onPlan }) {
           </ul>
         </div>
       )}
-      <ResultMap places={places.map(placeForMap)} trails={result.trails ?? []} />
+      <Suspense fallback={<div className="map lazy-map" />}>
+        <ResultMap places={places.map(placeForMap)} trails={result.trails ?? []} />
+      </Suspense>
       <p className="table-hint">{t('Trykk på en rad for å åpne detaljside med varsel for de neste dagene.')}</p>
       <table className="ranking">
         <thead>
@@ -188,7 +193,9 @@ function VaersokView({ onPlan }) {
       </section>
 
       {detail ? (
-        <PlaceDetail place={detail} onBack={() => setDetail(null)} onPlan={onPlan} />
+        <Suspense fallback={<p className="lazy-fallback muted">…</p>}>
+          <PlaceDetail place={detail} onBack={() => setDetail(null)} onPlan={onPlan} />
+        </Suspense>
       ) : (
         <>
           <div className="chat">
@@ -364,19 +371,21 @@ export default function App() {
       </aside>
 
       <main className={`main ${tab === 'rute' ? 'wide' : ''}`} ref={mainRef}>
-        {tab === 'hjem' && <Dashboard session={session} onNavigate={setTab} />}
-        {tab === 'vaersok' && <VaersokView onPlan={planTrip} />}
-        {tab === 'rute' && (
-          <RoutePlanner
-            session={session}
-            target={planTarget}
-            onClearTarget={() => setPlanTarget(null)}
-          />
-        )}
-        {tab === 'trening' && <TrainingView session={session} />}
-        {tab === 'kosthold' && <NutritionView session={session} />}
-        {tab === 'restitusjon' && <RecoveryView session={session} />}
-        {tab === 'konto' && <AuthView session={session} />}
+        <Suspense fallback={<p className="lazy-fallback muted">{t('Laster …')}</p>}>
+          {tab === 'hjem' && <Dashboard session={session} onNavigate={setTab} />}
+          {tab === 'vaersok' && <VaersokView onPlan={planTrip} />}
+          {tab === 'rute' && (
+            <RoutePlanner
+              session={session}
+              target={planTarget}
+              onClearTarget={() => setPlanTarget(null)}
+            />
+          )}
+          {tab === 'trening' && <TrainingView session={session} />}
+          {tab === 'kosthold' && <NutritionView session={session} />}
+          {tab === 'restitusjon' && <RecoveryView session={session} />}
+          {tab === 'konto' && <AuthView session={session} />}
+        </Suspense>
       </main>
     </div>
   )

@@ -388,6 +388,7 @@ const EN = {
   'økter denne uka': 'workouts this week',
   'vs forrige uke': 'vs last week',
   'Henter varsel': 'Fetching forecast',
+  'Laster …': 'Loading …',
 }
 
 

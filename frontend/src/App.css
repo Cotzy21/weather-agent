@@ -90,6 +90,10 @@
   box-shadow: 0 0 18px rgba(52, 211, 153, 0.16), inset 0 0 12px rgba(52, 211, 153, 0.07);
 }
 
+/* Fallback mens en on-demand-chunk (lazy view) lastes. */
+.lazy-fallback { padding: 40px 4px; font-size: var(--fs-base); }
+.lazy-map { background: var(--tint); display: grid; place-items: center; }
+
 .main {
   flex: 1;
   min-width: 0;
