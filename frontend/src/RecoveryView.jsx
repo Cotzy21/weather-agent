@@ -19,20 +19,24 @@ const TYPE_LABELS = {
 const label = (type) => TYPE_LABELS[type] || type
 
 export default function RecoveryView({ session }) {
-  const { t } = useI18n()
-  // Hydrer fra cachen (forhåndshentet ved innlogging) så fanen tegnes straks.
-  const [report, setReport] = useState(() => getCached('/api/recovery') ?? null)
+  const { t, lang } = useI18n()
+  // Rapporten (råd/varsler) genereres på valgt språk i backend, så cache-nøkkelen
+  // og hentingen inkluderer språket - bytter du språk, hentes riktig versjon.
+  const recoveryKey = `/api/recovery?lang=${lang}`
+  const [report, setReport] = useState(() => getCached(recoveryKey) ?? null)
   const revealRef = useReveal([session, report])
 
   useEffect(() => {
     if (!session) { setReport(null); return }
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session])
+  }, [session, lang])
 
   async function load() {
+    const cached = getCached(recoveryKey)
+    if (cached) setReport(cached) // vis riktig språk straks
     try {
-      setReport(await cachedGet('/api/recovery', await authHeaders()))
+      setReport(await cachedGet(recoveryKey, await authHeaders()))
     } catch { /* behold cachet / tom tilstand */ }
   }
 

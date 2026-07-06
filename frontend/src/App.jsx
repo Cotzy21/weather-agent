@@ -281,6 +281,7 @@ export default function App() {
         if (!alive) return
         const iso = new Date().toISOString().slice(0, 10)
         const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
+        const lang = localStorage.getItem('lang') ?? 'en' // recovery-tekst genereres på språket
         // Rask først: siste ukes økter (fremsiden blir klar raskt).
         await cachedGet(`/api/treningsokter?siden=${weekAgo}`, headers).catch(() => {})
         if (!alive) return
@@ -289,7 +290,7 @@ export default function App() {
           '/api/treningsokter',
           `/api/kosthold/dag?dato=${iso}`,
           `/api/kosthold/uke?til=${iso}`,
-          '/api/recovery',
+          `/api/recovery?lang=${lang}`,
           '/api/trening/planer',
           '/api/kosthold/favoritter',
           '/api/kosthold/maaltider',

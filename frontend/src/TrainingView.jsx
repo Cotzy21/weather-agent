@@ -633,7 +633,7 @@ export default function TrainingView({ session }) {
         <span className="ai-title">{t('⌚ Importer fra Garmin')}</span>
         <p className="muted import-hint">
           {t('Garmin Connect → Aktiviteter → Alle aktiviteter → «Eksporter CSV», og velg fila her.')}
-          Øktene dine havner i dagboka med ekte kalorier, og dagsbalansen bruker dem automatisk.
+          {' '}{t('Øktene dine havner i dagboka med ekte kalorier, og dagsbalansen bruker dem automatisk.')}
         </p>
         <label className={`file-btn ${importBusy ? 'busy' : ''}`}>
           {importBusy ? t('Importerer …') : t('📂 Velg CSV-fil')}

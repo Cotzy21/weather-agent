@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
+import { useI18n } from './i18n.jsx'
 
 /**
  * Interaktiv kroppsmodell: velg gutt/jente og front/rygg, trykk på musklene
@@ -106,6 +107,7 @@ function pickExercises(selectedIds, count) {
 }
 
 export default function MusclePicker({ onCreate }) {
+  const { t } = useI18n()
   const [gender, setGender] = useState('gutt')
   const [view, setView] = useState('front')
   const [selected, setSelected] = useState([]) // rekkefølgen brukeren valgte i
@@ -133,7 +135,7 @@ export default function MusclePicker({ onCreate }) {
 
   function create() {
     const names = pickExercises(selected, exCount)
-    onCreate(names, selected.map((id) => MUSCLES[id].label), {
+    onCreate(names, selected.map((id) => t(MUSCLES[id].label)), {
       sets: setCount,
       reps: FOCUS[focus].reps,
     })
@@ -153,15 +155,15 @@ export default function MusclePicker({ onCreate }) {
   return (
     <div className="muscle-picker" data-reveal>
       <div className="mp-head">
-        <span className="ai-title">🧬 Bygg økt fra kroppen</span>
+        <span className="ai-title">{t('🧬 Bygg økt fra kroppen')}</span>
         <div className="mp-toggles">
-          <div className="seg" title="Velg kroppstype">
-            <button className={gender === 'gutt' ? 'on' : ''} onClick={() => setGender('gutt')}>Gutt</button>
-            <button className={gender === 'jente' ? 'on' : ''} onClick={() => setGender('jente')}>Jente</button>
+          <div className="seg" title={t('Velg kroppstype')}>
+            <button className={gender === 'gutt' ? 'on' : ''} onClick={() => setGender('gutt')}>{t('Gutt')}</button>
+            <button className={gender === 'jente' ? 'on' : ''} onClick={() => setGender('jente')}>{t('Jente')}</button>
           </div>
-          <div className="seg" title="Snu kroppen for å nå muskler på begge sider">
-            <button className={view === 'front' ? 'on' : ''} onClick={() => setView('front')}>Front</button>
-            <button className={view === 'bak' ? 'on' : ''} onClick={() => setView('bak')}>Rygg</button>
+          <div className="seg" title={t('Snu kroppen for å nå muskler på begge sider')}>
+            <button className={view === 'front' ? 'on' : ''} onClick={() => setView('front')}>{t('Front')}</button>
+            <button className={view === 'bak' ? 'on' : ''} onClick={() => setView('bak')}>{t('Rygg')}</button>
           </div>
         </div>
       </div>
@@ -185,7 +187,7 @@ export default function MusclePicker({ onCreate }) {
         </svg>
 
         <div className="mp-side">
-          <p className="mp-active">{active ? MUSCLES[active].label : 'Trykk på en muskel'}</p>
+          <p className="mp-active">{active ? t(MUSCLES[active].label) : t('Trykk på en muskel')}</p>
           {active && (
             <ul className="mp-exercises">
               {MUSCLES[active].exercises.map((e) => <li key={e}>{e}</li>)}
@@ -194,46 +196,49 @@ export default function MusclePicker({ onCreate }) {
           <div className="mp-chips">
             {selected.map((id) => (
               <button key={id} className="type-chip active" onClick={() => toggle(id)}>
-                {MUSCLES[id].label} ✕
+                {t(MUSCLES[id].label)} ✕
               </button>
             ))}
           </div>
 
           <div className="mp-plan">
             <div className="mp-plan-row">
-              <span className="mp-plan-label">Fokus</span>
+              <span className="mp-plan-label">{t('Fokus')}</span>
               <div className="seg">
                 {Object.entries(FOCUS).map(([key, f]) => (
                   <button key={key} className={focus === key ? 'on' : ''} onClick={() => setFocus(key)}>
-                    {f.label}
+                    {t(f.label)}
                   </button>
                 ))}
               </div>
             </div>
             <div className="mp-plan-row">
-              <span className="mp-plan-label">Øvelser</span>
+              <span className="mp-plan-label">{t('Øvelser')}</span>
               <div className="stepper">
-                <button onClick={() => setExCount((n) => Math.max(1, n - 1))} aria-label="Færre øvelser">−</button>
+                <button onClick={() => setExCount((n) => Math.max(1, n - 1))} aria-label={t('Færre øvelser')}>−</button>
                 <span>{exCount}</span>
-                <button onClick={() => setExCount((n) => Math.min(10, n + 1))} aria-label="Flere øvelser">+</button>
+                <button onClick={() => setExCount((n) => Math.min(10, n + 1))} aria-label={t('Flere øvelser')}>+</button>
               </div>
             </div>
             <div className="mp-plan-row">
-              <span className="mp-plan-label">Sett per øvelse</span>
+              <span className="mp-plan-label">{t('Sett per øvelse')}</span>
               <div className="stepper">
-                <button onClick={() => setSetCount((n) => Math.max(1, n - 1))} aria-label="Færre sett">−</button>
+                <button onClick={() => setSetCount((n) => Math.max(1, n - 1))} aria-label={t('Færre sett')}>−</button>
                 <span>{setCount}</span>
-                <button onClick={() => setSetCount((n) => Math.min(8, n + 1))} aria-label="Flere sett">+</button>
+                <button onClick={() => setSetCount((n) => Math.min(8, n + 1))} aria-label={t('Flere sett')}>+</button>
               </div>
             </div>
-            <p className="mp-hint muted">{FOCUS[focus].label}: {FOCUS[focus].hint}.</p>
+            <p className="mp-hint muted">{t(FOCUS[focus].label)}: {t(FOCUS[focus].hint)}.</p>
           </div>
 
           <button className="primary mp-create" disabled={!selected.length} onClick={create}>
-            ⚡ Lag økt ({Math.min(exCount, selected.reduce((n, id) => n + MUSCLES[id].exercises.length, 0))} øvelser × {setCount} sett)
+            {t('⚡ Lag økt ({e} øvelser × {s} sett)', {
+              e: Math.min(exCount, selected.reduce((n, id) => n + MUSCLES[id].exercises.length, 0)),
+              s: setCount,
+            })}
           </button>
-          {created && <span className="success">✓ Lagt i økta under</span>}
-          <p className="mp-hint muted">Musklene på {view === 'front' ? 'baksiden' : 'framsiden'} finner du under «{view === 'front' ? 'Rygg' : 'Front'}».</p>
+          {created && <span className="success">{t('✓ Lagt i økta under')}</span>}
+          <p className="mp-hint muted">{t('Musklene på baksiden/framsiden finner du under den andre knappen.')}</p>
         </div>
       </div>
     </div>
