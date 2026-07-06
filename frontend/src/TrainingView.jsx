@@ -274,7 +274,14 @@ export default function TrainingView({ session }) {
       const res = await fetch(apiUrl('/api/trening/assistent'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({ messages: next.map((m) => ({ role: m.role, content: m.content })) }),
+        // Fold assistentens oppfølgingsspørsmål inn i innholdet som sendes tilbake,
+        // ellers «glemmer» modellen hva den nettopp spurte om.
+        body: JSON.stringify({
+          messages: next.map((m) => ({
+            role: m.role,
+            content: m.questions?.length ? `${m.content}\n${m.questions.join('\n')}` : m.content,
+          })),
+        }),
       })
       if (!res.ok) throw new Error(await readError(res))
       const data = await res.json()
