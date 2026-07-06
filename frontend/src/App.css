@@ -1316,6 +1316,35 @@ header .sub { margin-top: 6px; color: var(--muted); }
 
 /* ---------- Treningsplaner ---------- */
 .plan-list { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+/* Ukesplan-oversikt: én celle per ukedag, plan(er) lagt på den dagen. */
+.week-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin: 8px 0 12px;
+}
+.week-cell {
+  display: flex; flex-direction: column; gap: 4px; align-items: stretch;
+  padding: 8px 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-2);
+  min-height: 64px;
+}
+.week-cell.has { border-color: rgba(52, 211, 153, 0.4); }
+.week-cell-day { font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-align: center; }
+.week-cell-plan {
+  border: none; border-radius: 8px; cursor: pointer;
+  padding: 4px 6px; font-size: var(--fs-xs); font-weight: 600;
+  background: var(--accent-soft); color: var(--accent-strong);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transition: background 0.15s;
+}
+.week-cell-plan:hover { background: rgba(52, 211, 153, 0.22); }
+.week-cell-rest { text-align: center; font-size: var(--fs-sm); }
+@media (max-width: 560px) {
+  .week-strip { grid-template-columns: repeat(4, 1fr); }
+}
 .plan-list ul { list-style: none; margin: 6px 0 0; padding: 0; }
 .plan-list li { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 14px; }
 

@@ -464,6 +464,26 @@ export default function TrainingView({ session }) {
         {plans.length > 0 && (
           <div className="plan-list">
             <span className="ai-title">{t('📋 Mine planer')}</span>
+
+            {plans.some((p) => dayIndex(p.content?.day) >= 0) && (
+              <div className="week-strip">
+                {WEEKDAYS.map((d, i) => {
+                  const onDay = plans.filter((p) => dayIndex(p.content?.day) === i)
+                  return (
+                    <div className={`week-cell ${onDay.length ? 'has' : ''}`} key={i}>
+                      <span className="week-cell-day">{t(d)}</span>
+                      {onDay.length
+                        ? onDay.map((p) => (
+                            <button key={p.id} className="week-cell-plan" onClick={() => applySuggestion(p)}
+                                    title={t('Bruk i ny økt')}>{p.title}</button>
+                          ))
+                        : <span className="week-cell-rest muted">–</span>}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
             <ul>
               {plans.map((p) => (
                 <li key={p.id}>
@@ -680,6 +700,24 @@ export default function TrainingView({ session }) {
       )}
     </div>
   )
+}
+
+// Ukedager (mandag først). Nøklene oversettes via t(); dayIndex tåler både
+// norske og engelske dagnavn (assistenten skriver på brukerens språk).
+const WEEKDAYS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag']
+const DAY_ALIASES = {
+  mandag: 0, monday: 0, tirsdag: 1, tuesday: 1, onsdag: 2, wednesday: 2,
+  torsdag: 3, thursday: 3, fredag: 4, friday: 4,
+  lørdag: 5, lordag: 5, saturday: 5, søndag: 6, sondag: 6, sunday: 6,
+}
+function dayIndex(day) {
+  if (!day) return -1
+  const k = day.trim().toLowerCase()
+  if (k in DAY_ALIASES) return DAY_ALIASES[k]
+  for (const [alias, idx] of Object.entries(DAY_ALIASES)) {
+    if (k.startsWith(alias)) return idx
+  }
+  return -1
 }
 
 const CARDIO_TYPES = ['LØPING', 'SYKKEL', 'SVØMMING', 'HIKING']
