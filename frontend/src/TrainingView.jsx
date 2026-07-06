@@ -262,8 +262,8 @@ export default function TrainingView({ session }) {
 
   // Send én melding i samtalen med assistenten. Svaret er ENTEN oppfølgings-
   // spørsmål (vises i chatten) ELLER en ferdig plan (vises med aksepter/forkast).
-  async function sendMessage() {
-    const text = aiFocus.trim()
+  async function sendMessage(preset) {
+    const text = (typeof preset === 'string' ? preset : aiFocus).trim()
     if (!text || aiBusy) return
     const next = [...aiMessages, { role: 'user', content: text }]
     setAiMessages(next)
@@ -394,7 +394,19 @@ export default function TrainingView({ session }) {
         </div>
 
         {aiMessages.length === 0 && (
-          <p className="muted ai-intro">{t('Be om et opplegg – f.eks. «lag en push pull legs split» eller «jeg vil begynne med mer cardio». Assistenten spør om det trenger mer, og bruker historikken din til progressiv overload.')}</p>
+          <>
+            <p className="muted ai-intro">{t('Be om et opplegg – f.eks. «lag en push pull legs split» eller «jeg vil begynne med mer cardio». Assistenten spør om det trenger mer, og bruker historikken din til progressiv overload.')}</p>
+            <div className="ai-examples">
+              {[
+                t('Lag en push/pull/legs-split'),
+                t('Upper/lower, 4 dager i uka'),
+                t('Jeg vil begynne med mer cardio'),
+                t('Fullkropp 3x i uka'),
+              ].map((ex) => (
+                <button key={ex} className="ai-example" disabled={aiBusy} onClick={() => sendMessage(ex)}>{ex}</button>
+              ))}
+            </div>
+          </>
         )}
 
         {aiMessages.map((m, i) => (

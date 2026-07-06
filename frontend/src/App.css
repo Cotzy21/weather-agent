@@ -529,6 +529,19 @@ header .sub { margin-top: 6px; color: var(--muted); }
 /* Samtale med assistenten (chat-bobler + oppfølgingsspørsmål). */
 .ai-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .ai-intro { font-size: var(--fs-sm); margin: 8px 0 4px; }
+.ai-examples { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.ai-example {
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-2);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ai-example:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); }
+.ai-example:disabled { opacity: 0.5; cursor: default; }
 .ai-msg { margin: 8px 0; max-width: 88%; }
 .ai-msg.user { margin-left: auto; }
 .ai-msg-text {
