@@ -46,6 +46,7 @@ export default function RoutePlanner({ session, target, onClearTarget }) {
   // brukeren alt har skrevet). Kartet sentreres via focus-proppen på RouteMap.
   useEffect(() => {
     if (target) setRouteName((name) => name || t('Tur til {name}', { name: target.name }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target])
 
   async function loadSaved() {
