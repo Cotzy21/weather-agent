@@ -5,6 +5,7 @@ import no.weatheragent.web.dto.RecoveryReportDto;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -22,8 +23,11 @@ public class RecoveryController {
         this.recovery = recovery;
     }
 
+    /** {@code ?lang=en} gir råd/varsler på engelsk; ellers norsk. */
     @GetMapping("/api/recovery")
-    public RecoveryReportDto report(@AuthenticationPrincipal Jwt jwt) {
-        return RecoveryReportDto.from(recovery.report(UUID.fromString(jwt.getSubject())));
+    public RecoveryReportDto report(@AuthenticationPrincipal Jwt jwt,
+                                    @RequestParam(value = "lang", required = false) String lang) {
+        boolean english = "en".equalsIgnoreCase(lang);
+        return RecoveryReportDto.from(recovery.report(UUID.fromString(jwt.getSubject()), english));
     }
 }

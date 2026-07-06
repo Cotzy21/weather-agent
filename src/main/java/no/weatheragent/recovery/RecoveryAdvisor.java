@@ -58,11 +58,51 @@ public final class RecoveryAdvisor {
                     "7-9 timer søvn",
                     "Lett bevegelse i morgen er bedre enn full ro"));
 
+    private static final Map<String, List<String>> STEPS_BY_TYPE_EN = Map.of(
+            "STYRKE", List.of(
+                    "Protein (20-40 g) within a couple of hours after the session",
+                    "7-9 hours of sleep - that's where the muscle is actually built",
+                    "Light activity tomorrow (a walk or easy cycling) boosts blood flow",
+                    "Stretch lightly - the muscle groups you trained, without pushing"),
+            "LØPING", List.of(
+                    "Carbs and fluids in the first hour after the run",
+                    "Easy walking or light cycling the day after (active recovery)",
+                    "Stretch or foam-roll calves, hip flexors and hamstrings",
+                    "Sore calves several days in a row? Take an extra rest day before your next run"),
+            "SYKKEL", List.of(
+                    "Carbs and fluids right after long rides",
+                    "Stretch hip flexors and quads - they work hardest on the bike",
+                    "Easy spinning the day after loosens things up",
+                    "Knee pain? Check your saddle height - the wrong setting is the usual culprit"),
+            "SVØMMING", List.of(
+                    "Rehydrate - you sweat more in the water than you notice",
+                    "Stretch shoulders and chest lightly",
+                    "Shoulder niggles? Vary your strokes and drop the paddles for a while"),
+            "HIKING", List.of(
+                    "Rehydrate and replace salts after long hikes",
+                    "Legs up for a while tonight - it reduces swelling",
+                    "Stretch calves, thighs and hips",
+                    "Sore knees after the descent are normal - give them an easy day"),
+            "BULDRING", List.of(
+                    "Stretch forearms and fingers LIGHTLY - never hard right after climbing",
+                    "Give the fingers ~48 hours before the next hard bouldering session - tendons adapt slower than muscles",
+                    "Sore finger joints? Contrast baths (alternating hot and cold water) can help"),
+            "FRISTIL", List.of(
+                    "Fluids and a balanced meal after the session",
+                    "7-9 hours of sleep",
+                    "Light movement tomorrow beats complete rest"));
+
     private RecoveryAdvisor() {
     }
 
-    /** Råd for øktene fra i dag og i går, i rekkefølgen de ble logget (nyest først). */
+    /** Norsk (bakoverkompatibelt for tester). */
     public static List<RecoveryAdvice> advise(List<Workout> workouts, LocalDate today) {
+        return advise(workouts, today, false);
+    }
+
+    /** Råd for øktene fra i dag og i går, i rekkefølgen de ble logget (nyest først). */
+    public static List<RecoveryAdvice> advise(List<Workout> workouts, LocalDate today, boolean english) {
+        Map<String, List<String>> stepsByType = english ? STEPS_BY_TYPE_EN : STEPS_BY_TYPE;
         List<RecoveryAdvice> advice = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
 
@@ -76,7 +116,7 @@ public final class RecoveryAdvisor {
             if (!seen.add(type)) {
                 continue; // ett rådskort per type holder
             }
-            List<String> steps = STEPS_BY_TYPE.getOrDefault(type, STEPS_BY_TYPE.get("FRISTIL"));
+            List<String> steps = stepsByType.getOrDefault(type, stepsByType.get("FRISTIL"));
             advice.add(new RecoveryAdvice(type, isToday ? "i dag" : "i går", steps));
         }
         return advice;

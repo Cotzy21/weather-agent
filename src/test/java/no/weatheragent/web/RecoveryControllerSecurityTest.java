@@ -15,6 +15,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -44,7 +46,7 @@ class RecoveryControllerSecurityTest {
 
     @Test
     void reportIsReturnedForAuthenticatedUser() throws Exception {
-        when(recovery.report(UUID.fromString(SUB))).thenReturn(new RecoveryService.RecoveryReport(
+        when(recovery.report(eq(UUID.fromString(SUB)), anyBoolean())).thenReturn(new RecoveryService.RecoveryReport(
                 List.of(new RecoveryAdvice("LØPING", "i dag", List.of("Karbohydrater og væske"))),
                 List.of(new InjuryWarning("LØPING", InjuryWarning.Level.HOY, 200, "Ro ned denne uka.")),
                 4, true));

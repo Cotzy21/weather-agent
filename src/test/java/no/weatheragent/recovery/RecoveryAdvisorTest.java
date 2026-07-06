@@ -44,6 +44,15 @@ class RecoveryAdvisorTest {
     }
 
     @Test
+    void englishFlagGivesEnglishSteps() {
+        List<RecoveryAdvice> no = RecoveryAdvisor.advise(List.of(workout("STYRKE", TODAY)), TODAY, false);
+        List<RecoveryAdvice> en = RecoveryAdvisor.advise(List.of(workout("STYRKE", TODAY)), TODAY, true);
+
+        assertTrue(no.getFirst().steps().stream().anyMatch(s -> s.contains("søvn")));
+        assertTrue(en.getFirst().steps().stream().anyMatch(s -> s.toLowerCase().contains("sleep")));
+    }
+
+    @Test
     void unknownTypeFallsBackToGeneralSteps() {
         List<RecoveryAdvice> advice = RecoveryAdvisor.advise(
                 List.of(workout("YOGA", TODAY)), TODAY);

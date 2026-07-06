@@ -63,10 +63,39 @@ public final class InjuryRiskAnalyzer {
             "Ny eller gjenopptatt aktivitet - sener og ledd tilpasser seg saktere enn kondisjonen. "
                     + "Bygg gradvis (~10 % økning per uke) de første ukene.";
 
+    private static final Map<String, String> MESSAGE_BY_TYPE_EN = Map.of(
+            "LØPING", "Typical overuse injuries for runners are shin splints and Achilles issues. "
+                    + "Ease off this week, and build up gradually (~10% per week).",
+            "STYRKE", "Rapid volume increases stress tendons and joints before the muscles complain. "
+                    + "Consider a lighter week (deload) before increasing further.",
+            "BULDRING", "Finger tendon and pulley injuries typically come from sudden volume jumps. "
+                    + "Fewer hard attempts, more technique this week.",
+            "SYKKEL", "Knees take the hit from rapid increases on the bike. "
+                    + "Ease off the intensity, and check that your saddle height is right.",
+            "SVØMMING", "Swimmer's shoulder is the classic overuse injury. "
+                    + "Reduce the volume a little and vary your strokes.",
+            "HIKING", "Knees and ankles take a beating from rapid increases, especially on descents. "
+                    + "Shorter hikes next week, and consider using poles.");
+
+    private static final String DEFAULT_MESSAGE_EN =
+            "Your body needs time to adapt - increase gradually (~10% per week).";
+
+    private static final String NEW_ACTIVITY_MESSAGE_EN =
+            "New or resumed activity - tendons and joints adapt slower than your fitness. "
+                    + "Build up gradually (~10% increase per week) the first few weeks.";
+
     private InjuryRiskAnalyzer() {
     }
 
+    /** Norsk (bakoverkompatibelt for tester). */
     public static List<InjuryWarning> analyze(List<Workout> workouts, LocalDate today) {
+        return analyze(workouts, today, false);
+    }
+
+    public static List<InjuryWarning> analyze(List<Workout> workouts, LocalDate today, boolean english) {
+        Map<String, String> messages = english ? MESSAGE_BY_TYPE_EN : MESSAGE_BY_TYPE;
+        String defaultMsg = english ? DEFAULT_MESSAGE_EN : DEFAULT_MESSAGE;
+        String newActivityMsg = english ? NEW_ACTIVITY_MESSAGE_EN : NEW_ACTIVITY_MESSAGE;
         // Belastning per type, delt i akutt (siste 7 dager) og kronisk (4 uker før).
         Map<String, double[]> loads = new HashMap<>(); // [akutt, kronisk-total]
         LocalDate acuteFrom = today.minusDays(ACUTE_DAYS - 1);
@@ -95,7 +124,7 @@ public final class InjuryRiskAnalyzer {
                 return;
             }
             if (chronicWeekly < MIN_CHRONIC_LOAD) {
-                warnings.add(new InjuryWarning(type, Level.NY_AKTIVITET, 0, NEW_ACTIVITY_MESSAGE));
+                warnings.add(new InjuryWarning(type, Level.NY_AKTIVITET, 0, newActivityMsg));
                 return;
             }
             double ratio = acute / chronicWeekly;
@@ -103,7 +132,7 @@ public final class InjuryRiskAnalyzer {
                 Level level = ratio >= HIGH_RATIO ? Level.HOY : Level.MODERAT;
                 int percent = (int) Math.round((ratio - 1) * 100);
                 warnings.add(new InjuryWarning(type, level, percent,
-                        MESSAGE_BY_TYPE.getOrDefault(type, DEFAULT_MESSAGE)));
+                        messages.getOrDefault(type, defaultMsg)));
             }
         });
 
