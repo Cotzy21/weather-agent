@@ -400,6 +400,9 @@ const EN = {
   'vs forrige uke': 'vs last week',
   'Henter varsel': 'Fetching forecast',
   'Laster …': 'Loading …',
+  'Finest fjellvær i Rogaland i helga': 'Best mountain weather in Rogaland this weekend',
+  'Hvordan blir været i Oslo i morgen': "What's the weather in Oslo tomorrow",
+  'Beste turvær på Sunnmøre neste uke': 'Best hiking weather in Sunnmøre next week',
 }
 
 

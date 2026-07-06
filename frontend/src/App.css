@@ -219,6 +219,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
   gap: 12px;
 }
 .hint { color: var(--muted); font-style: italic; text-align: center; }
+.chat-examples { justify-content: center; }
 
 .msg { padding: 13px 16px; border-radius: 16px; animation: pop 0.25s ease-out; }
 @keyframes pop {

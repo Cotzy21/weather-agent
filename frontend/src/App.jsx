@@ -152,9 +152,9 @@ function VaersokView({ onPlan }) {
     setWeights((w) => ({ ...w, [key]: value }))
   }
 
-  async function ask(e) {
-    e.preventDefault()
-    const query = input.trim()
+  async function ask(e, preset) {
+    if (e && e.preventDefault) e.preventDefault()
+    const query = (typeof preset === 'string' ? preset : input).trim()
     if (!query || loading) return
 
     setMessages((m) => [...m, { role: 'user', text: query }])
@@ -200,7 +200,18 @@ function VaersokView({ onPlan }) {
         <>
           <div className="chat">
             {messages.length === 0 && (
-              <p className="hint">{t('Prøv: «hvor er det finest fjellvær i Møre og Romsdal i helga»')}</p>
+              <>
+                <p className="hint">{t('Prøv: «hvor er det finest fjellvær i Møre og Romsdal i helga»')}</p>
+                <div className="ai-examples chat-examples">
+                  {[
+                    t('Finest fjellvær i Rogaland i helga'),
+                    t('Hvordan blir været i Oslo i morgen'),
+                    t('Beste turvær på Sunnmøre neste uke'),
+                  ].map((ex) => (
+                    <button key={ex} className="ai-example" disabled={loading} onClick={() => ask(null, ex)}>{ex}</button>
+                  ))}
+                </div>
+              </>
             )}
             {messages.map((m, i) =>
               m.role === 'user' ? (
