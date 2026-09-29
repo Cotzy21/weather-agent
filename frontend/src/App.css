@@ -104,6 +104,10 @@
   max-width: 1020px;
 }
 
+/* Menypanelet er bare en gruppe på desktop; på mobil blir det nedtrekksmenyen. */
+.menu-panel { display: contents; }
+.mobile-title, .menu-toggle, .menu-backdrop { display: none; }
+
 @media (max-width: 640px) {
   .app { flex-direction: column; }
   .sidebar {
@@ -111,18 +115,72 @@
     height: auto;
     flex-direction: row;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    overflow-x: auto;
+    z-index: 30;
   }
+  .sidebar.collapsed { width: auto; padding-left: 16px; padding-right: 16px; }
+  .brand { padding: 0; }
   .brand-name { display: none; }
-  .nav { flex-direction: row; }
-  .nav-item span { display: none; }
+  .sidebar-toggle { display: none; }
+  .mobile-title {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    font-weight: 700;
+    font-size: 17px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .menu-toggle {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card-solid);
+    color: var(--text);
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .menu-panel {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px 14px;
+    background: var(--card-solid);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
+    max-height: calc(100svh - 70px);
+    overflow-y: auto;
+  }
+  .sidebar.menu-open .menu-panel { display: flex; }
+  .menu-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: rgba(0, 0, 0, 0.25);
+  }
+  .nav { flex-direction: column; gap: 4px; }
+  .sidebar.collapsed .nav-item span,
+  .nav-item span { display: inline; }
+  .sidebar.collapsed .nav-item,
+  .nav-item { justify-content: flex-start; padding: 13px 14px; font-size: 16px; }
   .nav-item:hover { transform: none; }
-  .sidebar-toggle { display: none; } /* mobil-raden er alltid kompakt */
-  .main { padding: 0 16px; }
+  .account-btn { margin-top: 0; }
+  .main { padding: 0 16px env(safe-area-inset-bottom, 0px); }
 }
+
+.auth-reason { margin: -4px 0 14px; }
 
 /* ---------- Felles byggeklosser ---------- */
 h2, h3 { letter-spacing: -0.3px; }

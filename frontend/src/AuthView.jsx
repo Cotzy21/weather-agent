@@ -4,7 +4,7 @@ import { useI18n } from './i18n.jsx'
 
 // Enkel konto-side: e-post/passord registrering + innlogging via Supabase,
 // eller utlogging hvis man allerede er innlogget.
-export default function AuthView({ session }) {
+export default function AuthView({ session, reason }) {
   const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -46,6 +46,7 @@ export default function AuthView({ session }) {
   return (
     <div className="account">
       <h2 className="detail-title">{t('Logg inn')}</h2>
+      {reason && <p className="muted auth-reason">{reason}</p>}
       <div className="auth-form">
         <input type="email" placeholder={t('E-post')} value={email} onChange={(e) => setEmail(e.target.value)} />
         <input type="password" placeholder={t('Passord')} value={password} onChange={(e) => setPassword(e.target.value)} />

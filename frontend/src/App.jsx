@@ -247,10 +247,29 @@ function VaersokView({ onPlan }) {
   )
 }
 
+// Alt unntatt værsøket krever innlogging (auth: true).
+const NAV = [
+  { id: 'hjem', icon: '🏠', label: 'Hjem', auth: true },
+  { id: 'vaersok', icon: '🔎', label: 'Værsøk', auth: false },
+  { id: 'rute', icon: '🧭', label: 'Ruteplanlegger', auth: true },
+  { id: 'trening', icon: '🏋️', label: 'Trening', auth: true },
+  { id: 'kosthold', icon: '🥗', label: 'Kosthold', auth: true },
+  { id: 'restitusjon', icon: '🧘', label: 'Restitusjon', auth: true },
+]
+
 export default function App() {
   const { t, lang, setLang } = useI18n()
-  const [tab, setTab] = useState('hjem')
+  const [tab, setTab] = useState(supabase ? 'hjem' : 'vaersok')
   const [session, setSession] = useState(null)
+  // Til getSession har svart vet vi ikke om brukeren er innlogget - unngår
+  // at innloggingsveggen blinker forbi ved oppstart.
+  const [authReady, setAuthReady] = useState(!supabase)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  function go(id) {
+    setTab(id)
+    setMenuOpen(false)
+  }
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') ?? 'light')
   // Sidemenyen har to states (som Garmin): utvidet og kollapset ikon-rail.
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === '1')
@@ -275,7 +294,11 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase) return undefined
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+      if (!data.session) setTab('vaersok')
+      setAuthReady(true)
+    })
     // Tøm data-cachen når brukeren endres (inn/ut-logging), så ingen ser
     // forrige brukers cachede økter/kosthold.
     let lastUser = null
@@ -323,10 +346,13 @@ export default function App() {
   }, [session])
 
   const mainRef = useTabTransition(tab)
+  const current = NAV.find((n) => n.id === tab)
+  const locked = authReady && !session && current?.auth
 
   return (
     <div className="app">
-      <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+      {menuOpen && <div className="menu-backdrop" onClick={() => setMenuOpen(false)} />}
+      <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${menuOpen ? 'menu-open' : ''}`}>
         <button
           className="sidebar-toggle"
           title={collapsed ? t('Utvid menyen') : t('Minimer menyen')}
@@ -339,25 +365,27 @@ export default function App() {
           <span className="brand-icon">⛰️</span>
           <span className="brand-name">Turvær</span>
         </div>
+        <span className="mobile-title">{tab === 'konto' ? t(session ? 'Min konto' : 'Logg inn') : t(current?.label ?? '')}</span>
+        <button
+          className="menu-toggle"
+          aria-label={t('Meny')}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          {menuOpen ? '✕' : '☰'}
+        </button>
+        <div className="menu-panel">
         <nav className="nav" aria-label="Moduser">
-          <button className={`nav-item ${tab === 'hjem' ? 'active' : ''}`} title={t('Hjem')} onClick={() => setTab('hjem')}>
-            🏠 <span>{t('Hjem')}</span>
-          </button>
-          <button className={`nav-item ${tab === 'vaersok' ? 'active' : ''}`} title={t('Værsøk')} onClick={() => setTab('vaersok')}>
-            🔎 <span>{t('Værsøk')}</span>
-          </button>
-          <button className={`nav-item ${tab === 'rute' ? 'active' : ''}`} title={t('Ruteplanlegger')} onClick={() => setTab('rute')}>
-            🧭 <span>{t('Ruteplanlegger')}</span>
-          </button>
-          <button className={`nav-item ${tab === 'trening' ? 'active' : ''}`} title={t('Trening')} onClick={() => setTab('trening')}>
-            🏋️ <span>{t('Trening')}</span>
-          </button>
-          <button className={`nav-item ${tab === 'kosthold' ? 'active' : ''}`} title={t('Kosthold')} onClick={() => setTab('kosthold')}>
-            🥗 <span>{t('Kosthold')}</span>
-          </button>
-          <button className={`nav-item ${tab === 'restitusjon' ? 'active' : ''}`} title={t('Restitusjon')} onClick={() => setTab('restitusjon')}>
-            🧘 <span>{t('Restitusjon')}</span>
-          </button>
+          {NAV.map((n) => (
+            <button
+              key={n.id}
+              className={`nav-item ${tab === n.id ? 'active' : ''}`}
+              title={n.auth && !session ? `${t(n.label)} – ${t('Krever innlogging')}` : t(n.label)}
+              onClick={() => go(n.id)}
+            >
+              {n.icon} <span>{t(n.label)}{n.auth && !session && ' 🔒'}</span>
+            </button>
+          ))}
         </nav>
         <button
           className="nav-item account-btn"
@@ -375,14 +403,20 @@ export default function App() {
         </button>
         <button
           className={`nav-item ${tab === 'konto' ? 'active' : ''}`}
-          onClick={() => setTab('konto')}
+          onClick={() => go('konto')}
         >
           👤 <span>{session ? t('Min konto') : t('Logg inn')}</span>
         </button>
+        </div>
       </aside>
 
-      <main className={`main ${tab === 'rute' ? 'wide' : ''}`} ref={mainRef}>
+      <main className={`main ${tab === 'rute' && !locked ? 'wide' : ''}`} ref={mainRef}>
         <Suspense fallback={<p className="lazy-fallback muted">{t('Laster …')}</p>}>
+          {!authReady ? (
+            <p className="lazy-fallback muted">{t('Laster …')}</p>
+          ) : locked ? (
+            <AuthView session={null} reason={t('Logg inn for å bruke {feature}. Værsøket er åpent for alle.', { feature: t(current.label) })} />
+          ) : (<>
           {tab === 'hjem' && <Dashboard session={session} onNavigate={setTab} />}
           {tab === 'vaersok' && <VaersokView onPlan={planTrip} />}
           {tab === 'rute' && (
@@ -396,6 +430,7 @@ export default function App() {
           {tab === 'kosthold' && <NutritionView session={session} />}
           {tab === 'restitusjon' && <RecoveryView session={session} />}
           {tab === 'konto' && <AuthView session={session} />}
+          </>)}
         </Suspense>
       </main>
     </div>
