@@ -35,6 +35,22 @@ const PACE = [
   { v: 0.5, t: 'Opp 0,5 kg/uke' },
 ]
 
+// Generiske enheter i tillegg til varens egne porsjoner (glass, skive …).
+// Volum regnes som 1 ml ≈ 1 g - stemmer for vann/melk/shake, grovt for pulver.
+const GENERIC_UNITS = [
+  { v: 'kg', t: 'kg', g: 1000 },
+  { v: 'dl', t: 'dl', g: 100, volume: true },
+  { v: 'ml', t: 'ml', g: 1, volume: true },
+  { v: 'ss', t: 'spiseskje (ss)', g: 15, volume: true },
+  { v: 'ts', t: 'teskje (ts)', g: 5, volume: true },
+]
+const unitByKey = Object.fromEntries(GENERIC_UNITS.map((u) => [u.v, u]))
+
+const EMPTY_FOOD = {
+  name: '', brand: '', barcode: '', kcal: '', protein: '', carb: '', fat: '',
+  portionName: '', portionGrams: '', isPublic: false,
+}
+
 const today = () => new Date().toISOString().slice(0, 10)
 
 export default function MealDiary({ session }) {
@@ -45,7 +61,12 @@ export default function MealDiary({ session }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [picked, setPicked] = useState(null)   // valgt matvare fra søket
-  const [portion, setPortion] = useState('g')  // 'g' eller index i picked.portions
+  const [portion, setPortion] = useState('g')  // 'g', generisk enhet ('dl' …) eller index i picked.portions
+
+  // Egne matvarer (for varer Matvaretabellen ikke har, f.eks. en bestemt shake).
+  const [showFoodForm, setShowFoodForm] = useState(false)
+  const [foodForm, setFoodForm] = useState(EMPTY_FOOD)
+  const [myFoods, setMyFoods] = useState([])
   const [amount, setAmount] = useState(100)
 
   const [day, setDay] = useState(null)
@@ -132,6 +153,69 @@ export default function MealDiary({ session }) {
     }
   }
 
+  async function loadMyFoods() {
+    try {
+      const res = await fetch(apiUrl('/api/kosthold/egne-matvarer'), { headers: await authHeaders() })
+      if (res.ok) setMyFoods(await res.json())
+    } catch { /* sekundært */ }
+  }
+
+  function toggleFoodForm() {
+    if (!showFoodForm) loadMyFoods()
+    setShowFoodForm(!showFoodForm)
+  }
+
+  // En egen vare fra API-et i samme form som et søketreff, så den kan velges direkte.
+  function fromCustom(f) {
+    return {
+      foodId: f.foodId,
+      name: f.brand ? `${f.name} (${f.brand})` : f.name,
+      kcalPer100g: f.kcalPer100g,
+      proteinPer100g: f.proteinPer100g,
+      fatPer100g: f.fatPer100g,
+      carbPer100g: f.carbPer100g,
+      portions: f.portionName && f.portionGrams ? [{ name: f.portionName, grams: f.portionGrams }] : [],
+      source: 'EGEN',
+    }
+  }
+
+  async function createFood() {
+    setError(null)
+    const num = (x) => (x === '' ? 0 : Number(x))
+    try {
+      const res = await fetch(apiUrl('/api/kosthold/egne-matvarer'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({
+          name: foodForm.name.trim(),
+          brand: foodForm.brand.trim() || null,
+          barcode: foodForm.barcode.trim() || null,
+          kcalPer100g: num(foodForm.kcal),
+          proteinPer100g: num(foodForm.protein),
+          fatPer100g: num(foodForm.fat),
+          carbPer100g: num(foodForm.carb),
+          portionName: foodForm.portionName.trim() || null,
+          portionGrams: foodForm.portionGrams === '' ? null : Number(foodForm.portionGrams),
+          isPublic: foodForm.isPublic,
+        }),
+      })
+      if (!res.ok) throw new Error(await readError(res))
+      const created = await res.json()
+      setFoodForm(EMPTY_FOOD)
+      setShowFoodForm(false)
+      pick(fromCustom(created)) // rett til mengde-steget med den nye varen
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  async function deleteFood(id) {
+    try {
+      await fetch(apiUrl(`/api/kosthold/egne-matvarer/${id}`), { method: 'DELETE', headers: await authHeaders() })
+      loadMyFoods()
+    } catch { /* ignorer */ }
+  }
+
   function pick(food) {
     setPicked(food)
     // Har varen porsjoner (glass, skive …), foreslå den første – ellers gram.
@@ -142,6 +226,7 @@ export default function MealDiary({ session }) {
   // Mengde -> gram: enten direkte, eller antall porsjoner * porsjonsvekt.
   const grams = picked == null ? 0
     : portion === 'g' ? Number(amount) || 0
+    : unitByKey[portion] ? (Number(amount) || 0) * unitByKey[portion].g
     : (Number(amount) || 0) * (picked.portions[portion]?.grams ?? 0)
 
   const previewKcal = picked ? (picked.kcalPer100g * grams) / 100 : 0
@@ -235,12 +320,73 @@ export default function MealDiary({ session }) {
         </div>
       )}
 
-      <input
-        className="diary-search"
-        placeholder={t('Søk i Matvaretabellen … (f.eks. havregryn)')}
-        value={query}
-        onChange={(e) => { setQuery(e.target.value); setPicked(null) }}
-      />
+      <div className="diary-search-row">
+        <input
+          className="diary-search"
+          placeholder={t('Søk etter matvare … (f.eks. havregryn)')}
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setPicked(null) }}
+        />
+        <button className="mini" onClick={toggleFoodForm}>
+          {showFoodForm ? t('Lukk') : t('+ Egen matvare')}
+        </button>
+      </div>
+
+      {showFoodForm && (
+        <div className="food-form">
+          <p className="muted food-form-hint">
+            {t('Mangler en vare? Legg den inn selv – næring står på pakningen (per 100 g).')}
+          </p>
+          <div className="food-form-grid">
+            <input placeholder={t('Navn (f.eks. Proteinshake sjokolade)')} value={foodForm.name}
+                   onChange={(e) => setFoodForm({ ...foodForm, name: e.target.value })} />
+            <input placeholder={t('Merke (valgfritt)')} value={foodForm.brand}
+                   onChange={(e) => setFoodForm({ ...foodForm, brand: e.target.value })} />
+            <input placeholder={t('Strekkode (valgfritt)')} inputMode="numeric" value={foodForm.barcode}
+                   onChange={(e) => setFoodForm({ ...foodForm, barcode: e.target.value })} />
+          </div>
+          <div className="food-form-grid numbers">
+            {[['kcal', 'kcal / 100 g'], ['protein', 'Protein (g)'], ['carb', 'Karbo (g)'], ['fat', 'Fett (g)']].map(([k, label]) => (
+              <label key={k}>{t(label)}
+                <input type="number" min="0" step="any" value={foodForm[k]}
+                       onChange={(e) => setFoodForm({ ...foodForm, [k]: e.target.value })} />
+              </label>
+            ))}
+          </div>
+          <div className="food-form-grid">
+            <input placeholder={t('Porsjon (valgfritt, f.eks. scoop)')} value={foodForm.portionName}
+                   onChange={(e) => setFoodForm({ ...foodForm, portionName: e.target.value })} />
+            <input type="number" min="0" step="any" placeholder={t('Gram per porsjon')} value={foodForm.portionGrams}
+                   onChange={(e) => setFoodForm({ ...foodForm, portionGrams: e.target.value })} />
+          </div>
+          <label className="food-public">
+            <input type="checkbox" checked={foodForm.isPublic}
+                   onChange={(e) => setFoodForm({ ...foodForm, isPublic: e.target.checked })} />
+            {t('Del offentlig – alle brukere kan søke den opp')}
+          </label>
+          <button className="primary" onClick={createFood}
+                  disabled={!foodForm.name.trim() || foodForm.kcal === ''}>
+            {t('Lagre matvare')}
+          </button>
+
+          {myFoods.length > 0 && (
+            <div className="my-foods">
+              <p className="trails-title">{t('Mine matvarer')}</p>
+              <ul>
+                {myFoods.map((f) => (
+                  <li key={f.id}>
+                    <button className="linklike" onClick={() => { pick(fromCustom(f)); setShowFoodForm(false) }}>
+                      {f.name}{f.brand ? ` (${f.brand})` : ''}
+                    </button>
+                    <span className="muted"> · {f.kcalPer100g.toFixed(0)} kcal/100 g{f.isPublic ? ` · ${t('delt')}` : ''}</span>
+                    <button className="del" onClick={() => deleteFood(f.id)} aria-label={t('Slett')}>✕</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {!picked && results.length > 0 && (
         <ul className="food-results">
@@ -248,6 +394,8 @@ export default function MealDiary({ session }) {
             <li key={f.foodId}>
               <button className="linklike" onClick={() => pick(f)}>
                 {f.name} <span className="muted">{f.kcalPer100g.toFixed(0)} kcal/100 g</span>
+                {f.source === 'EGEN' && <span className="food-source own">{t('egen')}</span>}
+                {f.source === 'OFFENTLIG' && <span className="food-source shared">{t('delt')}</span>}
               </button>
             </li>
           ))}
@@ -264,14 +412,21 @@ export default function MealDiary({ session }) {
             </label>
             <label>{t('Enhet')}
               <select value={portion}
-                      onChange={(e) => setPortion(e.target.value === 'g' ? 'g' : Number(e.target.value))}>
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setPortion(v === 'g' || unitByKey[v] ? v : Number(v))
+                      }}>
                 <option value="g">{t('gram')}</option>
                 {picked.portions.map((p, i) => (
                   <option key={i} value={i}>{p.name} ({p.grams.toFixed(0)} g)</option>
                 ))}
+                {GENERIC_UNITS.map((u) => <option key={u.v} value={u.v}>{t(u.t)}</option>)}
               </select>
             </label>
             <span className="muted">= {grams.toFixed(0)} g · ~{previewKcal.toFixed(0)} kcal</span>
+            {unitByKey[portion]?.volume && (
+              <span className="muted unit-hint">{t('(1 ml ≈ 1 g – stemmer for drikke, omtrentlig for pulver)')}</span>
+            )}
             <button className="primary" onClick={add} disabled={grams <= 0}>{t('Legg til')}</button>
           </div>
         </div>

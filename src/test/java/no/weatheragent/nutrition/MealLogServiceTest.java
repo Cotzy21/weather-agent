@@ -28,7 +28,8 @@ class MealLogServiceTest {
 
     private final MealEntryRepository repository = mock(MealEntryRepository.class);
     private final MatvaretabellenClient client = mock(MatvaretabellenClient.class);
-    private final MealLogService service = new MealLogService(repository, client);
+    private final CustomFoodService customFoods = mock(CustomFoodService.class);
+    private final MealLogService service = new MealLogService(repository, client, customFoods);
 
     @Test
     void loggingSnapshotsCaloriesAndMacrosScaledByGrams() {
@@ -107,5 +108,27 @@ class MealLogServiceTest {
         when(repository.findByUserIdAndDateBetween(any(), any(), any())).thenReturn(List.of());
 
         assertTrue(service.week(USER, DATE).isEmpty());
+    }
+
+    @Test
+    void customFoodsAreLoggedWithTheirOwnMacros() {
+        CustomFood shake = new CustomFood(USER, "Proteinshake", "Merke", null,
+                380, 75, 5, 8, "scoop", 30.0, false);
+        when(customFoods.usable(USER, "egen:abc")).thenReturn(java.util.Optional.of(shake));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        MealEntry entry = service.log(USER, DATE, "MELLOM", "egen:abc", 30);
+
+        assertEquals(114, entry.getKcal(), 0.01);     // 380 · 0,3
+        assertEquals(22.5, entry.getProteinG(), 0.01); // 75 · 0,3
+        assertEquals("Proteinshake (Merke)", entry.getFoodName());
+    }
+
+    @Test
+    void customFoodTheUserCannotSeeIsRejected() {
+        when(customFoods.usable(USER, "egen:hemmelig")).thenReturn(java.util.Optional.empty());
+
+        assertThrows(UnknownFoodException.class,
+                () -> service.log(USER, DATE, "MELLOM", "egen:hemmelig", 30));
     }
 }

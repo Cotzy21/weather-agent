@@ -53,6 +53,9 @@ class MealLogControllerSecurityTest {
     private no.weatheragent.nutrition.CalorieGoalService goals;
 
     @MockitoBean
+    private no.weatheragent.nutrition.CustomFoodService customFoods;
+
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     @Test
@@ -146,5 +149,39 @@ class MealLogControllerSecurityTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Kalsium"))
                 .andExpect(jsonPath("$[0].advice").isNotEmpty());
+    }
+
+    @Test
+    void customFoodsComeFirstInSearchAndAreLabeledBySource() throws Exception {
+        UUID me = UUID.fromString(SUB);
+        var mine = new no.weatheragent.nutrition.CustomFood(me, "Proteinshake", null, null,
+                380, 75, 5, 8, null, null, false);
+        var shared = new no.weatheragent.nutrition.CustomFood(UUID.randomUUID(), "Protein bar", null, null,
+                350, 30, 10, 40, null, null, true);
+        when(customFoods.search(me, "prot")).thenReturn(List.of(mine, shared));
+        when(search.search("prot")).thenReturn(List.of(new FoodItem(
+                "01.001", "Proteinpulver", 370, Map.of("Protein", 80.0), List.of(), List.of())));
+
+        mvc.perform(get("/api/kosthold/matvarer").param("sok", "prot")
+                        .with(jwt().jwt(j -> j.subject(SUB))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].source").value("EGEN"))
+                .andExpect(jsonPath("$[1].source").value("OFFENTLIG"))
+                .andExpect(jsonPath("$[2].source").value("MATVARETABELLEN"));
+    }
+
+    @Test
+    void unknownBarcodeGives404() throws Exception {
+        when(customFoods.byBarcode(UUID.fromString(SUB), "7038010009457")).thenReturn(java.util.Optional.empty());
+
+        mvc.perform(get("/api/kosthold/strekkode/7038010009457").with(jwt().jwt(j -> j.subject(SUB))))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void customFoodEndpointsRequireAuthentication() throws Exception {
+        mvc.perform(get("/api/kosthold/egne-matvarer")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/kosthold/egne-matvarer")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/kosthold/strekkode/123")).andExpect(status().isUnauthorized());
     }
 }

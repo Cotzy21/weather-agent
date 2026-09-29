@@ -17,7 +17,9 @@ import java.util.stream.Collectors;
  * ukesoversikt over vitaminer/mineraler målt mot anbefalt daglig inntak.
  *
  * All næringsberegning skjer lokalt mot den cachede Matvaretabellen -
- * ingen eksterne kall per forespørsel.
+ * ingen eksterne kall per forespørsel. Egne matvarer ({@code egen:<uuid>})
+ * logges på samme måte; de har bare makroer, så de bidrar ikke til
+ * vitamin-/mineraloversikten.
  */
 @Service
 public class MealLogService {
@@ -32,10 +34,13 @@ public class MealLogService {
 
     private final MealEntryRepository repository;
     private final MatvaretabellenClient foods;
+    private final CustomFoodService customFoods;
 
-    public MealLogService(MealEntryRepository repository, MatvaretabellenClient foods) {
+    public MealLogService(MealEntryRepository repository, MatvaretabellenClient foods,
+                          CustomFoodService customFoods) {
         this.repository = repository;
         this.foods = foods;
+        this.customFoods = customFoods;
     }
 
     /** Dagens loggede matvarer pluss totaler. */
@@ -57,7 +62,7 @@ public class MealLogService {
         if (!MEALS.contains(meal)) {
             throw new IllegalArgumentException("Ukjent måltid: " + meal);
         }
-        FoodItem food = foodById(foodId);
+        FoodItem food = foodById(userId, foodId);
 
         double factor = grams / 100.0;
         return repository.save(new MealEntry(userId, date, meal, food.foodId(), food.name(), grams,
@@ -120,7 +125,13 @@ public class MealLogService {
                 .toList();
     }
 
-    private FoodItem foodById(String foodId) {
+    /** Egen vare (eier eller offentlig) eller Matvaretabellen-vare. */
+    private FoodItem foodById(UUID userId, String foodId) {
+        if (foodId.startsWith(CustomFood.ID_PREFIX)) {
+            return customFoods.usable(userId, foodId)
+                    .map(CustomFood::toFoodItem)
+                    .orElseThrow(() -> new UnknownFoodException(foodId));
+        }
         return foods.allFoods().stream()
                 .filter(f -> f.foodId().equals(foodId))
                 .findFirst()

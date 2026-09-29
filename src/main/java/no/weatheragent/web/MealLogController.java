@@ -3,10 +3,14 @@ package no.weatheragent.web;
 import jakarta.validation.Valid;
 import no.weatheragent.nutrition.CalorieGoal;
 import no.weatheragent.nutrition.CalorieGoalService;
+import no.weatheragent.nutrition.CustomFood;
+import no.weatheragent.nutrition.CustomFoodService;
 import no.weatheragent.nutrition.DailyBalanceService;
 import no.weatheragent.nutrition.FoodSearchService;
 import no.weatheragent.nutrition.MealLogService;
 import no.weatheragent.web.dto.CalorieGoalDto;
+import no.weatheragent.web.dto.CreateCustomFoodRequest;
+import no.weatheragent.web.dto.CustomFoodDto;
 import no.weatheragent.web.dto.DaySummaryDto;
 import no.weatheragent.web.dto.FoodDto;
 import no.weatheragent.web.dto.LogMealRequest;
@@ -27,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -42,19 +47,64 @@ public class MealLogController {
     private final MealLogService meals;
     private final DailyBalanceService balance;
     private final CalorieGoalService goals;
+    private final CustomFoodService customFoods;
 
     public MealLogController(FoodSearchService search, MealLogService meals,
-                             DailyBalanceService balance, CalorieGoalService goals) {
+                             DailyBalanceService balance, CalorieGoalService goals,
+                             CustomFoodService customFoods) {
         this.search = search;
         this.meals = meals;
         this.balance = balance;
         this.goals = goals;
+        this.customFoods = customFoods;
     }
 
-    /** Søk i Matvaretabellen, f.eks. GET /api/kosthold/matvarer?sok=brød */
+    /**
+     * Søk i egne + offentlig delte matvarer OG Matvaretabellen, f.eks.
+     * GET /api/kosthold/matvarer?sok=brød. Egne/delte kommer først - de er
+     * mer spesifikke (en bestemt shake) enn tabellens generiske varer.
+     */
     @GetMapping("/api/kosthold/matvarer")
-    public List<FoodDto> foods(@RequestParam("sok") String query) {
-        return search.search(query).stream().map(FoodDto::from).toList();
+    public List<FoodDto> foods(@AuthenticationPrincipal Jwt jwt, @RequestParam("sok") String query) {
+        UUID userId = UUID.fromString(jwt.getSubject());
+        List<FoodDto> out = new ArrayList<>();
+        for (CustomFood f : customFoods.search(userId, query)) {
+            out.add(FoodDto.from(f.toFoodItem(), f.getOwnerId().equals(userId) ? "EGEN" : "OFFENTLIG"));
+        }
+        search.search(query).forEach(f -> out.add(FoodDto.from(f)));
+        return out;
+    }
+
+    /** Slå opp en vare på strekkode (egne + offentlig delte), 404 hvis ukjent. */
+    @GetMapping("/api/kosthold/strekkode/{kode}")
+    public ResponseEntity<FoodDto> byBarcode(@AuthenticationPrincipal Jwt jwt, @PathVariable String kode) {
+        UUID userId = UUID.fromString(jwt.getSubject());
+        return customFoods.byBarcode(userId, kode)
+                .map(f -> ResponseEntity.ok(FoodDto.from(f.toFoodItem(),
+                        f.getOwnerId().equals(userId) ? "EGEN" : "OFFENTLIG")))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/api/kosthold/egne-matvarer")
+    public List<CustomFoodDto> myFoods(@AuthenticationPrincipal Jwt jwt) {
+        return customFoods.listMine(UUID.fromString(jwt.getSubject())).stream()
+                .map(CustomFoodDto::from)
+                .toList();
+    }
+
+    @PostMapping("/api/kosthold/egne-matvarer")
+    public CustomFoodDto createFood(@AuthenticationPrincipal Jwt jwt,
+                                    @Valid @RequestBody CreateCustomFoodRequest r) {
+        return CustomFoodDto.from(customFoods.create(UUID.fromString(jwt.getSubject()),
+                r.name(), r.brand(), r.barcode(),
+                r.kcalPer100g(), r.proteinPer100g(), r.fatPer100g(), r.carbPer100g(),
+                r.portionName(), r.portionGrams(), r.isPublic()));
+    }
+
+    @DeleteMapping("/api/kosthold/egne-matvarer/{id}")
+    public ResponseEntity<Void> deleteFood(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        boolean deleted = customFoods.delete(id, UUID.fromString(jwt.getSubject()));
+        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 
     @PostMapping("/api/kosthold/logg")

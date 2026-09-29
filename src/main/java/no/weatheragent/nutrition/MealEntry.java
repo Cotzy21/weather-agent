@@ -36,7 +36,7 @@ public class MealEntry {
     @Column(name = "meal", length = 20, nullable = false)
     private String meal;
 
-    @Column(name = "food_id", length = 20, nullable = false)
+    @Column(name = "food_id", length = 60, nullable = false)
     private String foodId;
 
     @Column(name = "food_name", length = 160, nullable = false)

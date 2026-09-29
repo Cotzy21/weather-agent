@@ -85,6 +85,9 @@
 - [ ] LLM-kost per værsøk: mål faktisk forbruk første uka og sett budsjett/
       alarm hos leverandøren.
 - [ ] Overpass-speilene: følg med på 429-rater i loggen; vurder egen instans.
+- [ ] **Offentlig delte matvarer er brukerinnhold**: validering stopper
+      fysisk umulige tall, men ikke feil/spam. Legg til «rapporter»-knapp +
+      en enkel admin-sletting før det blir mange brukere.
 
 ## 3. Kan vente (fra planen)
 
