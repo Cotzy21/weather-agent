@@ -4,158 +4,116 @@
 > som er gitignored, og fulgte derfor ikke med til nye maskiner).
 > Oppdater den når en modul er ferdig eller en beslutning tas.
 
-Sist oppdatert: 2026-07-02 (på Mac-en, etter «robusthet i værsøket»-økta).
+Sist oppdatert: 2026-09-29 (avsjekk mot originalplanen + 5 nye moduler).
+Se også **DEPLOY.md** for alt som må gjøres før første deploy.
 
 ## Hva appen er
 
 Turvær-/helseapp: finn hvor det blir finest turvær («hvor på Sunnmøre blir det
-best vær i helgen?»), planlegg ruta, og følg trening/kosthold/recovery.
+best vær i helgen?»), planlegg ruta, og følg trening/kosthold/restitusjon.
 Java 25 / Spring Boot 3.5 (Maven) + React (Vite) i `frontend/`.
-Auth: Supabase JWT. DB: Postgres via Flyway (`src/main/resources/db/migration`).
+Auth: Supabase JWT (HS256 + ES256/JWKS). DB: Postgres via Flyway (V1–V11).
+Dockerfile + PORT-config for backend-deploy finnes.
 
-## Status per område (planen ↔ koden)
+## Status mot originalplanen
 
-### Værsøk — LENGST FREMME, nettopp gjort globalt + robust
-- ✅ Hele kjeden fritekst → tolkning (LLM, fast/smart-tier) → OSM/Overpass
-  (topper/turruter i område) → kandidat-utvelgelse (rutenett) → MET-vær →
-  scoring m/vekter → ranking. REST: `GET /api/turvaer`, `/api/sted`, `/api/rute`.
-- ✅ Landsdekkende → **globalt**: tolkeren gir ISO-landkode, Overpass-søk scopes
-  til landet med globalt navnefallback (`OverpassQueries`).
-- ✅ NYTT i dag: **Overpass-failover** til speil (overpass-api.de →
-  kumi.systems → private.coffee) ved 429/5xx/timeout — adresserer den kjente
-  «Kartdata-tjenesten er midlertidig overbelastet»-feilen.
-- ✅ NYTT i dag: **vær-fallback til Open-Meteo** (`ResilientWeatherClient`):
-  MET først; Open-Meteo (16 dagers horisont) når MET feiler ELLER ikke dekker
-  siste dato i perioden. Adresserer «ingen værdata for neste helg» (MET stopper
-  på ~9–10 dager; «neste helg» spurt tidlig i uka ligger utenfor).
-- ✅ NYTT i dag: retry på geocoding-klienten (samme mønster som MET/Overpass).
-- ⚠️ Lisens-merknad: Open-Meteo (geocoding + vær-fallback) er gratis KUN
-  ikke-kommersielt. Før kommersiell deploy: kjøp API-plan hos Open-Meteo
-  (billig) eller bytt fallback. MET er CC-BY (kommersielt OK, krever attribusjon
-  + identifiserende User-Agent — satt i `application.properties`).
-- ✅ NYTT i dag: **værsøk → ruteplanlegger-flyt**: «🧭 Planlegg tur hit»-knapp på
-  vinneren og på detaljsiden. Stedet løftes til App-state (`planTarget`), tab
-  byttes, planleggeren viser banner + oransje målmarkør, sentrerer kartet og
-  foreslår rutenavn. ✕ i banneret fjerner målet.
+### Værsøk ✅
+- Fritekst → LLM-tolkning (fast/smart-tier) → OSM/Overpass (topper/ruter i
+  område, globalt m/landkode) → kandidater → vær → scoring → ranking.
+- **Prompten vekter seg selv**: «vi hater regn og vind, temperatur er ikke
+  viktig» → regn/vind HØY, temp LAV (brukes når glidebryterne står på standard).
+- Robusthet: Overpass-speil-failover, MET → Open-Meteo-fallback (16 dager),
+  retry på geocoding. Eksempel-chips i søket. VARSEL-modus for «hvordan blir
+  været i X».
+- Værsøk → ruteplanlegger («🧭 Planlegg tur hit»).
 
-### Ruteplanlegger — grunnmur på plass
-- ✅ Klikk-waypoints → rute (`RoutingClient`), høydeprofil (`ElevationClient`),
-  kalorier (`CalorieAdvisor`), klesråd (`ClothingAdvisor`), lagring av ruter.
-- ✅ NYTT: **terrengvurdering** (`RouteAssessor`, ren/testbar): DNT-inspirert
-  vanskelighetsgrad (grønn/blå/rød/svart = verste av distanse-, stignings-
-  og bratthets-karakter), høyeste punkt, bratteste parti (%), og regelbaserte
-  «vær forberedt på»-råd (bratt/høyfjell/langtur/nedstigning). Beregnes fra
-  høydeprofilen som allerede hentes; terskler kan finjusteres mot ekte
-  DNT-verdier senere.
-- ✅ NYTT: **prompten vekter seg selv**: «vi hater regn og vind, temperatur
-  er ikke viktig» -> tolkeren gir weights (regn/vind HØY, temp LAV) som
-  brukes NÅR de manuelle glidebryterne står på standard (manuelt vinner).
-- Gjenstår: highlighting av populære stier rundt et valgt resultat,
-  «fortell om turen»-tekst (LLM), klesråd koblet til værdato for turen.
+### Ruteplanlegger ✅ (delvis)
+- Waypoints → rute, høydeprofil, kalorier, snacks, klesråd, lagring, kartlag
+  (kart/terreng/satellitt).
+- **Terrengvurdering** (`RouteAssessor`): DNT-inspirert vanskelighetsgrad,
+  høyeste punkt, bratteste parti, «vær forberedt på»-råd.
+- **Turstier highlightet**: detaljsiden henter ekte stigeometri
+  (`out geom`, klippet til boks rundt stedet, uttynnet — Preikestolen:
+  280 KB → 28 KB), tegner linjene og fremhever en sti når man trykker på den.
+- Gjenstår: «fortell om turen»-tekst (LLM — koster per kall, se prismodell).
 
-### Trening — fungerer, med kjente feil (se under)
-- ✅ Logging av økter (styrke/cardio/hiking), progresjon per øvelse,
-  AI-forslag (`WorkoutSuggester`, fast/smart-tier), muskelvelger i UI.
-- ✅ NYTT: **treningsplaner i profilen** (`TrainingPlan*`, Flyway V6): «Lagre
-  som plan» på AI-forslag, «Mine planer»-liste, «Bruk i ny økt» fyller
-  øktbyggeren (planer har samme JSONB-form som økter/forslag). Tak på 30.
-- Gjenstår: progressive overload-motor (regelbasert, uten LLM), sleep
-  score-tilpasning (krever klokke-integrasjoner), real-time tracking (sen fase).
+### Trening ✅
+- Logging (styrke/cardio/hiking, supersett m/runder, dra-og-slipp), progresjon,
+  Garmin CSV-import (ekte kalorier), treningsplaner i profilen, AI-assistent
+  (samtale m/oppfølgingsspørsmål → ukeplan man aksepterer/forkaster).
+- **Progressive overload-motor** (`ProgressionAdvisor`, regelbasert, 0 LLM):
+  dobbel progresjon per øvelse — reps opp til toppen av området, så vekt
+  (+5 kg store beinløft / +2,5 kg / +1 kg under 20 kg), deload −10 % etter
+  tre økter uten fremgang. «Neste gang»-kort i oversikten, «+ Legg i økt».
+- **Dagsform fra søvn** (`ReadinessAdvisor`): søvn-vanen i habit trackeren →
+  god/middels/lav (7 t / 6 t-grenser) med råd; sendes også til AI-assistenten.
+  Byttes mot klokkens søvnscore/HRV når integrasjonene kommer.
+- Gjenstår: real-time tracking (sen fase i planen), klokke-integrasjoner.
 
-### Kosthold — kjernen på plass
-- ✅ Favoritt-matvarer m/tak (`NutritionFavorite*`, Flyway V4, sikret + testet).
-- ✅ NYTT: **kostholdsdagbok** (`MealEntry*`, Flyway V5): søk i hele
-  Matvaretabellen (~2100 varer, hentes ÉN gang og caches — null API-kall per
-  søk), logg med gram ELLER varens egne porsjoner (glass/skive/dl …),
-  dagstotaler (kcal/protein/karbo/fett, snapshot ved logging), og
-  **ukesoversikt for 16 vitaminer/mineraler** mot NNR 2023-referanser med
-  hardkodede råd når inntaket er lavt (`NutrientReference`).
-  Kilde-attribusjon til Matvaretabellen/Mattilsynet vises i UI (NLOD-lisens,
-  kommersiell bruk OK med henvisning).
-- ✅ NYTT: **kaloriteller med vektmål** (`CalorieGoal*`, Flyway V7): profil
-  (vekt/høyde/alder/kjønn/aktivitet/tempo) → daglig kcal-mål via
-  Mifflin-St Jeor × aktivitetsfaktor ± 7700 kcal/kg fordelt på uka; gulv på
-  1400 kcal/dag og tak på ±1,5 kg/uke. Målet beregnes alltid ferskt (lagres
-  ikke), så formel-forbedringer slår inn for alle.
-- ✅ NYTT: **trening ↔ kosthold**: `WorkoutCalorieEstimator` (ren MET-tabell,
-  løping fartsbasert, hiking m/stigningstillegg, styrke ~3 min/sett) +
-  `DailyBalanceService` → `/api/kosthold/dag` viser nå
-  «mål − spist + trening = igjen» og et påfyll-råd ved forbrenning ≥ 500 kcal.
-- ✅ NYTT: **habit tracker** (`habit`-pakke, Flyway V9, UI i Restitusjon-fanen
-  siden søvn/koffein er restitusjonsdata): egendefinerte vaner m/emoji og
-  valgfri enhet (tom = ja/nei-vane), 7-dagers rutenett (toggle/tallfelt),
-  streak per vane, hurtigforslag (koffein/søvn/lesing/meditasjon/vann),
-  tak på 20. Skal senere sammenlignes med HRV fra klokke-import.
-- Gjenstår: strekkode (utsatt), egne/publiserte matvarer deles offentlig.
+### Kosthold ✅
+- Dagbok mot Matvaretabellen (~2100 varer, cachet), kalorimål (Mifflin-St Jeor),
+  trening ↔ kosthold-balanse, 16 vitaminer/mineraler per uke mot NNR 2023,
+  favoritter + egne måltider (synkes til konto), fremside-kort.
+- **Egne matvarer** (Flyway V10): navn/merke/strekkode/næring per 100 g/porsjon,
+  privat eller **delt offentlig**; søket slår sammen egne + delte +
+  Matvaretabellen (merket «egen»/«delt»). `GET /api/kosthold/strekkode/{kode}`
+  er klart for en kamera-skanner.
+- **Flere enheter**: kg, dl, ml, spiseskje, teskje (+ varens egne porsjoner).
+- **Preferanser & allergier** (Flyway V11): diett (alt/vegetar/pescetar/vegan),
+  14 EU-allergener, «liker ikke». `FoodFlags` gjenkjenner dem i matnavn
+  (norske sammensatte ord, unntakslister). Søket merker og legger uegnede
+  varer bakerst; **næringsrådene filtrerer kildene** (melkeallergiker får
+  grønnkål/plantedrikk for kalsium, veganer beriket drikk/tilskudd for B12).
+  UI sier alltid «basert på navnet – sjekk pakningen».
+- Gjenstår: kamera-strekkodeskanning (+ ev. Open Food Facts som kilde, ODbL),
+  «rapporter»-knapp for offentlige matvarer (se DEPLOY.md).
 
-### Recovery/skadeforebygging — BYGGET (egen «Restitusjon»-fane)
-- ✅ **Skadevarsler** (`InjuryRiskAnalyzer`, ren): ACWR-metoden — belastning
-  siste 7 dager delt på snittet av de 4 ukene før, per økt-type. Ratio ≥1,3
-  = moderat, ≥1,5 = høy; helt ny aktivitet får eget «bygg gradvis»-varsel.
-  Belastningsmål = kcal fra `WorkoutCalorieEstimator` (samme enhet på tvers
-  av typer, og Garmin-importerte økter bidrar med EKTE pulskalorier).
-  Typespesifikke skaderåd hardkodet (beinhinner/akilles, pulley, svømmerskulder …).
-- ✅ **Restitusjonssteg** (`RecoveryAdvisor`, ren): hardkodede råd per
-  økt-type for øktene i dag/i går, + hviledag-forslag ved ≥3 treningsdager
-  på rad. UI sier tydelig «tommelfingerregler, ikke medisinske råd».
-- ✅ `GET /api/recovery` (autentisert) + 🧘 Restitusjon-fane i frontend.
-- Gjenstår: recovery-verktøy (massasjepistol, basseng …) inn i rådene,
-  finjustere terskler/rådtekster med brukerens research.
+### Restitusjon ✅
+- ACWR-skadevarsler per aktivitet, restitusjonssteg per økttype, hviledag-
+  forslag, habit tracker (7-dagers rutenett, streaks). Råd på nb/en fra backend.
+- Gjenstår: recovery-verktøy (massasjepistol, basseng …) — planen sier
+  «vi finner ting når den tiden kommer».
 
 ### Generelt
-- ✅ NYTT: **fremside-sammendrag for kosthold** (klikkbart kort på Hjem):
-  dagens balanse (spist/trening/igjen av målet) + ukas lave næringsstoffer
-  med kort konsekvens-tekst; klikk går til kosthold-fanen.
-- ✅ NYTT: **i18n påbegynt** (`frontend/src/i18n.jsx`): lettvekts uten
-  bibliotek, gettext-stil — norsk tekst er nøkkelen, `t('…')` slår opp i
-  EN-ordboka og faller tilbake til norsk. Plassholdere: `t('… {n} …', {n})`.
-  🌐-knapp i sidemenyen, valget lagres i localStorage.
-  **ALLE views er oversatt** (chrome, Hjem, Værsøk, Ruteplanlegger,
-  Restitusjon, Vaner, Trening, Kosthold, MealDiary, Konto — inkl.
-  matfamilier/matvarenavn), og **engelsk er nå standardspråket** per
-  planen. Backend-innhold (råd/feilmeldinger/AI-svar) er fortsatt norsk —
-  oversettes senere via Accept-Language mot API-et.
-- Gjenstår ellers: klokke-integrasjoner (Apple Health/Garmin/Strava/Whoop),
-  prismodell. Sikkerhetsprinsipp: lagre minst mulig sensitivt, per-bruker
-  kryptering når integrasjonene kommer.
+- i18n: nb/en i hele frontenden, engelsk standard, 🌐-knapp. Restitusjon og
+  progresjonsråd kommer også på engelsk fra backend (`?lang=en`); kostholds-
+  rådene er fortsatt bare norske.
+- Gjenstår: **flere språk** («alle de mest populære») — bestem hvilke;
+  klokke-integrasjoner (Apple Health/Garmin/Strava/Whoop); prismodell.
+  Sikkerhetsprinsipp: minst mulig sensitivt lagret, per-bruker kryptering
+  når integrasjonene kommer.
 
 ## Kjente feil — status
 
-1. **401 ved lagring av økt** — DIAGNOSTISERT: skjer når backend mangler
-   `SUPABASE_JWT_SECRET`/`SUPABASE_JWKS_URI` (da feiler ALL tokenvalidering),
-   eller når brukeren ikke er innlogget/tokenet er utløpt. Backend logger nå
-   en tydelig feilmelding i stedet for kryptisk dekoder-feil, og frontend
-   viser «logg inn på nytt»-melding ved 401. Sjekk oppstartsloggen:
-   `Supabase JWT-validering konfigurert: HS256=…, JWKS=…` — står det
-   false/false, er env-variablene ikke satt.
-2. **«Kartdata-tjenesten overbelastet»** — fikset med speil-failover (i dag).
-3. **«Ingen værdata» for helg-søk** — fikset med Open-Meteo-fallback (i dag).
-4. **Vite proxy ECONNREFUSED /api/treningsokter** — ikke en bug: backend
-   kjørte ikke. Start backend før frontend (se under).
+1. **401 ved lagring** — fikset (ES256-tokens + tydelig logg når
+   `SUPABASE_JWT_SECRET`/`SUPABASE_JWKS_URI` mangler).
+2. **«Kartdata-tjenesten overbelastet»** — speil-failover. NB: fra enkelte
+   nett svarer speilene ikke (sett i sandkasse 2026-09-29) — hovedinstansen
+   med retry fungerte.
+3. **«Ingen værdata» for helg-søk** — Open-Meteo-fallback.
+4. **Vite proxy ECONNREFUSED** — ikke en bug: backend kjørte ikke.
 
 ## Oppsett på ny maskin (det som IKKE følger med git)
 
-1. `frontend/.env` — kopier `frontend/.env.example`, fyll inn Supabase-URL
-   og anon key (Supabase-dashboardet → Settings → API).
+1. `frontend/.env` — kopier `frontend/.env.example`, fyll inn Supabase-URL og
+   anon key. Kjør `npm install` i `frontend/`.
 2. Backend-env: `SUPABASE_JWT_SECRET` (eller `SUPABASE_JWKS_URI`),
-   `SPRING_DATASOURCE_URL/USERNAME/PASSWORD` (Supabase Postgres),
-   evt. LLM-nøkler (se `application.properties` for alle navn).
-3. Kjør: `mvn spring-boot:run` (backend, port 8080) + `npm run dev` i
-   `frontend/` (Vite proxyer `/api` → 8080).
-4. Tester: `mvn test` (124 stk, alle grønne per i dag).
+   `SPRING_DATASOURCE_URL/USERNAME/PASSWORD`, LLM-nøkler (se
+   `application.properties`).
+3. Kjør: `mvn spring-boot:run` (8080) + `npm run dev` i `frontend/`.
+4. Tester: `mvn test` (280 stk, alle grønne 2026-09-29). Repository-testen
+   for egne matvarer kjører mot in-memory H2 (kun test-scope).
 
-## Foreslåtte neste steg (i rekkefølge)
+## Foreslåtte neste steg
 
-1. **DEPLOY — se DEPLOY.md** for hele sjekklisten (env, lisenser,
-   rate limiting, RLS, personvern). Habit tracker og i18n er ferdige.
-2. Verifisere alt ende-til-ende mot ekte backend/DB (Flyway kjører
-   V1-V9 automatisk ved oppstart).
-3. Recovery-verktøy (massasjepistol, basseng …) inn i restitusjonsrådene.
-4. Klokke-integrasjoner / backend-i18n / prismodell (se DEPLOY.md §3).
+1. **Verifiser ende-til-ende mot ekte DB** — Flyway kjører V10 (egne matvarer
+   + utvidet `meal_entries.food_id`) og V11 (preferanser) ved oppstart.
+2. **DEPLOY.md** — rate limiting, Supabase RLS, lisenser, personvern.
+3. Velg hvilke ekstra språk (f.eks. svensk/tysk/spansk/fransk).
+4. Strekkode: kamera-skanning i nettleseren (BarcodeDetector) + oppslag.
 
 ## Arbeidsstil (viktig)
 
 Bygg én modul om gangen, forklar flyten, verifiser med tester før neste steg.
-Ikke dump ferdig UI — dette er også et læringsprosjekt. Reduser API-kall
-(cache/hardkoding der det gir mening); brukeren gjør gjerne research selv —
-spør heller enn å gjette faktaverdier.
+Reduser API-kall (cache/hardkoding der det gir mening); brukeren gjør gjerne
+research selv — spør heller enn å gjette faktaverdier.
