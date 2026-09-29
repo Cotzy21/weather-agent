@@ -4,6 +4,8 @@ import { apiUrl, readError, cachedGet, getCached } from './api'
 import MusclePicker from './MusclePicker'
 import { useReveal } from './anim'
 import { useI18n } from './i18n.jsx'
+import LiveSession from './LiveSession.jsx'
+import { loadLive, clearLive, newLive, fromPlan } from './liveSession.js'
 
 const TYPES = [
   { v: 'STYRKE', t: '🏋️ Styrke' },
@@ -102,7 +104,10 @@ export default function TrainingView({ session }) {
   // Training-fanen har to moduser: 'overview' (landing med oppsummering + logg)
   // og 'builder' (der man faktisk lager/logger en økt). Bygg-fra-kroppen vises
   // bare i byggeren, ikke som det første man møter.
-  const [mode, setMode] = useState('overview')
+  // Tredje modus: 'live' (økt pågår). En påbegynt økt gjenopptas automatisk.
+  const [mode, setMode] = useState(() => (session && loadLive(session.user.id) ? 'live' : 'overview'))
+  const [live, setLive] = useState(() => (session ? loadLive(session.user.id) : null))
+  const [liveSaved, setLiveSaved] = useState(false)
 
   const [plans, setPlans] = useState(() => getCached('/api/trening/planer') ?? [])
 
@@ -159,6 +164,32 @@ export default function TrainingView({ session }) {
     }
     setBlocks((prev) => [...prev.filter((b) => b.kind !== 'exercise' || b.name.trim()), block])
     setMode('builder')
+  }
+
+  function startLive(title, exercises) {
+    setLive(newLive(title, exercises))
+    setMode('live')
+    window.scrollTo(0, 0)
+  }
+
+  function endLive() {
+    clearLive(session.user.id)
+    setLive(null)
+    setMode('overview')
+  }
+
+  async function finishLive({ title, content }) {
+    const res = await fetch(apiUrl('/api/treningsokter'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+      body: JSON.stringify({ date: today(), title, type: 'STYRKE', content, notes: null }),
+    })
+    if (!res.ok) throw new Error(await readError(res))
+    endLive()
+    setLiveSaved(true)
+    setTimeout(() => setLiveSaved(false), 3000)
+    loadWorkouts()
+    loadNextSets()
   }
 
   async function loadWorkouts() {
@@ -424,6 +455,18 @@ export default function TrainingView({ session }) {
     <div className="training" ref={revealRef}>
       <datalist id="exercises">{EXERCISES.map((e) => <option key={e} value={e} />)}</datalist>
 
+      {mode === 'live' && live && (
+        <LiveSession
+          key={live.startedAt}
+          userId={session.user.id}
+          initial={live}
+          nextSets={nextSets}
+          fmtKg={fmtKg}
+          onFinish={finishLive}
+          onCancel={endLive}
+        />
+      )}
+
       {mode === 'overview' && (
         <>
           <h2 className="detail-title" data-reveal>{t('Trening')}</h2>
@@ -435,6 +478,15 @@ export default function TrainingView({ session }) {
             </span>
             <span className="cw-arrow">→</span>
           </button>
+          <button className="create-workout" data-reveal onClick={() => startLive('', [])}>
+            <span className="cw-icon">▶</span>
+            <span className="cw-text">
+              <strong>{t('Start live økt')}</strong>
+              <span className="muted">{t('Huk av sett mens du trener, med pausetimer')}</span>
+            </span>
+            <span className="cw-arrow">→</span>
+          </button>
+          {liveSaved && <p className="success" data-reveal>{t('✓ Økt lagret')}</p>}
 
           {readiness && !readiness.none && (
             <div className={`readiness ${readiness.level.toLowerCase()}`} data-reveal>
@@ -570,6 +622,9 @@ export default function TrainingView({ session }) {
                   <strong>{p.title}</strong>{' '}
                   <span className="muted">({t((TYPES.find((tp) => tp.v === p.type)?.t) || p.type)})</span>
                   <button className="mini" onClick={() => applySuggestion(p)}>{t('Bruk i ny økt')}</button>
+                  {p.type === 'STYRKE' && (
+                    <button className="mini" onClick={() => startLive(p.title, fromPlan(p.content, nextSets))}>▶ {t('Live')}</button>
+                  )}
                   <button className="del" onClick={() => deletePlan(p.id)} aria-label={t('Slett plan')}>✕</button>
                 </li>
               ))}
