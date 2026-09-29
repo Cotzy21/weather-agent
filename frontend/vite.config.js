@@ -7,6 +7,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    // Tillater mobil-testing via Cloudflare-tunnel (`npm run tunnel`).
+    allowedHosts: ['.trycloudflare.com'],
     proxy: {
       '/api': 'http://localhost:8080',
     },
