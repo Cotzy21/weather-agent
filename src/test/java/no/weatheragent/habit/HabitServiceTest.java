@@ -102,4 +102,25 @@ class HabitServiceTest {
 
         assertEquals(3, list.getFirst().streakDays());
     }
+
+    @Test
+    void sleepHoursComeFromTheSleepHabitAndSkipMinuteLikeValues() {
+        Habit sleep = new Habit(USER, "Søvn", "😴", "timer");
+        when(habits.findByUserIdOrderByCreatedAtAsc(USER)).thenReturn(List.of(kaffe(), sleep));
+        when(logs.findByHabitIdInAndDateGreaterThanEqual(any(), any())).thenReturn(List.of(
+                new HabitLog(null, TODAY, 7.5),
+                new HabitLog(null, TODAY.minusDays(1), 420))); // 420 = minutter, ikke timer
+
+        var hours = service.sleepHours(USER, TODAY.minusDays(3));
+
+        assertEquals(1, hours.size());
+        assertEquals(7.5, hours.get(TODAY));
+    }
+
+    @Test
+    void noSleepHabitMeansNoSleepData() {
+        when(habits.findByUserIdOrderByCreatedAtAsc(USER)).thenReturn(List.of(kaffe()));
+
+        assertTrue(service.sleepHours(USER, TODAY.minusDays(3)).isEmpty());
+    }
 }

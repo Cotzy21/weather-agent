@@ -55,6 +55,9 @@ function mapSets(arr) {
   return out.length ? out : [newSet()]
 }
 
+const READINESS_ICONS = { GOD: '💪', MIDDELS: '🙂', LAV: '😴' }
+const READINESS_LABELS = { GOD: 'God', MIDDELS: 'Middels', LAV: 'Lav' }
+
 // Merkelapper for progressive overload-forslagene (nøklene oversettes via t()).
 const ACTION_LABELS = {
   OK_VEKT: '↑ mer vekt',
@@ -108,16 +111,32 @@ export default function TrainingView({ session }) {
   const nextKey = `/api/ovelser/neste?lang=${lang}`
   const [nextSets, setNextSets] = useState(() => getCached(nextKey) ?? [])
 
+  // Dagsform fra søvnen i habit trackeren. null = ikke hentet/ingen søvndata.
+  const [readiness, setReadiness] = useState(null)
+
   useEffect(() => {
-    if (session) { loadWorkouts(); loadPlans(); loadNextSets() }
-    else { setWorkouts([]); setPlans([]); setNextSets([]) }
+    if (session) { loadWorkouts(); loadPlans(); loadNextSets(); loadReadiness() }
+    else { setWorkouts([]); setPlans([]); setNextSets([]); setReadiness(null) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, lang])
+
+  // 204 = brukeren logger ikke søvn -> vis et hint i stedet for kortet.
+  async function loadReadiness() {
+    try {
+      const res = await fetch(apiUrl(`/api/trening/dagsform?lang=${lang}`), { headers: await authHeaders() })
+      setReadiness(res.status === 200 ? await res.json() : { none: true })
+    } catch { /* sekundært */ }
+  }
 
   async function loadNextSets() {
     try {
       setNextSets(await cachedGet(nextKey, await authHeaders()))
     } catch { /* sekundært – behold cachet */ }
+  }
+
+  const fmtHours = (h) => {
+    const s = Number.isInteger(h) ? String(h) : h.toFixed(1)
+    return lang === 'en' ? s : s.replace('.', ',')
   }
 
   // 82.5 -> "82,5" på norsk, "82.5" på engelsk; hele tall uten desimal.
@@ -416,6 +435,24 @@ export default function TrainingView({ session }) {
             </span>
             <span className="cw-arrow">→</span>
           </button>
+
+          {readiness && !readiness.none && (
+            <div className={`readiness ${readiness.level.toLowerCase()}`} data-reveal>
+              <span className="readiness-head">
+                {READINESS_ICONS[readiness.level]} {t('Dagsform')}: <strong>{t(READINESS_LABELS[readiness.level])}</strong>
+                <span className="muted">
+                  {' · '}{fmtHours(readiness.lastNightHours)} {t('t søvn')}
+                  {' · '}{t('snitt 3 netter')} {fmtHours(readiness.avg3Hours)} {t('t')}
+                </span>
+              </span>
+              <span className="readiness-advice">{readiness.advice}</span>
+            </div>
+          )}
+          {readiness?.none && (
+            <p className="muted readiness-hint" data-reveal>
+              {t('😴 Tips: legg til vanen «Søvn» (timer) under Restitusjon, så tilpasser vi treningsrådene til hvor godt du har sovet.')}
+            </p>
+          )}
         </>
       )}
 

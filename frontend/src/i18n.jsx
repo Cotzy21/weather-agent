@@ -348,6 +348,13 @@ const EN = {
   'Forkast': 'Discard',
   '📋 Mine planer': '📋 My plans',
   '📈 Neste gang – progressive overload': '📈 Next time – progressive overload',
+  'Dagsform': 'Readiness',
+  'God': 'Good',
+  't søvn': 'h sleep',
+  'snitt 3 netter': '3-night avg',
+  't': 'h',
+  '😴 Tips: legg til vanen «Søvn» (timer) under Restitusjon, så tilpasser vi treningsrådene til hvor godt du har sovet.':
+      '😴 Tip: add the habit “Sleep” (hours) under Recovery, and training advice will adapt to how well you slept.',
   'kroppsvekt': 'bodyweight',
   '↑ mer vekt': '↑ more weight',
   '+ reps': '+ reps',

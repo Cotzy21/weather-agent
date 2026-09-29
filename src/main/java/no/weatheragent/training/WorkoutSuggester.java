@@ -27,11 +27,14 @@ public class WorkoutSuggester {
     private final WorkoutRepository repository;
     private final OpenAiCompatibleChatClient llm;
     private final ObjectMapper mapper;
+    private final ReadinessService readiness;
 
-    public WorkoutSuggester(WorkoutRepository repository, OpenAiCompatibleChatClient llm, ObjectMapper mapper) {
+    public WorkoutSuggester(WorkoutRepository repository, OpenAiCompatibleChatClient llm, ObjectMapper mapper,
+                            ReadinessService readiness) {
         this.repository = repository;
         this.llm = llm;
         this.mapper = mapper;
+        this.readiness = readiness;
     }
 
     public Suggestion suggest(UUID userId, String focus, String type) {
@@ -145,16 +148,21 @@ public class WorkoutSuggester {
         return workouts;
     }
 
+    /**
+     * Nylige økter + søvn siste netter (fra habit trackeren), så forslagene
+     * tar hensyn til både progresjon og dagsform («sleep score» fra planen).
+     */
     private String recentHistory(UUID userId) {
+        String sleep = readiness.promptContext(userId);
         List<Workout> recent = repository.findByUserIdOrderByDateDescCreatedAtDesc(userId);
         if (recent.isEmpty()) {
-            return "Ingen tidligere økter logget.";
+            return "Ingen tidligere økter logget." + sleep;
         }
         StringBuilder sb = new StringBuilder();
         recent.stream().limit(HISTORY_LIMIT).forEach(w -> sb
                 .append("- ").append(w.getDate()).append(' ').append(w.getType())
                 .append(" \"").append(w.getTitle()).append("\": ").append(summarize(w)).append('\n'));
-        return sb.toString();
+        return sb.append(sleep).toString();
     }
 
     private static String summarize(Workout w) {

@@ -1715,3 +1715,21 @@ header .sub { margin-top: 6px; color: var(--muted); }
   vertical-align: middle;
 }
 .food-warning.allergen { background: rgba(239, 68, 68, 0.12); color: #b91c1c; }
+
+/* ---------- Dagsform (søvn) i Trening-oversikten ---------- */
+.readiness {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+.readiness.god { background: var(--accent-soft); border-color: rgba(52, 211, 153, 0.35); }
+.readiness.middels { background: rgba(251, 191, 36, 0.1); border-color: rgba(251, 191, 36, 0.4); }
+.readiness.lav { background: rgba(96, 165, 250, 0.1); border-color: rgba(96, 165, 250, 0.4); }
+.readiness-head { font-size: 14.5px; }
+.readiness-advice { font-size: 13.5px; }
+.readiness-hint { font-size: 13px; margin: 10px 0; }

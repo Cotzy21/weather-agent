@@ -22,7 +22,27 @@ class WorkoutSuggesterTest {
     private final WorkoutRepository repo = mock(WorkoutRepository.class);
     private final OpenAiCompatibleChatClient llm = mock(OpenAiCompatibleChatClient.class);
     private final ObjectMapper mapper = new ObjectMapper();
-    private final WorkoutSuggester suggester = new WorkoutSuggester(repo, llm, mapper);
+    private final ReadinessService readiness = mock(ReadinessService.class);
+    private final WorkoutSuggester suggester = new WorkoutSuggester(repo, llm, mapper, readiness);
+
+    @org.junit.jupiter.api.BeforeEach
+    void noSleepLoggedByDefault() {
+        when(readiness.promptContext(any())).thenReturn("");
+    }
+
+    @Test
+    void sleepContextIsSentToTheModel() {
+        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(readiness.promptContext(user)).thenReturn("\nSøvn siste netter: 2026-09-29 5.0 t\nDagsform i dag (fra søvn): LAV");
+        when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn(
+                "{\"title\":\"Rolig\",\"type\":\"STYRKE\",\"content\":{\"blocks\":[]},\"rationale\":\"\"}");
+
+        suggester.suggest(user, "styrke", "STYRKE");
+
+        org.mockito.ArgumentCaptor<String> prompt = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(llm).complete(eq(LlmTier.SMART), any(), prompt.capture());
+        org.junit.jupiter.api.Assertions.assertTrue(prompt.getValue().contains("Dagsform i dag (fra søvn): LAV"));
+    }
     private final UUID user = UUID.randomUUID();
 
     @Test

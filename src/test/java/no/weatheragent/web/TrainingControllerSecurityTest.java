@@ -42,6 +42,9 @@ class TrainingControllerSecurityTest {
     private WorkoutImportService importer;
 
     @MockitoBean
+    private no.weatheragent.training.ReadinessService readiness;
+
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     @Test
@@ -66,6 +69,31 @@ class TrainingControllerSecurityTest {
     @Test
     void planerRequireAuthentication() throws Exception {
         mvc.perform(get("/api/trening/planer")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void readinessRequiresAuthAndIsEmptyWithoutSleepData() throws Exception {
+        mvc.perform(get("/api/trening/dagsform")).andExpect(status().isUnauthorized());
+
+        when(readiness.today(any(), org.mockito.ArgumentMatchers.anyBoolean())).thenReturn(java.util.Optional.empty());
+        mvc.perform(get("/api/trening/dagsform")
+                        .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void readinessIsReturnedWhenSleepIsLogged() throws Exception {
+        when(readiness.today(any(), org.mockito.ArgumentMatchers.anyBoolean())).thenReturn(java.util.Optional.of(
+                new no.weatheragent.training.Readiness(no.weatheragent.training.Readiness.Level.LAV,
+                        java.time.LocalDate.of(2026, 9, 29), 5.0, 5.5, "Lite søvn – velg en lettere økt.")));
+
+        mvc.perform(get("/api/trening/dagsform")
+                        .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .jsonPath("$.level").value("LAV"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .jsonPath("$.lastNightHours").value(5.0));
     }
 
     @Test

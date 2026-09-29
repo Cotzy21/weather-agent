@@ -79,6 +79,29 @@ public class HabitService {
         }
     }
 
+    /**
+     * Søvntimer per dato fra {@code from} og framover, fra brukerens søvn-vane
+     * (navn som inneholder «søvn»/«sleep» og har en enhet). Tom hvis vanen
+     * ikke finnes. Urealistiske verdier (over 16) hoppes over - da er det
+     * trolig logget minutter, ikke timer.
+     */
+    @Transactional(readOnly = true)
+    public java.util.SortedMap<LocalDate, Double> sleepHours(UUID userId, LocalDate from) {
+        java.util.SortedMap<LocalDate, Double> out = new java.util.TreeMap<>();
+        habits.findByUserIdOrderByCreatedAtAsc(userId).stream()
+                .filter(h -> !h.isBoolean())
+                .filter(h -> {
+                    String n = h.getName().toLowerCase(java.util.Locale.ROOT);
+                    return n.contains("søvn") || n.contains("sleep");
+                })
+                .findFirst()
+                .ifPresent(sleep -> logs.findByHabitIdInAndDateGreaterThanEqual(java.util.Collections.singletonList(sleep.getId()), from)
+                        .stream()
+                        .filter(l -> l.getValue() > 0 && l.getValue() <= 16)
+                        .forEach(l -> out.put(l.getDate(), l.getValue())));
+        return out;
+    }
+
     /** Alle vanene med logger for de siste {@link #GRID_DAYS} dagene + streak. */
     @Transactional(readOnly = true)
     public List<HabitWithLogs> listFor(UUID userId, LocalDate today) {

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import jakarta.validation.Valid;
 import no.weatheragent.training.ChatTurn;
+import no.weatheragent.training.ReadinessService;
 import no.weatheragent.training.Suggestion;
 import no.weatheragent.training.TrainingPlanService;
 import no.weatheragent.training.WorkoutImportService;
@@ -15,6 +16,7 @@ import no.weatheragent.web.dto.ImportResultDto;
 import no.weatheragent.web.dto.LogWorkoutRequest;
 import no.weatheragent.web.dto.NextSetDto;
 import no.weatheragent.web.dto.PlanSuggestionDto;
+import no.weatheragent.web.dto.ReadinessDto;
 import no.weatheragent.web.dto.ProgressPointDto;
 import no.weatheragent.web.dto.SavePlanRequest;
 import no.weatheragent.web.dto.SuggestionDto;
@@ -55,13 +57,28 @@ public class TrainingController {
     private final WorkoutSuggester suggester;
     private final TrainingPlanService plans;
     private final WorkoutImportService importer;
+    private final ReadinessService readiness;
 
     public TrainingController(WorkoutService workouts, WorkoutSuggester suggester,
-                              TrainingPlanService plans, WorkoutImportService importer) {
+                              TrainingPlanService plans, WorkoutImportService importer,
+                              ReadinessService readiness) {
         this.workouts = workouts;
         this.suggester = suggester;
         this.plans = plans;
         this.importer = importer;
+        this.readiness = readiness;
+    }
+
+    /**
+     * Dagsform fra søvnen logget i habit trackeren (i dag/i går). 204 når
+     * brukeren ikke logger søvn - da viser frontenden bare et hint.
+     */
+    @GetMapping("/api/trening/dagsform")
+    public ResponseEntity<ReadinessDto> readiness(@AuthenticationPrincipal Jwt jwt,
+                                                  @RequestParam(value = "lang", required = false) String lang) {
+        return readiness.today(UUID.fromString(jwt.getSubject()), "en".equalsIgnoreCase(lang))
+                .map(r -> ResponseEntity.ok(ReadinessDto.from(r)))
+                .orElse(ResponseEntity.noContent().build());
     }
 
     /**
