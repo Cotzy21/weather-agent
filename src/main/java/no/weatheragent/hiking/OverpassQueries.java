@@ -52,6 +52,30 @@ final class OverpassQueries {
                 """;
     }
 
+    /** Maks antall elementer (stier/ruter) vi ber om geometri for. */
+    static final int MAX_GEOMETRY_ELEMENTS = 60;
+
+    /**
+     * Navngitte turruter/stier rundt ETT punkt, MED linjegeometri - til å tegne
+     * og highlighte stiene på kartet. Geometrien klippes til en boks rundt
+     * punktet ({@code out geom(s,w,n,e)}): uten klipping ville en lang rute
+     * (f.eks. E1) gitt megabytes med koordinater for noe som stort sett ligger
+     * utenfor kartutsnittet. Koordinater formateres med punktum (Locale.ROOT).
+     */
+    static String trailGeometriesNear(double lat, double lon, int radiusMeters) {
+        double dLat = radiusMeters / 111_320.0;
+        double dLon = radiusMeters / (111_320.0 * Math.cos(Math.toRadians(lat)));
+        return String.format(java.util.Locale.ROOT, """
+                [out:json][timeout:60];
+                (
+                  relation(around:%d,%.6f,%.6f)["route"~"hiking|foot"]["name"];
+                  way(around:%d,%.6f,%.6f)["highway"~"path|footway"]["name"];
+                );
+                out geom(%.6f,%.6f,%.6f,%.6f) %d;
+                """, radiusMeters, lat, lon, radiusMeters, lat, lon,
+                lat - dLat, lon - dLon, lat + dLat, lon + dLon, MAX_GEOMETRY_ELEMENTS);
+    }
+
     private static String header(int timeoutSeconds) {
         return "[out:json][timeout:" + timeoutSeconds + "];\n";
     }

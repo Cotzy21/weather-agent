@@ -55,4 +55,14 @@ class OverpassQueriesTest {
         assertEquals("a\\\"b", OverpassQueries.escape("a\"b"));
         assertEquals("a b", OverpassQueries.escape("a\nb"));
     }
+
+    @Test
+    void geometryQueryClipsToABoxAroundThePointWithDotDecimals() {
+        String q = OverpassQueries.trailGeometriesNear(62.18, 6.86, 8000);
+
+        org.junit.jupiter.api.Assertions.assertTrue(q.contains("relation(around:8000,62.180000,6.860000)"));
+        org.junit.jupiter.api.Assertions.assertTrue(q.contains("out geom(62.108135,"));   // 62,18 - 8000/111320
+        org.junit.jupiter.api.Assertions.assertTrue(q.contains(" " + OverpassQueries.MAX_GEOMETRY_ELEMENTS + ";"));
+        org.junit.jupiter.api.Assertions.assertFalse(q.contains("62,18")); // aldri komma-desimaler
+    }
 }

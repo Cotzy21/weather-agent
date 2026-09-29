@@ -18,8 +18,10 @@ function distanceKm(aLat, aLon, bLat, bLon) {
 // Viser stedene fra rangeringen på et OpenStreetMap-kart: vinner i rødt, andre
 // blå, turruter grønne. Velger man et sted (selected), sentreres kartet der,
 // stedet blir oransje, og turruter nær det stedet lyser opp i oransje.
+// Turruter MED geometri (detaljsiden) tegnes som linjer; `highlight` (et
+// stinavn) fremhever én sti og zoomer til den.
 // circleMarkers brukes for å unngå Leaflet sitt bundler-problem med ikon-bilder.
-export default function ResultMap({ places, trails = [], selected = null }) {
+export default function ResultMap({ places, trails = [], selected = null, highlight = null }) {
   const elRef = useRef(null)
   const mapRef = useRef(null)
   const layerRef = useRef(null)
@@ -60,8 +62,27 @@ export default function ResultMap({ places, trails = [], selected = null }) {
       points.push([p.lat, p.lon])
     })
 
-    // Turruter. Hvis et sted er valgt, lyser rutene nær det opp i oransje.
+    // Turruter med linjegeometri: tegn selve stien. Den fremhevede blir rød og
+    // tykk, og kartet zoomer til den.
+    let highlightBounds = null
+    trails.filter((tr) => tr.lines?.length).forEach((tr) => {
+      const on = highlight && tr.name === highlight
+      const style = on
+        ? { color: '#dc2626', weight: 7, opacity: 0.95 }
+        : { color: '#ea580c', weight: 4, opacity: 0.8 }
+      const line = L.polyline(tr.lines, style)
+        .bindPopup(`🥾 <strong>${tr.name}</strong>${tr.operator ? `<br/>${tr.operator}` : ''}`)
+        .on('mouseover', () => line.setStyle({ weight: on ? 8 : 6 }))
+        .on('mouseout', () => line.setStyle(style))
+        .addTo(layer)
+      if (on) highlightBounds = line.getBounds()
+      tr.lines.forEach((l) => l.forEach((pt) => points.push(pt)))
+    })
+
+    // Turruter uten geometri (bare senterpunkt). Hvis et sted er valgt, lyser
+    // rutene nær det opp i oransje.
     trails.forEach((tr) => {
+      if (tr.lines?.length) return
       if (tr.lat == null || tr.lon == null) return
       const near = selected && distanceKm(selected.lat, selected.lon, tr.lat, tr.lon) <= NEAR_KM
       L.circleMarker([tr.lat, tr.lon], {
@@ -76,7 +97,9 @@ export default function ResultMap({ places, trails = [], selected = null }) {
       points.push([tr.lat, tr.lon])
     })
 
-    if (selected) {
+    if (highlightBounds) {
+      map.fitBounds(highlightBounds, { padding: [40, 40], maxZoom: 15 })
+    } else if (selected) {
       map.setView([selected.lat, selected.lon], 11)
     } else if (points.length === 1) {
       map.setView(points[0], 9)
@@ -85,7 +108,7 @@ export default function ResultMap({ places, trails = [], selected = null }) {
     }
     // Kartet ligger i en flex/animert boks; sikre riktig størrelse etter layout.
     setTimeout(() => map.invalidateSize(), 0)
-  }, [places, trails, selected])
+  }, [places, trails, selected, highlight])
 
   // Rydd opp Leaflet-instansen når komponenten forsvinner.
   useEffect(() => () => {

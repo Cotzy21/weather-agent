@@ -178,7 +178,8 @@ public class TurvaerService {
             WeatherScorer.summarize(forecast, today.plusDays(i)).ifPresent(days::add);
         }
 
-        List<Trail> trails = overpassClient.trailsNear(List.of(loc), TRAIL_RADIUS_M);
+        // Med linjegeometri: detaljsiden tegner og highlighter selve stiene rundt stedet.
+        List<Trail> trails = overpassClient.trailGeometriesNear(loc, TRAIL_RADIUS_M);
 
         List<String> clothing = days.isEmpty() ? List.of() : ClothingAdvisor.recommend(
                 days.getFirst().maxTempC(), days.getFirst().totalPrecipMm(), days.getFirst().avgWindMs());

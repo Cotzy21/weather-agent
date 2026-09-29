@@ -67,4 +67,47 @@ class OverpassTrailParserTest {
         assertEquals("Preikestolen Roundtrip", roundtrip.name());
         assertEquals("", roundtrip.operator());
     }
+
+    @Test
+    void geometryResponseMergesSameNamedSegmentsAndSkipsClippedGaps() throws Exception {
+        var root = new com.fasterxml.jackson.databind.ObjectMapper().readTree("""
+                {"elements":[
+                  {"type":"way","tags":{"name":"Slogstien","highway":"path"},
+                   "geometry":[{"lat":62.10,"lon":6.80},{"lat":62.11,"lon":6.81}]},
+                  {"type":"way","tags":{"name":"slogstien","highway":"path"},
+                   "geometry":[{"lat":62.11,"lon":6.81},null,{"lat":62.12,"lon":6.82}]},
+                  {"type":"relation","tags":{"name":"Kyststien","route":"hiking","operator":"DNT"},
+                   "members":[{"type":"way","geometry":[{"lat":62.0,"lon":6.0},{"lat":62.0,"lon":6.1}]},
+                              {"type":"node"}]},
+                  {"type":"way","tags":{"highway":"path"},
+                   "geometry":[{"lat":1,"lon":1},{"lat":2,"lon":2}]}
+                ]}
+                """);
+
+        var trails = OverpassTrailParser.parseWithGeometry(root);
+
+        org.junit.jupiter.api.Assertions.assertEquals(2, trails.size());          // uten navn hoppes over
+        var slog = trails.getFirst();
+        org.junit.jupiter.api.Assertions.assertEquals("Slogstien", slog.name());
+        org.junit.jupiter.api.Assertions.assertEquals(2, slog.lines().size());    // to segmenter slått sammen
+        org.junit.jupiter.api.Assertions.assertEquals(2, slog.lines().get(1).size()); // null-hullet hoppet over
+        var kyst = trails.get(1);
+        org.junit.jupiter.api.Assertions.assertEquals("DNT", kyst.operator());
+        org.junit.jupiter.api.Assertions.assertEquals(62.0, kyst.latitude(), 1e-9);
+        org.junit.jupiter.api.Assertions.assertEquals(6.05, kyst.longitude(), 1e-9);
+    }
+
+    @Test
+    void longLinesAreThinnedButKeepBothEnds() {
+        var points = new java.util.ArrayList<no.weatheragent.route.RoutePoint>();
+        for (int i = 0; i < 500; i++) {
+            points.add(new no.weatheragent.route.RoutePoint(i, i));
+        }
+
+        var thin = OverpassTrailParser.thin(points, 60);
+
+        org.junit.jupiter.api.Assertions.assertEquals(60, thin.size());
+        org.junit.jupiter.api.Assertions.assertEquals(0, thin.getFirst().lat());
+        org.junit.jupiter.api.Assertions.assertEquals(499, thin.getLast().lat());
+    }
 }

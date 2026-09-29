@@ -14,6 +14,7 @@ export default function PlaceDetail({ place, onBack, onPlan }) {
   const { t } = useI18n()
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
+  const [highlight, setHighlight] = useState(null) // stinavn fremhevet på kartet
 
   useEffect(() => {
     let alive = true
@@ -65,6 +66,7 @@ export default function PlaceDetail({ place, onBack, onPlan }) {
               elevation: data.elevationM,
             }]}
             trails={data.trails}
+            highlight={highlight}
           />
 
           <h3 className="detail-h3">{t('Vær de neste dagene')}</h3>
@@ -94,12 +96,20 @@ export default function PlaceDetail({ place, onBack, onPlan }) {
 
           <div className="trails">
             <p className="trails-title">{t('🥾 Merkede turer i nærheten')}</p>
+            {data.trails?.some((trail) => trail.lines?.length) && (
+              <p className="muted trail-hint">{t('Trykk på en sti for å fremheve den på kartet.')}</p>
+            )}
             {data.trails?.length > 0 ? (
               <ul>
-                {data.trails.map((t, i) => (
+                {data.trails.map((trail, i) => (
                   <li key={i}>
-                    {t.name}
-                    {t.operator && <span className="muted"> · {t.operator}</span>}
+                    {trail.lines?.length ? (
+                      <button className={`linklike trail-pick ${highlight === trail.name ? 'on' : ''}`}
+                              onClick={() => setHighlight(highlight === trail.name ? null : trail.name)}>
+                        {trail.name}
+                      </button>
+                    ) : trail.name}
+                    {trail.operator && <span className="muted"> · {trail.operator}</span>}
                   </li>
                 ))}
               </ul>

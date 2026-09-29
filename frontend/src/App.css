@@ -1733,3 +1733,8 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .readiness-head { font-size: 14.5px; }
 .readiness-advice { font-size: 13.5px; }
 .readiness-hint { font-size: 13px; margin: 10px 0; }
+
+/* ---------- Fremhevede turstier (detaljsiden) ---------- */
+.trail-hint { font-size: 12.5px; margin: 2px 0 6px; }
+.trail-pick { text-align: left; }
+.trail-pick.on { color: #dc2626; font-weight: 700; }

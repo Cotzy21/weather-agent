@@ -21,6 +21,6 @@ public class CacheConfig {
     @Bean
     public CacheManager cacheManager() {
         // "foods" = hele Matvaretabellen (~2100 varer): hentes én gang, søkes lokalt.
-        return new ConcurrentMapCacheManager("peaks", "trails", "trailsInArea", "foods");
+        return new ConcurrentMapCacheManager("peaks", "trails", "trailsInArea", "trailGeometry", "foods");
     }
 }

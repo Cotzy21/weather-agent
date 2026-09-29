@@ -143,6 +143,17 @@ public class OverpassClient {
     }
 
     /**
+     * Navngitte turruter/stier rundt ett sted MED linjegeometri, så kartet kan
+     * tegne og highlighte selve stiene (detaljsiden). Egen cache: geometrien er
+     * større enn senterpunktene og endrer seg nesten aldri.
+     */
+    @Cacheable(value = "trailGeometry", key = "#center.latitude() + ',' + #center.longitude() + ',' + #radiusMeters")
+    public List<Trail> trailGeometriesNear(Location center, int radiusMeters) {
+        return OverpassTrailParser.parseWithGeometry(fetch(
+                OverpassQueries.trailGeometriesNear(center.latitude(), center.longitude(), radiusMeters)));
+    }
+
+    /**
      * Alle navngitte turruter/stier innenfor et område (administrativt eller
      * nasjonalpark), deduplisert på navn. Brukes når brukeren vil rangere selve
      * turrutene etter vær. Samme land-scope + globalt fallback som peaksInArea.

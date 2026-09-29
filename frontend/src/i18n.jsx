@@ -102,6 +102,7 @@ const EN = {
   'score': 'score',
   '🥾 Merkede turer i området': '🥾 Marked trails in the area',
   '🥾 Merkede turer i nærheten': '🥾 Marked trails nearby',
+  'Trykk på en sti for å fremheve den på kartet.': 'Tap a trail to highlight it on the map.',
   'Fant ingen merkede turer (OpenStreetMap) i nærheten.': 'No marked trails (OpenStreetMap) found nearby.',
   'Fant ingen værdata for perioden (kanskje for langt fram?).':
       'No weather data found for the period (maybe too far ahead?).',
