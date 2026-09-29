@@ -48,12 +48,20 @@ public class MealLogService {
                              double kcal, double proteinG, double fatG, double carbG) {
     }
 
-    /** Ett næringsstoff i ukesoversikten: snitt per logget dag mot dagsmålet. */
-    public record NutrientStatus(NutrientReference reference, double avgPerDay, double percent) {
+    /**
+     * Ett næringsstoff i ukesoversikten: snitt per logget dag mot dagsmålet.
+     * {@code profile} brukes til å tilpasse kildene i rådet (allergier/diett).
+     */
+    public record NutrientStatus(NutrientReference reference, double avgPerDay, double percent,
+                                 DietProfile profile) {
+
+        public NutrientStatus(NutrientReference reference, double avgPerDay, double percent) {
+            this(reference, avgPerDay, percent, DietProfile.NONE);
+        }
 
         /** Råd vises bare når inntaket er lavt - ellers er alt vel. */
         public String advice() {
-            return percent < LOW_THRESHOLD_PERCENT ? reference.lowAdvice() : null;
+            return percent < LOW_THRESHOLD_PERCENT ? reference.lowAdvice(profile) : null;
         }
     }
 
@@ -94,6 +102,12 @@ public class MealLogService {
      */
     @Transactional(readOnly = true)
     public List<NutrientStatus> week(UUID userId, LocalDate endDate) {
+        return week(userId, endDate, DietProfile.NONE);
+    }
+
+    /** Som {@link #week(UUID, LocalDate)}, men med råd tilpasset brukerens profil. */
+    @Transactional(readOnly = true)
+    public List<NutrientStatus> week(UUID userId, LocalDate endDate, DietProfile profile) {
         List<MealEntry> entries =
                 repository.findByUserIdAndDateBetween(userId, endDate.minusDays(WEEK_DAYS - 1), endDate);
         if (entries.isEmpty()) {
@@ -120,7 +134,7 @@ public class MealLogService {
         return NutrientReference.TRACKED.stream()
                 .map(ref -> {
                     double avg = totals.getOrDefault(ref.nutrientId(), 0.0) / daysLogged;
-                    return new NutrientStatus(ref, avg, ref.percentOfTarget(avg));
+                    return new NutrientStatus(ref, avg, ref.percentOfTarget(avg), profile);
                 })
                 .toList();
     }

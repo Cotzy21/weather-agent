@@ -46,6 +46,22 @@ const GENERIC_UNITS = [
 ]
 const unitByKey = Object.fromEntries(GENERIC_UNITS.map((u) => [u.v, u]))
 
+// De 14 allergenene EU krever merking av (kodene matcher backendens FoodFlags).
+const ALLERGENS = [
+  ['GLUTEN', 'gluten'], ['MELK', 'melk'], ['EGG', 'egg'], ['NOTTER', 'nøtter'],
+  ['PEANOTTER', 'peanøtter'], ['FISK', 'fisk'], ['SKALLDYR', 'skalldyr'], ['BLOTDYR', 'bløtdyr'],
+  ['SOYA', 'soya'], ['SELLERI', 'selleri'], ['SENNEP', 'sennep'], ['SESAM', 'sesam'],
+  ['LUPIN', 'lupin'], ['SULFITT', 'sulfitt'],
+]
+const allergenName = Object.fromEntries(ALLERGENS)
+
+const DIETS = [
+  { v: 'ALT', t: 'Spiser alt' },
+  { v: 'VEGETAR', t: 'Vegetar' },
+  { v: 'PESCETAR', t: 'Pescetar (fisk, ikke kjøtt)' },
+  { v: 'VEGAN', t: 'Vegan' },
+]
+
 const EMPTY_FOOD = {
   name: '', brand: '', barcode: '', kcal: '', protein: '', carb: '', fat: '',
   portionName: '', portionGrams: '', isPublic: false,
@@ -76,6 +92,13 @@ export default function MealDiary({ session }) {
 
   const [goal, setGoal] = useState(null)       // lagret profil + utregnet mål
   const [showGoal, setShowGoal] = useState(false)
+
+  // Kostholdspreferanser: diett, allergier og «liker ikke». Backend bruker dem
+  // til å merke søketreff og tilpasse kildene i næringsrådene.
+  const [prefs, setPrefs] = useState({ diet: 'ALT', allergies: [], dislikes: [] })
+  const [showPrefs, setShowPrefs] = useState(false)
+  const [dislikeText, setDislikeText] = useState('')
+  const [prefsVersion, setPrefsVersion] = useState(0) // bumpes ved lagring -> nytt søk
   const [goalForm, setGoalForm] = useState({
     weightKg: '', heightCm: '', age: '', sex: 'M', activityLevel: 'MODERAT', goalKgPerWeek: 0,
   })
@@ -98,10 +121,60 @@ export default function MealDiary({ session }) {
       } catch { /* nettverksglipp – behold forrige liste */ }
     }, 300)
     return () => clearTimeout(t)
-  }, [query])
+  }, [query, prefsVersion])
 
   useEffect(() => { loadDay() }, [date]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { loadWeek(); loadGoal() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadWeek(); loadGoal(); loadPrefs() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function loadPrefs() {
+    try {
+      const res = await fetch(apiUrl('/api/kosthold/preferanser'), { headers: await authHeaders() })
+      if (res.ok) {
+        const p = await res.json()
+        setPrefs(p)
+        setDislikeText(p.dislikes.join(', '))
+      }
+    } catch { /* sekundært */ }
+  }
+
+  function toggleAllergen(code) {
+    setPrefs((p) => ({
+      ...p,
+      allergies: p.allergies.includes(code) ? p.allergies.filter((a) => a !== code) : [...p.allergies, code],
+    }))
+  }
+
+  async function savePrefs() {
+    setError(null)
+    try {
+      const res = await fetch(apiUrl('/api/kosthold/preferanser'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({
+          diet: prefs.diet,
+          allergies: prefs.allergies,
+          dislikes: dislikeText.split(',').map((d) => d.trim()).filter(Boolean),
+        }),
+      })
+      if (!res.ok) throw new Error(await readError(res))
+      const saved = await res.json()
+      setPrefs(saved)
+      setDislikeText(saved.dislikes.join(', '))
+      setShowPrefs(false)
+      setPrefsVersion((v) => v + 1) // merk søketreffene på nytt
+      loadWeek()                   // næringsrådene tilpasses
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  // Advarselskode fra backend -> kort merkelapp.
+  function warningLabel(code) {
+    if (code.startsWith('ALLERGEN:')) return `⚠️ ${t(allergenName[code.slice(9)] ?? code.slice(9))}`
+    if (code === 'DIETT') return `🚫 ${t('passer ikke dietten')}`
+    if (code === 'MISLIKER') return `👎 ${t('liker ikke')}`
+    return code
+  }
 
   async function loadDay() {
     try {
@@ -276,10 +349,47 @@ export default function MealDiary({ session }) {
             {MEALS.map((m) => <option key={m.v} value={m.v}>{t(m.t)}</option>)}
           </select>
         </label>
+        <button className="linklike goal-toggle" onClick={() => setShowPrefs(!showPrefs)}>
+          ⚙️ {t('Preferanser & allergier')}
+          {(prefs.allergies.length > 0 || prefs.diet !== 'ALT') && (
+            <span className="prefs-count"> ({prefs.allergies.length + (prefs.diet !== 'ALT' ? 1 : 0)})</span>
+          )} {showPrefs ? '▾' : '▸'}
+        </button>
         <button className="linklike goal-toggle" onClick={() => setShowGoal(!showGoal)}>
           🎯 {goal ? t('Mål: {n} kcal/dag', { n: goal.dailyTargetKcal.toFixed(0) }) : t('Sett opp kalorimål')} {showGoal ? '▾' : '▸'}
         </button>
       </div>
+
+      {showPrefs && (
+        <div className="prefs-form">
+          <label>{t('Diett')}
+            <select value={prefs.diet} onChange={(e) => setPrefs({ ...prefs, diet: e.target.value })}>
+              {DIETS.map((d) => <option key={d.v} value={d.v}>{t(d.t)}</option>)}
+            </select>
+          </label>
+          <div className="prefs-allergens">
+            <span className="prefs-label">{t('Allergier')}</span>
+            <div className="pill-row">
+              {ALLERGENS.map(([code, name]) => (
+                <button key={code}
+                        className={`pill ${prefs.allergies.includes(code) ? 'on' : ''}`}
+                        aria-pressed={prefs.allergies.includes(code)}
+                        onClick={() => toggleAllergen(code)}>
+                  {t(name)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <label>{t('Liker ikke (skill med komma)')}
+            <input placeholder={t('f.eks. sopp, rosenkål, lever')} value={dislikeText}
+                   onChange={(e) => setDislikeText(e.target.value)} />
+          </label>
+          <p className="muted prefs-note">
+            {t('Søket merker og legger varer som ikke passer bakerst, og næringsrådene foreslår bare kilder som passer deg. Allergivarsler er basert på navnet – sjekk alltid pakningen.')}
+          </p>
+          <button className="primary" onClick={savePrefs}>{t('Lagre preferanser')}</button>
+        </div>
+      )}
 
       {showGoal && (
         <div className="goal-form">
@@ -396,6 +506,11 @@ export default function MealDiary({ session }) {
                 {f.name} <span className="muted">{f.kcalPer100g.toFixed(0)} kcal/100 g</span>
                 {f.source === 'EGEN' && <span className="food-source own">{t('egen')}</span>}
                 {f.source === 'OFFENTLIG' && <span className="food-source shared">{t('delt')}</span>}
+                {f.warnings?.map((w) => (
+                  <span key={w} className={`food-warning ${w.startsWith('ALLERGEN') ? 'allergen' : ''}`}>
+                    {warningLabel(w)}
+                  </span>
+                ))}
               </button>
             </li>
           ))}
@@ -404,7 +519,13 @@ export default function MealDiary({ session }) {
 
       {picked && (
         <div className="diary-add">
-          <p className="diary-picked"><strong>{picked.name}</strong></p>
+          <p className="diary-picked"><strong>{picked.name}</strong>
+            {picked.warnings?.map((w) => (
+              <span key={w} className={`food-warning ${w.startsWith('ALLERGEN') ? 'allergen' : ''}`}>
+                {warningLabel(w)}
+              </span>
+            ))}
+          </p>
           <div className="diary-amount">
             <label>{t('Mengde')}
               <input type="number" min="0" step="any" value={amount}

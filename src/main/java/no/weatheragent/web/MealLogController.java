@@ -6,12 +6,16 @@ import no.weatheragent.nutrition.CalorieGoalService;
 import no.weatheragent.nutrition.CustomFood;
 import no.weatheragent.nutrition.CustomFoodService;
 import no.weatheragent.nutrition.DailyBalanceService;
+import no.weatheragent.nutrition.DietPreferenceService;
+import no.weatheragent.nutrition.DietProfile;
+import no.weatheragent.nutrition.FoodFlags;
 import no.weatheragent.nutrition.FoodSearchService;
 import no.weatheragent.nutrition.MealLogService;
 import no.weatheragent.web.dto.CalorieGoalDto;
 import no.weatheragent.web.dto.CreateCustomFoodRequest;
 import no.weatheragent.web.dto.CustomFoodDto;
 import no.weatheragent.web.dto.DaySummaryDto;
+import no.weatheragent.web.dto.DietPreferenceDto;
 import no.weatheragent.web.dto.FoodDto;
 import no.weatheragent.web.dto.LogMealRequest;
 import no.weatheragent.web.dto.MealEntryDto;
@@ -32,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,15 +53,17 @@ public class MealLogController {
     private final DailyBalanceService balance;
     private final CalorieGoalService goals;
     private final CustomFoodService customFoods;
+    private final DietPreferenceService preferences;
 
     public MealLogController(FoodSearchService search, MealLogService meals,
                              DailyBalanceService balance, CalorieGoalService goals,
-                             CustomFoodService customFoods) {
+                             CustomFoodService customFoods, DietPreferenceService preferences) {
         this.search = search;
         this.meals = meals;
         this.balance = balance;
         this.goals = goals;
         this.customFoods = customFoods;
+        this.preferences = preferences;
     }
 
     /**
@@ -72,7 +79,30 @@ public class MealLogController {
             out.add(FoodDto.from(f.toFoodItem(), f.getOwnerId().equals(userId) ? "EGEN" : "OFFENTLIG"));
         }
         search.search(query).forEach(f -> out.add(FoodDto.from(f)));
-        return out;
+
+        // Tilpass til brukerens allergier/diett/misliker: merk treffene, og legg
+        // de med advarsler bakerst (stabil sortering beholder relevansen ellers).
+        DietProfile profile = preferences.profileFor(userId);
+        if (profile.isEmpty()) {
+            return out;
+        }
+        return out.stream()
+                .map(f -> f.withWarnings(FoodFlags.warnings(f.name(), profile)))
+                .sorted(Comparator.comparing(f -> !f.warnings().isEmpty()))
+                .toList();
+    }
+
+    @GetMapping("/api/kosthold/preferanser")
+    public DietPreferenceDto myPreferences(@AuthenticationPrincipal Jwt jwt) {
+        return DietPreferenceDto.from(preferences.profileFor(UUID.fromString(jwt.getSubject())));
+    }
+
+    /** Lagre diett, allergier og «liker ikke» (erstatter alt, én per bruker). */
+    @PutMapping("/api/kosthold/preferanser")
+    public DietPreferenceDto savePreferences(@AuthenticationPrincipal Jwt jwt,
+                                             @RequestBody DietPreferenceDto request) {
+        return DietPreferenceDto.from(preferences.save(UUID.fromString(jwt.getSubject()),
+                request.diet(), request.allergies(), request.dislikes()));
     }
 
     /** Slå opp en vare på strekkode (egne + offentlig delte), 404 hvis ukjent. */
@@ -152,7 +182,9 @@ public class MealLogController {
     @GetMapping("/api/kosthold/uke")
     public List<NutrientStatusDto> week(@AuthenticationPrincipal Jwt jwt,
                                         @RequestParam("til") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return meals.week(UUID.fromString(jwt.getSubject()), endDate).stream()
+        UUID userId = UUID.fromString(jwt.getSubject());
+        // Rådene («gode kilder: …») tilpasses allergier/diett/misliker.
+        return meals.week(userId, endDate, preferences.profileFor(userId)).stream()
                 .map(NutrientStatusDto::from)
                 .toList();
     }

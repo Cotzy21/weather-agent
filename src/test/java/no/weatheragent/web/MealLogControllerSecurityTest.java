@@ -5,6 +5,7 @@ import no.weatheragent.nutrition.FoodSearchService;
 import no.weatheragent.nutrition.MealEntry;
 import no.weatheragent.nutrition.MealLogService;
 import no.weatheragent.security.SecurityConfig;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -54,6 +55,14 @@ class MealLogControllerSecurityTest {
 
     @MockitoBean
     private no.weatheragent.nutrition.CustomFoodService customFoods;
+
+    @MockitoBean
+    private no.weatheragent.nutrition.DietPreferenceService preferences;
+
+    @BeforeEach
+    void noPreferencesByDefault() {
+        when(preferences.profileFor(any())).thenReturn(no.weatheragent.nutrition.DietProfile.NONE);
+    }
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
@@ -142,7 +151,7 @@ class MealLogControllerSecurityTest {
                         .filter(r -> r.nutrientId().equals("Ca")).findFirst().orElseThrow(),
                 248, 26.1);
 
-        when(meals.week(eq(UUID.fromString(SUB)), any())).thenReturn(List.of(lowCalcium));
+        when(meals.week(eq(UUID.fromString(SUB)), any(), any())).thenReturn(List.of(lowCalcium));
 
         mvc.perform(get("/api/kosthold/uke").param("til", "2026-07-02")
                         .with(jwt().jwt(j -> j.subject(SUB))))
@@ -183,5 +192,43 @@ class MealLogControllerSecurityTest {
         mvc.perform(get("/api/kosthold/egne-matvarer")).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/kosthold/egne-matvarer")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/kosthold/strekkode/123")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void searchFlagsAndDemotesFoodsAgainstThePreferences() throws Exception {
+        UUID me = UUID.fromString(SUB);
+        when(preferences.profileFor(me)).thenReturn(new no.weatheragent.nutrition.DietProfile(
+                no.weatheragent.nutrition.FoodFlags.Diet.ALT,
+                java.util.Set.of(no.weatheragent.nutrition.FoodFlags.Allergen.MELK), List.of()));
+        when(customFoods.search(me, "drikk")).thenReturn(List.of());
+        when(search.search("drikk")).thenReturn(List.of(
+                new FoodItem("1", "Melkedrikk, sjokolade", 70, Map.of(), List.of(), List.of()),
+                new FoodItem("2", "Havredrikk", 45, Map.of(), List.of(), List.of())));
+
+        mvc.perform(get("/api/kosthold/matvarer").param("sok", "drikk")
+                        .with(jwt().jwt(j -> j.subject(SUB))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Havredrikk"))   // uten advarsel først
+                .andExpect(jsonPath("$[0].warnings").isEmpty())
+                .andExpect(jsonPath("$[1].warnings[0]").value("ALLERGEN:MELK"));
+    }
+
+    @Test
+    void preferencesRoundTripAndRequireAuthentication() throws Exception {
+        mvc.perform(get("/api/kosthold/preferanser")).andExpect(status().isUnauthorized());
+
+        when(preferences.save(eq(UUID.fromString(SUB)), eq("VEGAN"), any(), any()))
+                .thenReturn(new no.weatheragent.nutrition.DietProfile(
+                        no.weatheragent.nutrition.FoodFlags.Diet.VEGAN,
+                        java.util.Set.of(no.weatheragent.nutrition.FoodFlags.Allergen.SESAM), List.of("sopp")));
+
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/kosthold/preferanser")
+                        .with(jwt().jwt(j -> j.subject(SUB)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"diet\":\"VEGAN\",\"allergies\":[\"SESAM\"],\"dislikes\":[\"sopp\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.diet").value("VEGAN"))
+                .andExpect(jsonPath("$.allergies[0]").value("SESAM"))
+                .andExpect(jsonPath("$.dislikes[0]").value("sopp"));
     }
 }

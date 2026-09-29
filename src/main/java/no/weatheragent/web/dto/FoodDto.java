@@ -10,6 +10,8 @@ import java.util.List;
  *
  * {@code source} sier hvor varen kommer fra, så UI-et kan merke den:
  * MATVARETABELLEN, EGEN (brukerens egen) eller OFFENTLIG (delt av en annen bruker).
+ * {@code warnings} er advarsler mot brukerens preferanser (se FoodFlags):
+ * "ALLERGEN:MELK", "DIETT", "MISLIKER" - tom når alt er greit.
  */
 public record FoodDto(
         String foodId,
@@ -19,7 +21,8 @@ public record FoodDto(
         double fatPer100g,
         double carbPer100g,
         List<PortionDto> portions,
-        String source
+        String source,
+        List<String> warnings
 ) {
 
     public record PortionDto(String name, double grams) {
@@ -40,6 +43,12 @@ public record FoodDto(
                 food.portions().stream()
                         .map(p -> new PortionDto(p.name(), p.grams()))
                         .toList(),
-                source);
+                source,
+                List.of());
+    }
+
+    public FoodDto withWarnings(List<String> newWarnings) {
+        return new FoodDto(foodId, name, kcalPer100g, proteinPer100g, fatPer100g, carbPer100g,
+                portions, source, List.copyOf(newWarnings));
     }
 }

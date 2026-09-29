@@ -1686,3 +1686,32 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .my-foods ul { list-style: none; margin: 4px 0 0; padding: 0; }
 .my-foods li { display: flex; align-items: center; gap: 4px; font-size: 13.5px; padding: 2px 0; }
 .unit-hint { font-size: 12px; flex-basis: 100%; }
+
+/* ---------- Kostholdspreferanser + advarsler ---------- */
+.prefs-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-bottom: 10px;
+}
+.prefs-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.prefs-form select, .prefs-form input { max-width: 360px; }
+.prefs-label { font-size: 13px; color: var(--muted); }
+.pill-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.pill.on { background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.55); color: #b91c1c; font-weight: 600; }
+.prefs-note { font-size: 12.5px; margin: 0; }
+.prefs-form .primary { align-self: flex-start; }
+.prefs-count { font-weight: 700; }
+.food-warning {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.15);
+  color: #b45309;
+  vertical-align: middle;
+}
+.food-warning.allergen { background: rgba(239, 68, 68, 0.12); color: #b91c1c; }
