@@ -55,8 +55,16 @@ function mapSets(arr) {
   return out.length ? out : [newSet()]
 }
 
+// Merkelapper for progressive overload-forslagene (nøklene oversettes via t()).
+const ACTION_LABELS = {
+  OK_VEKT: '↑ mer vekt',
+  FLERE_REPS: '+ reps',
+  DELOAD: '↓ deload',
+  KROPPSVEKT: '+ reps',
+}
+
 export default function TrainingView({ session }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [type, setType] = useState('STYRKE')
   const [date, setDate] = useState(today())
   const [title, setTitle] = useState('')
@@ -95,11 +103,44 @@ export default function TrainingView({ session }) {
 
   const [plans, setPlans] = useState(() => getCached('/api/trening/planer') ?? [])
 
+  // Progressive overload: vekt/reps-forslag for neste økt per øvelse. Begrunnelsene
+  // lages på valgt språk i backend, så språket er med i cache-nøkkelen.
+  const nextKey = `/api/ovelser/neste?lang=${lang}`
+  const [nextSets, setNextSets] = useState(() => getCached(nextKey) ?? [])
+
   useEffect(() => {
-    if (session) { loadWorkouts(); loadPlans() }
-    else { setWorkouts([]); setPlans([]) }
+    if (session) { loadWorkouts(); loadPlans(); loadNextSets() }
+    else { setWorkouts([]); setPlans([]); setNextSets([]) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session])
+  }, [session, lang])
+
+  async function loadNextSets() {
+    try {
+      setNextSets(await cachedGet(nextKey, await authHeaders()))
+    } catch { /* sekundært – behold cachet */ }
+  }
+
+  // 82.5 -> "82,5" på norsk, "82.5" på engelsk; hele tall uten desimal.
+  const fmtKg = (v) => {
+    const s = Number.isInteger(v) ? String(v) : v.toFixed(1)
+    return lang === 'en' ? s : s.replace('.', ',')
+  }
+
+  // Legg en øvelse inn i byggeren med forslått vekt/reps (samme antall sett som
+  // sist), og åpne byggeren. Tomme startblokker fjernes så lista blir ren.
+  function addNextToBuilder(s) {
+    setType('STYRKE')
+    const block = {
+      kind: 'exercise',
+      name: s.exercise,
+      sets: Array.from({ length: Math.max(1, s.sets) }, () => ({
+        reps: String(s.nextReps),
+        weightKg: s.nextWeightKg > 0 ? String(s.nextWeightKg) : '',
+      })),
+    }
+    setBlocks((prev) => [...prev.filter((b) => b.kind !== 'exercise' || b.name.trim()), block])
+    setMode('builder')
+  }
 
   async function loadWorkouts() {
     try {
@@ -210,6 +251,7 @@ export default function TrainingView({ session }) {
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
       loadWorkouts()
+      loadNextSets() // ny økt -> nye progresjonsforslag
       setMode('overview') // tilbake til oversikten, der den nye økta + oppsummeringen vises
     } catch (e) {
       setError(e.message)
@@ -659,6 +701,32 @@ export default function TrainingView({ session }) {
 
       {mode === 'overview' && (
       <>
+      {nextSets.length > 0 && (
+        <div className="next-sets" data-reveal>
+          <span className="ai-title">{t('📈 Neste gang – progressive overload')}</span>
+          <ul>
+            {nextSets.map((s) => (
+              <li key={s.exercise} className={`next-set ${s.action.toLowerCase()}`}>
+                <span className="next-set-name"><strong>{s.exercise}</strong></span>
+                <span className="next-set-change">
+                  {s.lastWeightKg > 0 ? `${fmtKg(s.lastWeightKg)} kg` : t('kroppsvekt')} × {s.lastReps.join(', ')}
+                  {' → '}
+                  <strong>
+                    {s.nextWeightKg > 0 ? `${fmtKg(s.nextWeightKg)} kg` : t('kroppsvekt')} × {s.sets}×{s.nextReps}
+                  </strong>
+                  <span className={`next-set-tag ${s.action.toLowerCase()}`}>{t(ACTION_LABELS[s.action])}</span>
+                </span>
+                <span className="next-set-reason muted">{s.reason}</span>
+                <button className="mini" onClick={() => addNextToBuilder(s)}>{t('+ Legg i økt')}</button>
+              </li>
+            ))}
+          </ul>
+          <p className="muted source-note">
+            {t('Dobbel progresjon: flere reps til alle sett når toppen av området, så mer vekt. Tommelfingerregler – lytt til kroppen.')}
+          </p>
+        </div>
+      )}
+
       <h3 className="detail-h3" data-reveal>{t('Oppsummering (siste 7 dager)')}</h3>
       {summaries.length > 0 ? (
         <div className="train-summary" data-reveal>

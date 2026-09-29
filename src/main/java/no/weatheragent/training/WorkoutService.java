@@ -48,6 +48,16 @@ public class WorkoutService {
         return repository.deleteByIdAndUserId(id, userId) > 0;
     }
 
+    /**
+     * Progressive overload: forslag til vekt/reps neste gang for hver øvelse
+     * brukeren har trent de siste ukene (regelbasert, se {@link ProgressionAdvisor}).
+     */
+    @Transactional(readOnly = true)
+    public List<NextSetSuggestion> nextSession(UUID userId, LocalDate today, boolean english) {
+        return ProgressionAdvisor.suggest(
+                repository.findByUserIdAndTypeOrderByDateAsc(userId, STRENGTH), today, english);
+    }
+
     /** Progresjon per dag for én øvelse på tvers av styrkeøkter: beste vekt + volum. */
     @Transactional(readOnly = true)
     public List<ProgressPoint> progression(UUID userId, String exercise) {

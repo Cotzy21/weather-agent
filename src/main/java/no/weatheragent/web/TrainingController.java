@@ -13,6 +13,7 @@ import no.weatheragent.web.dto.AssistantReplyDto;
 import no.weatheragent.web.dto.AssistantRequest;
 import no.weatheragent.web.dto.ImportResultDto;
 import no.weatheragent.web.dto.LogWorkoutRequest;
+import no.weatheragent.web.dto.NextSetDto;
 import no.weatheragent.web.dto.PlanSuggestionDto;
 import no.weatheragent.web.dto.ProgressPointDto;
 import no.weatheragent.web.dto.SavePlanRequest;
@@ -32,6 +33,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -46,6 +48,8 @@ public class TrainingController {
 
     /** Tak på CSV-størrelse ved import (tegn) - Garmins egne filer er langt mindre. */
     private static final int MAX_IMPORT_CHARS = 5_000_000;
+
+    private static final ZoneId OSLO = ZoneId.of("Europe/Oslo");
 
     private final WorkoutService workouts;
     private final WorkoutSuggester suggester;
@@ -102,6 +106,19 @@ public class TrainingController {
     public ResponseEntity<Void> delete(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         boolean deleted = workouts.delete(id, UUID.fromString(jwt.getSubject()));
         return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    }
+
+    /**
+     * Progressive overload: vekt/reps-forslag for neste økt per øvelse.
+     * {@code ?lang=en} gir begrunnelsene på engelsk; ellers norsk.
+     */
+    @GetMapping("/api/ovelser/neste")
+    public List<NextSetDto> nextSession(@AuthenticationPrincipal Jwt jwt,
+                                        @RequestParam(value = "lang", required = false) String lang) {
+        return workouts.nextSession(UUID.fromString(jwt.getSubject()), LocalDate.now(OSLO),
+                        "en".equalsIgnoreCase(lang)).stream()
+                .map(NextSetDto::from)
+                .toList();
     }
 
     @GetMapping("/api/ovelser/progresjon")

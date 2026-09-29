@@ -69,6 +69,29 @@ class TrainingControllerSecurityTest {
     }
 
     @Test
+    void nextSessionRequiresAuthentication() throws Exception {
+        mvc.perform(get("/api/ovelser/neste")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void nextSessionReturnsSuggestionsWithLanguage() throws Exception {
+        when(workouts.nextSession(any(), any(), org.mockito.ArgumentMatchers.eq(true))).thenReturn(List.of(
+                new no.weatheragent.training.NextSetSuggestion("Benkpress", java.time.LocalDate.of(2026, 9, 26),
+                        80, List.of(5, 5, 5), no.weatheragent.training.NextSetSuggestion.Action.OK_VEKT,
+                        82.5, 3, 3, "Every set hit 5 reps last time – go up to 82.5 kg")));
+
+        mvc.perform(get("/api/ovelser/neste").param("lang", "en")
+                        .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .jsonPath("$[0].action").value("OK_VEKT"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .jsonPath("$[0].nextWeightKg").value(82.5))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .jsonPath("$[0].lastReps[2]").value(5));
+    }
+
+    @Test
     void planSuggestionRequiresAuthentication() throws Exception {
         mvc.perform(post("/api/trening/plan-forslag")
                         .contentType("application/json").content("{\"focus\":\"ppl split\"}"))
