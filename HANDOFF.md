@@ -41,6 +41,15 @@ Dockerfile + PORT-config for backend-deploy finnes.
   stedsnavn/vær. Teller mot AI-kvoten per bruker og AI-grensen per IP; knapp under estimatet i ruteplanleggeren.
 
 ### Trening ✅
+- **Maler og gjennomførte økter er skilt (2026-09-30):** «Ny» (bygg selv, velg muskler, AI-økt, AI-plan) lager bare en MAL i «Mine økter»
+  (`POST /api/trening/planer`; byggeren har ikke dato eller notater lenger). En økt regnes som gjennomført først når den er STARTET med
+  ▶ Start og fullført: styrke via live-økta (`LiveSession`), alt annet (løping, sykkel, tur, svømming, buldring, kampsport, fristil) via
+  `ActivitySession` (klokke, mål fra malen, bekreft distanse/varighet ved fullføring). Begge går gjennom samme offline-kø
+  (`POST /api/treningsokter`). Garmin-import er den eneste andre veien til en logget økt.
+- **Start-skjermen** (`WorkoutStart.jsx`): tom styrkeøkt, annen aktivitet, «Planlagt i dag», og malene sortert etter **kategori**
+  (`workoutCategories.js`: Push, Pull, Bein, Overkropp, Underkropp, Hele kroppen, Kjerne, Annen styrke, og aktivitetstypene) med søk og
+  «sist gjort». Kategorien velges i byggeren (lagres som `content.category`, ingen migrering) eller gjettes fra tittel og øvelsenes
+  muskelgrupper. Taket på lagrede økter er 100.
 - Logging (styrke/cardio/hiking, supersett m/runder, dra-og-slipp), progresjon,
   Garmin CSV-import (ekte kalorier), treningsplaner i profilen, AI-assistent
   (samtale m/oppfølgingsspørsmål → ukeplan man aksepterer/forkaster).

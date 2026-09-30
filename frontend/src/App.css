@@ -2320,3 +2320,23 @@ header .sub { margin-top: 6px; color: var(--muted); }
 }
 @media (prefers-reduced-motion: reduce) { .pr-confetti { display: none; } }
 .live-set-no.live-pr { font-size: 1.1em; }
+
+/* Start-skjermen (velg økt sortert etter kategori), byggeren som lager maler og aktivitetsøkten. */
+.start-intro, .builder-intro { margin: 0 0 12px; }
+.start-quick { margin: 4px 0 14px; }
+.start-quick .primary { width: 100%; padding: 14px; border-radius: 14px; font-size: 16px; font-weight: 700; }
+.start-search { width: 100%; font-size: 16px; padding: 12px 14px; border-radius: 12px; margin-bottom: 12px; }
+.start-group { margin-bottom: 10px; }
+.start-group-head {
+  display: flex; align-items: center; gap: 8px; width: 100%; margin: 0; padding: 10px 4px;
+  background: none; border: none; border-bottom: 1px solid var(--border);
+  color: var(--text); font: inherit; font-size: 15px; font-weight: 700; text-align: left; cursor: pointer;
+}
+.start-group-head .muted { font-weight: 600; }
+.start-group-head.static { cursor: default; }
+.start-chevron { margin-left: auto; color: var(--muted); }
+.start-group .plan-cards { margin-top: 8px; }
+.builder-category { margin: 12px 0; }
+.activity-hint { margin: 0; font-size: var(--fs-sm); }
+.activity-finish { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; padding: 0; }
+.activity-finish button { width: 100%; padding: 14px; border-radius: 14px; font-size: 16px; font-weight: 600; }

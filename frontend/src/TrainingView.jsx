@@ -7,7 +7,10 @@ import { useI18n } from './i18n.jsx'
 import LiveSession from './LiveSession.jsx'
 import PrCelebration from './PrCelebration.jsx'
 import { detectPRs } from './prDetection.js'
-import { addDays } from './weeklyStreak.js'
+import WorkoutStart from './WorkoutStart.jsx'
+import ActivitySession from './ActivitySession.jsx'
+import { loadActivity, clearActivity, newActivity } from './activitySession.js'
+import { STRENGTH_CATEGORIES, CATEGORY_LABELS } from './workoutCategories.js'
 import ExercisePicker from './ExercisePicker.jsx'
 import { exerciseKey } from './exercises'
 import TrainingMemoryCard from './TrainingMemoryCard.jsx'
@@ -67,9 +70,8 @@ const ACTION_LABELS = {
 export default function TrainingView({ session }) {
   const { t, lang } = useI18n()
   const [type, setType] = useState('STYRKE')
-  const [date, setDate] = useState(today())
   const [title, setTitle] = useState('')
-  const [notes, setNotes] = useState('')
+  const [category, setCategory] = useState('auto') // kategori for malen (STYRKE): 'auto' = gjettes fra tittel og øvelser
   const [blocks, setBlocks] = useState([newExercise()])
   const [cardio, setCardio] = useState({ distanceKm: '', durationMin: '', ascentM: '' })
 
@@ -77,8 +79,6 @@ export default function TrainingView({ session }) {
   const [workouts, setWorkouts] = useState(() => getCached('/api/treningsokter') ?? [])
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
-  const [saved, setSaved] = useState(false) // kort kvittering etter lagring
-  const [savedQueued, setSavedQueued] = useState(false) // lagret på enheten, sendes når nettet er tilbake
 
   // Drag-and-drop-omorganisering av blokker (pilene finnes fortsatt for touch).
   const [dragIdx, setDragIdx] = useState(null)
@@ -97,12 +97,16 @@ export default function TrainingView({ session }) {
   const [aiSaving, setAiSaving] = useState(false)
   const [aiMessages, setAiMessages] = useState([]) // samtalen med assistenten
 
-  // Training-fanen har to moduser: 'overview' (landing med oppsummering + logg)
-  // og 'builder' (der man faktisk lager/logger en økt). Bygg-fra-kroppen vises
-  // bare i byggeren, ikke som det første man møter.
-  // Tredje modus: 'live' (økt pågår). En påbegynt økt gjenopptas automatisk.
-  const [mode, setMode] = useState(() => (session && loadLive(session.user.id) ? 'live' : 'overview'))
+  // Training-fanen har flere moduser: 'overview' (landing med oppsummering), 'builder' (lager en ØKT-MAL som lagres i «Mine økter»,
+  // aldri en gjennomført økt), 'start' (velg hvilken mal du vil starte, sortert etter kategori), og 'live' (styrkeøkt pågår) eller
+  // 'activity' (annen aktivitet pågår). En økt regnes som gjennomført først når den er startet og fullført: live/activity er de eneste
+  // veiene til en logget økt (i tillegg til import fra Garmin). En påbegynt økt gjenopptas automatisk.
+  const [mode, setMode] = useState(() => {
+    if (!session) return 'overview'
+    return loadLive(session.user.id) ? 'live' : loadActivity(session.user.id) ? 'activity' : 'overview'
+  })
   const [live, setLive] = useState(() => (session ? loadLive(session.user.id) : null))
+  const [activity, setActivity] = useState(() => (session ? loadActivity(session.user.id) : null))
   const [liveSaved, setLiveSaved] = useState(false) // true | 'queued' (lagret på enheten, venter på nett)
   const [prs, setPrs] = useState(null) // rekorder i økta som nettopp ble lagret (feires i PrCelebration)
   const queue = workoutQueue(authHeaders)
@@ -123,6 +127,8 @@ export default function TrainingView({ session }) {
   const [aiwBusy, setAiwBusy] = useState(false)
   const [aiwError, setAiwError] = useState(null)
   const [aiwResult, setAiwResult] = useState(null)
+  const [aiwSaving, setAiwSaving] = useState(false)
+  const [aiwMsg, setAiwMsg] = useState(null) // «lagret som mal»-kvittering under AI-økta
 
   const [plans, setPlans] = useState(() => getCached('/api/trening/planer') ?? [])
 
@@ -275,6 +281,33 @@ export default function TrainingView({ session }) {
     setMode('overview')
   }
 
+  // Start en mal: styrke går til live-økta, alt annet til en aktivitetsøkt med klokke.
+  function startPlan(p) {
+    if (p.type === 'STYRKE') startLive(p.title, fromPlan(p.content, nextSets), p.id ?? null)
+    else startActivity(p.type, p)
+  }
+
+  function startActivity(type, plan = null) {
+    setActivity(newActivity(type, plan))
+    setMode('activity')
+    window.scrollTo(0, 0)
+  }
+
+  function endActivity() {
+    clearActivity(session.user.id)
+    setActivity(null)
+    setMode('overview')
+  }
+
+  // Aktivitetsøkta lagres som gjennomført når den fullføres (samme kø som live-økta: uten nett sendes den senere).
+  async function finishActivity(body) {
+    const { queued } = await queue.submit({ clientId: body.clientId, body })
+    endActivity()
+    setLiveSaved(queued ? 'queued' : true)
+    setTimeout(() => setLiveSaved(false), 4000)
+    if (!queued) loadWorkouts()
+  }
+
   // Økta lagres først på enheten og sendes så; uten nett blir den liggende i køen til nettet er tilbake.
   async function finishLive({ title, content }) {
     const clientId = live?.clientId ?? newId()
@@ -378,7 +411,7 @@ export default function TrainingView({ session }) {
         const key = b.kind === 'dropset' ? 'drops' : 'sets'
         return { kind: b.kind, name: b.name.trim(), [key]: cleanSets(b[key]) }
       }).filter((b) => (b.kind === 'superset' ? b.exercises.length : b.name))
-      return { blocks: out }
+      return { blocks: out, ...(STRENGTH_CATEGORIES.includes(category) ? { category } : {}) }
     }
     const num = (x) => (x === '' ? undefined : Number(x))
     if (type === 'HIKING') return { distanceKm: num(cardio.distanceKm), durationMin: num(cardio.durationMin), ascentM: num(cardio.ascentM) }
@@ -386,30 +419,53 @@ export default function TrainingView({ session }) {
     return { durationMin: num(cardio.durationMin) } // FRISTIL / BULDRING / KAMPSPORT
   }
 
-  async function submit() {
+  // «Ny økt» lager en MAL i «Mine økter», ikke en gjennomført økt. Den logges først når du starter den (▶ Start) og fullfører.
+  async function saveTemplate() {
     if (!title.trim()) { setError(t('Gi økta en tittel.')); return }
+    const content = buildContent()
+    if (type === 'STYRKE' && content.blocks.length === 0) { setError(t('Legg til minst én øvelse.')); return }
     setBusy(true)
     setError(null)
     try {
-      const clientId = newId()
-      const content = buildContent()
-      // Rekorder feires bare for styrkeøkter fra de siste dagene (ikke når man fyller inn gamle økter i ettertid).
-      const found = type === 'STYRKE' && date >= addDays(today(), -2) ? detectPRs(workouts, content, { date }) : []
-      const { queued } = await queue.submit({ clientId, body: {
-        date, title: title.trim(), type, content, notes: notes.trim() || null, clientId,
-      } })
-      if (found.length) setPrs(found)
-      setSavedQueued(queued)
-      setTitle(''); setNotes(''); setBlocks([newExercise()]); setCardio({ distanceKm: '', durationMin: '', ascentM: '' })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2500)
-      loadWorkouts()
-      loadNextSets() // ny økt -> nye progresjonsforslag
-      setMode('overview') // tilbake til oversikten, der den nye økta + oppsummeringen vises
+      const res = await fetch(apiUrl('/api/trening/planer'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({ title: title.trim(), type, content, rationale: null }),
+      })
+      if (!res.ok) throw new Error(await readError(res))
+      resetBuilder()
+      await loadPlans()
+      setPlanMsg(t('✓ Økta er lagret i «Mine økter». Start den med ▶ Start når du skal trene.'))
+      setTimeout(() => setPlanMsg(null), 5000)
+      setMode('overview')
+      window.scrollTo(0, 0)
     } catch (e) {
       setError(e.message)
     } finally {
       setBusy(false)
+    }
+  }
+
+  // AI-økta (én økt til i dag) kan også lagres som mal, ikke bare startes.
+  async function saveAiWorkoutAsTemplate() {
+    if (!aiwResult || aiwSaving) return
+    setAiwSaving(true)
+    setAiwMsg(null)
+    try {
+      const res = await fetch(apiUrl('/api/trening/planer'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({
+          title: aiwResult.title, type: aiwResult.type || 'STYRKE', content: aiwResult.content, rationale: aiwResult.rationale || null,
+        }),
+      })
+      if (!res.ok) throw new Error(await readError(res))
+      loadPlans()
+      setAiwMsg('✓')
+    } catch (e) {
+      setAiwMsg(e.message)
+    } finally {
+      setAiwSaving(false)
     }
   }
 
@@ -525,7 +581,7 @@ export default function TrainingView({ session }) {
   }
 
   function resetBuilder() {
-    setTitle(''); setNotes(''); setBlocks([newExercise()]); setCardio({ distanceKm: '', durationMin: '', ascentM: '' })
+    setTitle(''); setCategory('auto'); setBlocks([newExercise()]); setCardio({ distanceKm: '', durationMin: '', ascentM: '' }); setError(null)
   }
 
   // Skriv byggerens endringer tilbake dit økta kom fra. Ukedagen i planen beholdes;
@@ -579,6 +635,7 @@ export default function TrainingView({ session }) {
     setType(t)
     setTitle(s.title || '')
     const c = s.content || {}
+    setCategory(STRENGTH_CATEGORIES.includes(c.category) ? c.category : 'auto')
     if (t === 'STYRKE') {
       const bs = (c.blocks || []).map((b) => {
         if (b.kind === 'superset') {
@@ -672,6 +729,28 @@ export default function TrainingView({ session }) {
         />
       )}
 
+      {mode === 'activity' && activity && (
+        <ActivitySession
+          key={activity.startedAt}
+          userId={session.user.id}
+          initial={activity}
+          typeLabel={t(TYPES.find((tp) => tp.v === activity.type)?.t ?? activity.type)}
+          onFinish={finishActivity}
+          onCancel={endActivity}
+        />
+      )}
+
+      {mode === 'start' && (
+        <WorkoutStart
+          plans={plans}
+          workouts={workouts}
+          activityTypes={TYPES.filter((tp) => tp.v !== 'STYRKE')}
+          onStartPlan={startPlan}
+          onStartEmpty={() => startLive('', [])}
+          onStartActivity={(type) => startActivity(type)}
+        />
+      )}
+
       {pickFor && (
         <ExercisePicker
           title={t('Velg øvelse')}
@@ -696,7 +775,7 @@ export default function TrainingView({ session }) {
             <button className="train-action" onClick={() => setSheetOpen(true)}>
               <span className="ta-icon" aria-hidden="true">＋</span>{t('Ny')}
             </button>
-            <button className="train-action go" onClick={() => startLive('', [])}>
+            <button className="train-action go" onClick={() => { setMode('start'); window.scrollTo(0, 0) }}>
               <span className="ta-icon" aria-hidden="true">▶</span>{t('Start')}
             </button>
             <button className="train-action" onClick={() => { setMode('progress'); window.scrollTo(0, 0) }}>
@@ -706,7 +785,7 @@ export default function TrainingView({ session }) {
           <WeekProgram
             plans={plans}
             workouts={workouts}
-            onStart={(p) => (p.type === 'STYRKE' ? startLive(p.title, fromPlan(p.content, nextSets), p.id ?? null) : applySuggestion(p))}
+            onStart={startPlan}
           />
           {pendingCount > 0 && (
             <p className="offline-banner" role="status">
@@ -726,7 +805,7 @@ export default function TrainingView({ session }) {
             </details>
           )}
 
-          <h3 className="detail-h3" data-reveal>{t('Mine planer')}</h3>
+          <h3 className="detail-h3" data-reveal>{t('Mine økter')}</h3>
           {planMsg && <p className={planMsg.startsWith('✓') ? 'success' : 'error'}>{planMsg}</p>}
           {plans.length === 0 ? (
             <button className="plan-empty" data-reveal onClick={() => pickNew('ai-plan')}>
@@ -740,10 +819,7 @@ export default function TrainingView({ session }) {
                     <strong>{p.title}</strong>
                     <span className="muted">{planSubtitle(p)}</span>
                   </button>
-                  {p.type === 'STYRKE' && (
-                    <button className="plan-play" aria-label={t('Start live')}
-                            onClick={() => startLive(p.title, fromPlan(p.content, nextSets), p.id)}>▶</button>
-                  )}
+                  <button className="plan-play" aria-label={t('Start {name}', { name: p.title })} onClick={() => startPlan(p)}>▶</button>
                   <button className="del" onClick={() => deletePlan(p.id)} aria-label={t('Slett plan')}>✕</button>
                 </li>
               ))}
@@ -783,7 +859,7 @@ export default function TrainingView({ session }) {
         </div>
       )}
 
-      {mode !== 'overview' && mode !== 'live' && (
+      {mode !== 'overview' && mode !== 'live' && mode !== 'activity' && (
         mode === 'builder' && editTarget ? (
           <button className="back" onClick={returnFromBuilder}>
             ← {t(editTarget.kind === 'ai-plan' ? 'Tilbake til planen'
@@ -820,8 +896,14 @@ export default function TrainingView({ session }) {
                 <button className="primary" onClick={() => startLive(aiwResult.title, fromPlan(aiwResult.content, nextSets))}>
                   ▶ {t('Start nå')}
                 </button>
+                <button className="mini" onClick={saveAiWorkoutAsTemplate} disabled={aiwSaving}>💾 {t('Lagre som mal')}</button>
                 <button className="mini" onClick={() => applySuggestion(aiwResult, { kind: 'ai-workout' })}>{t('Rediger')}</button>
               </div>
+              {aiwMsg && (
+                <p className={aiwMsg === '✓' ? 'success' : 'error'}>
+                  {aiwMsg === '✓' ? t('✓ Lagret i «Mine økter». Start den med ▶ Start når du skal trene.') : aiwMsg}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -909,7 +991,8 @@ export default function TrainingView({ session }) {
 
       {mode === 'builder' && (
       <>
-      <h2 className="detail-title" data-reveal>{t('Ny økt')}</h2>
+      <h2 className="detail-title" data-reveal>{editTarget ? t('Rediger økt') : t('Ny økt')}</h2>
+      <p className="muted builder-intro">{t('Her lager du en økt du kan starte senere. Den lagres i «Mine økter» og regnes som gjennomført først når du starter den med ▶ Start.')}</p>
       <div className="type-select" data-reveal>
         {TYPES.map((tp) => (
           <button key={tp.v} className={`type-chip ${type === tp.v ? 'active' : ''}`} onClick={() => setType(tp.v)}>
@@ -919,7 +1002,6 @@ export default function TrainingView({ session }) {
       </div>
 
       <div className="log-meta">
-        <label>{t('Dato')}<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
         <label className="grow">{t('Tittel')}<input placeholder={t('f.eks. Push A / Langtur')} value={title}
                className={error === t('Gi økta en tittel.') && !title.trim() ? 'invalid' : ''}
                onChange={(e) => setTitle(e.target.value)} /></label>
@@ -1035,13 +1117,26 @@ export default function TrainingView({ session }) {
         </div>
       )}
 
-      <label className="notes-label">{t('Notater')}
-        <textarea rows="2" placeholder={t('Valgfritt')} value={notes} onChange={(e) => setNotes(e.target.value)} />
-      </label>
+      {type === 'STYRKE' && (
+        <div className="builder-category">
+          <span className="sheet-label">{t('Kategori')}</span>
+          <div className="type-select">
+            <button className={`type-chip ${category === 'auto' ? 'active' : ''}`} onClick={() => setCategory('auto')}>{t('Automatisk')}</button>
+            {STRENGTH_CATEGORIES.map((c) => (
+              <button key={c} className={`type-chip ${category === c ? 'active' : ''}`} onClick={() => setCategory(c)}>{t(CATEGORY_LABELS[c])}</button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="log-actions">
-        <button className="primary" onClick={submit} disabled={busy}>{busy ? t('Lagrer …') : t('Lagre økt')}</button>
-        {saved && <span className="success">{savedQueued ? t('✓ Lagret på enheten – sendes når nettet er tilbake') : t('✓ Økt lagret')}</span>}
+        {editTarget ? (
+          <button className="primary" onClick={returnFromBuilder}>
+            {t(editTarget.kind === 'ai-plan' ? 'Tilbake til planen' : editTarget.kind === 'ai-workout' ? 'Tilbake til AI-økta' : 'Lagre og tilbake')}
+          </button>
+        ) : (
+          <button className="primary" onClick={saveTemplate} disabled={busy}>{busy ? t('Lagrer …') : t('Lagre økt')}</button>
+        )}
       </div>
       {error && <p className="error">{error}</p>}
 
