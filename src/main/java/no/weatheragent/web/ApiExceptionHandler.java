@@ -5,7 +5,14 @@ import no.weatheragent.nutrition.InvalidMealException;
 import no.weatheragent.nutrition.MealLimitException;
 import no.weatheragent.nutrition.UnknownFoodException;
 import no.weatheragent.training.AiSuggestionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -70,5 +77,31 @@ public class ApiExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleBadInput(IllegalArgumentException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(e.getMessage()));
+    }
+
+    private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
+
+    /** Uleselig JSON eller feil type på et felt -> 400 uten å ekko parser-detaljer. */
+    @ExceptionHandler({HttpMessageNotReadableException.class, TypeMismatchException.class})
+    public ResponseEntity<ApiError> handleUnreadable(Exception e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError("Ugyldig forespørsel."));
+    }
+
+    /**
+     * Alt uventet -> generisk 500. Detaljer (SQL, stier, klassenavn, hemmeligheter i feilmeldinger)
+     * havner i loggen, aldri i svaret. Spring sine egne feil (404, 405, 415 ...) beholder sin statuskode,
+     * og sikkerhetsfeil slippes videre til Spring Security.
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleUnexpected(Exception e) throws Exception {
+        if (e instanceof AccessDeniedException || e instanceof AuthenticationException) {
+            throw e;
+        }
+        if (e instanceof ErrorResponse er) {
+            return ResponseEntity.status(er.getStatusCode()).body(new ApiError("Ugyldig forespørsel."));
+        }
+        log.error("Uventet feil", e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiError("Noe gikk galt hos oss. Prøv igjen om litt."));
     }
 }

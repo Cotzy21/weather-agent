@@ -79,4 +79,23 @@ class OpenEndpointsSecurityTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.trace").doesNotExist());
     }
+
+    @Test
+    void unexpectedFailuresGiveAGenericMessageNeverTheInternals() throws Exception {
+        org.mockito.Mockito.when(service.finnBesteVaer(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any()))
+                .thenThrow(new RuntimeException("jdbc:postgresql://db.internal:5432 password=hunter2"));
+        mvc.perform(get("/api/turvaer").param("q", "fint vær"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("hunter2"))))
+                .andExpect(jsonPath("$.error").value("Noe gikk galt hos oss. Prøv igjen om litt."));
+    }
+
+    @Test
+    void springsOwnClientErrorsKeepTheirStatusCode() throws Exception {
+        mvc.perform(get("/api/finnes-ikke")).andExpect(status().isNotFound());
+        mvc.perform(post("/api/turvaer")).andExpect(status().isMethodNotAllowed());
+        mvc.perform(get("/api/sted").param("name", "x").param("lat", "abc").param("lon", "1"))
+                .andExpect(status().isBadRequest());
+    }
 }
