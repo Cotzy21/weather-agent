@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  addDays, weekStart, clampGoal, normalizeSettings, computeStreak, togglePause, isIsoDate,
-  DEFAULT_GOAL, MAX_CARDS, MAX_PAUSES,
+  addDays, weekStart, clampGoal, normalizeSettings, computeStreak, togglePause, isIsoDate, goalForWeek, withGoal,
+  DEFAULT_GOAL, MAX_CARDS, MAX_PAUSES, MAX_GOAL_CHANGES,
 } from './weeklyStreak.js'
 
 // 2026-09-28 er en mandag; 2026-09-30 er en onsdag.
@@ -233,5 +233,76 @@ describe('computeStreak: pause og «i fare»', () => {
   it('fremtidige økter (klokkefeil) påvirker ikke avsluttede uker', () => {
     const r = computeStreak([{ date: '2027-05-01' }, ...weeks('2026-09-14', [3, 3])], { today: '2026-09-30' })
     expect(r.streak).toBe(2)
+  })
+})
+
+describe('målhistorikk: hver bruker setter sitt eget mål', () => {
+  const NOW = '2026-09-30' // onsdag i uka som starter 28. september
+  const past = weeks('2026-09-07', [3, 3, 3]) // tre uker med 3 dager
+
+  it('goalForWeek bruker siste endring på eller før uka, og første oppføring for tidligere uker', () => {
+    const goals = [{ from: '1970-01-05', goal: 3 }, { from: '2026-09-21', goal: 5 }]
+    expect(goalForWeek(goals, 9, '2026-09-14')).toBe(3)
+    expect(goalForWeek(goals, 9, '2026-09-21')).toBe(5)
+    expect(goalForWeek(goals, 9, '2026-10-05')).toBe(5)
+    expect(goalForWeek(goals, 9, '1969-01-06')).toBe(3)
+    expect(goalForWeek(undefined, 4, '2026-09-14')).toBe(4) // uten historikk gjelder målet alle uker
+  })
+
+  it('å øke målet skriver ikke om avsluttede uker: serien overlever', () => {
+    const settings = withGoal({ goal: 3, pauses: [] }, 5, NOW)
+    const r = computeStreak(past, { goal: settings.goal, goals: settings.goals, today: NOW })
+    expect(r.goal).toBe(5) // uka som pågår krever nå 5
+    expect(r.streak).toBe(3) // de tre gamle ukene teller fortsatt mot 3
+    expect(statuses(r).slice(0, 3)).toEqual(['good', 'good', 'good'])
+    expect(r.current.remaining).toBe(5)
+  })
+
+  it('uten historikk ville samme økning brutt serien bakover (derfor lagres historikken)', () => {
+    const r = computeStreak(past, { goal: 5, today: NOW })
+    expect(r.streak).toBe(0)
+  })
+
+  it('å senke målet pynter ikke på gamle glipper', () => {
+    const twoDays = weeks('2026-09-07', [2, 2, 2])
+    const settings = withGoal({ goal: 5, pauses: [] }, 2, NOW)
+    const r = computeStreak(twoDays, { goal: settings.goal, goals: settings.goals, today: NOW })
+    expect(r.streak).toBe(0) // ukene med 2 dager var glipper mot 5 den gangen
+    expect(r.goal).toBe(2)
+  })
+
+  it('målet kan endres flere ganger, og hver uke vurderes mot sitt eget mål', () => {
+    let s = { goal: 3, pauses: [] }
+    s = withGoal(s, 4, '2026-09-14') // fra uka 14. september: 4
+    s = withGoal(s, 2, '2026-09-28') // fra uka 28. september: 2
+    const w = [...week('2026-09-07', 3), ...week('2026-09-14', 4), ...week('2026-09-21', 4), ...week('2026-09-28', 2)]
+    const r = computeStreak(w, { goal: s.goal, goals: s.goals, today: NOW })
+    expect(r.streak).toBe(4) // 3 mot 3, 4 mot 4, 4 mot 4, og uka som pågår 2 mot 2
+    expect(r.state).toBe('done')
+  })
+
+  it('withGoal: uendret mål gir samme objekt, og input muteres ikke', () => {
+    const base = { goal: 3, pauses: [] }
+    expect(withGoal(base, 3, NOW)).toBe(base)
+    const changed = withGoal(base, 4, NOW)
+    expect(base).toEqual({ goal: 3, pauses: [] })
+    expect(changed).toEqual({ goal: 4, pauses: [], goals: [{ from: '1970-01-05', goal: 3 }, { from: '2026-09-28', goal: 4 }] })
+  })
+
+  it('withGoal: flere endringer i samme uke gir én oppføring, og verdien holdes mellom 1 og 7', () => {
+    let s = withGoal({ goal: 3, pauses: [] }, 4, NOW)
+    s = withGoal(s, 5, '2026-10-01')
+    expect(s.goals).toEqual([{ from: '1970-01-05', goal: 3 }, { from: '2026-09-28', goal: 5 }])
+    expect(withGoal({ goal: 3, pauses: [] }, 99, NOW).goal).toBe(7)
+    expect(withGoal({ goal: 3, pauses: [] }, 0, NOW).goal).toBe(1)
+  })
+
+  it('historikken begrenses, og normalizeSettings renser ugyldige oppføringer', () => {
+    let s = { goal: 1, pauses: [] }
+    for (let i = 0; i < MAX_GOAL_CHANGES + 10; i++) s = withGoal(s, i % 2 ? 1 : 2, addDays('2026-01-05', 7 * i))
+    expect(s.goals.length).toBeLessThanOrEqual(MAX_GOAL_CHANGES)
+    const n = normalizeSettings({ goal: 3, goals: [{ from: 'tull', goal: 3 }, { from: '2026-09-30', goal: 9 }, { from: '2026-09-30', goal: 4 }, null] })
+    expect(n.goals).toEqual([{ from: '2026-09-28', goal: 4 }])
+    expect(normalizeSettings({ goal: 3 })).toEqual({ goal: 3, pauses: [] }) // ingen tom `goals` i lagret JSON
   })
 })

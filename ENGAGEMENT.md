@@ -54,10 +54,11 @@ Merking: 🟢 etisk/brukeralignet. Status: ✅ ferdig · 🚧 pågår · ⏳ nes
 | 2.x | Transparent AI-kvote, opptjente hvilekort, sesongprogram, win-back-e-post | Server | 💤 (kommersiell lansering) |
 
 ## Beslutninger for 0.1 (kan endres; skriv til Oskar hvis du vil ha noe annet)
-- **Uke** = mandag–søndag, norsk dato. **Teller** alle økttyper (styrke, løping, tur, sykkel …). Det telles **treningsdager** (to økter samme
-  dag er én), så serien ikke kan pumpes.
-- **Mål** = 3 treningsdager per uke som standard, 1–7 justerbart. Ukens mål påvirker bare uker som ikke er avsluttet ennå; en uke som er
-  ferdig vurderes mot målet slik det står nå (enkelt og ærlig; vi lagrer ikke målhistorikk).
+- **Uke** = mandag–søndag, norsk dato. **Teller** alle økttyper likt (styrke, løping, tur, sykkel …), bekreftet av Oskar 2026-09-30. Det telles
+  **treningsdager** (to økter samme dag er én), så serien ikke kan pumpes.
+- **Mål** = hver bruker setter sitt eget (1–7 treningsdager per uke, −/+ på kortet; standard 3), bekreftet av Oskar 2026-09-30. Målet huskes
+  **per uke** (`goals` i innstillingen `streak`): endrer du målet, gjelder det nye fra uka du endrer, og avsluttede uker vurderes mot målet
+  som gjaldt DEN uka. Da bryter det ikke serien bakover å øke fra 3 til 5, og å senke målet pynter ikke på gamle glipper.
 - **Hvilekort:** +1 for hver 4. gode uke på rad i opptjening (maks 2 på lager). Dekker en uke som ikke nådde målet: serien fortsetter, men
   uka gir ikke +1. Kan ikke kjøpes.
 - **Reparasjon:** uten hvilekort og etter en glipp kan serien reddes ved å nå målet + 1 (f.eks. 4 dager) i uka ETTER glippen. Da fortsetter
@@ -81,6 +82,6 @@ Kjerne: D1/D7/D30 med «aktiv» = kjernehandling (økt, innsjekk, måltid). Uker
 dagsform; øker serielengde mens hviledager ved rød score går ned, har vi bygget en overtreningsmaskin.
 
 ## Åpne spørsmål til Oskar
-1. Er 3 treningsdager i uka riktig standardmål? Skal turer og gåing telle like mye som styrkeøkter?
-2. Vil du ha varsler (0.12) først når iPhone-appen er på TestFlight, eller også som nettleservarsel i PWA-en?
-3. Tur-merker (0.8): vil du selv sette opp lista over toppturer/hytter, eller skal jeg lage et første utkast fra OpenStreetMap?
+1. Varsler (0.12): først når iPhone-appen er på TestFlight, eller også som nettleservarsel i PWA-en?
+2. Tur-merker (0.8): en digital «badge» når du har vært på kjente steder (f.eks. Preikestolen, Galdhøpiggen). Appen trenger en liste over hvilke
+   steder som gir merke. Forslag: jeg lager et første utkast fra OpenStreetMap-data som du kan stryke og legge til i.

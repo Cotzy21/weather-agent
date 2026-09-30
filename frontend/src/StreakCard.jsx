@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { computeStreak, togglePause, clampGoal, MIN_GOAL, MAX_GOAL } from './weeklyStreak.js'
+import { computeStreak, togglePause, withGoal, MIN_GOAL, MAX_GOAL } from './weeklyStreak.js'
 import { useI18n } from './i18n.jsx'
 
 // Tegn og forklaring per ukestatus i stripa over de siste ukene.
@@ -21,7 +21,7 @@ const DOT = {
 export default function StreakCard({ workouts, settings, today, onChange }) {
   const { t } = useI18n()
   const r = useMemo(
-    () => computeStreak(workouts, { goal: settings.goal, pauses: settings.pauses, today }),
+    () => computeStreak(workouts, { goal: settings.goal, goals: settings.goals, pauses: settings.pauses, today }),
     [workouts, settings, today],
   )
   const days = (n) => (n === 1 ? t('1 dag') : t('{n} dager', { n }))
@@ -40,7 +40,7 @@ export default function StreakCard({ workouts, settings, today, onChange }) {
   else message = t('{left} igjen til målet. {daysLeft} igjen av uka.', { left: days(cur.remaining), daysLeft: days(cur.daysLeft) })
 
   const showRepair = r.repair && r.state !== 'paused'
-  const setGoal = (g) => onChange({ ...settings, goal: clampGoal(g) })
+  const setGoal = (g) => onChange(withGoal(settings, g, today))
 
   return (
     <div className="focus-card streak-card" data-reveal>

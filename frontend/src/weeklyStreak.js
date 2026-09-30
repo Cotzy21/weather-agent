@@ -10,6 +10,8 @@
 //    en ny serie på 1 (comeback). Lengste serie huskes uansett
 //  - pauset uke (sykdom/ferie/skade): verken bryter, øker eller bruker kort
 //  - uka med første økt vurderes ikke som glipp (man kan ikke nå målet hvis man begynner på en torsdag)
+//  - hver bruker setter sitt eget mål. Målet huskes per uke (`goals`), så det å endre målet aldri skriver om uker som er
+//    avsluttet: å øke fra 3 til 5 bryter ikke serien bakover, og å senke det pynter ikke på gamle glipper
 
 export const DEFAULT_GOAL = 3
 export const MIN_GOAL = 1
@@ -17,6 +19,7 @@ export const MAX_GOAL = 7
 export const CARD_EVERY = 4
 export const MAX_CARDS = 2
 export const MAX_PAUSES = 52
+export const MAX_GOAL_CHANGES = 52
 const WEEKS_SHOWN = 8
 
 const DAY_MS = 86400000
@@ -42,12 +45,54 @@ export function clampGoal(goal) {
   return Number.isFinite(n) ? Math.min(MAX_GOAL, Math.max(MIN_GOAL, n)) : DEFAULT_GOAL
 }
 
-/** Lagret oppsett med trygge verdier: mål 1–7 og pauser som mandager (en pause gjelder en hel uke). */
+const BASE_WEEK = '1970-01-05' // en mandag langt før noen økter: «målet fra første stund»
+
+const isGoal = (g) => Number.isInteger(g) && g >= MIN_GOAL && g <= MAX_GOAL
+
+/** Målhistorikk fra lagret oppsett: [{ from: mandag, goal }], sortert, uten duplikater og med bare gyldige verdier. */
+function normalizeGoals(raw) {
+  if (!Array.isArray(raw)) return []
+  const byWeek = new Map()
+  for (const e of raw) {
+    if (isIsoDate(e?.from) && isGoal(e?.goal)) byWeek.set(weekStart(e.from), e.goal)
+  }
+  return [...byWeek].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).slice(-MAX_GOAL_CHANGES).map(([from, goal]) => ({ from, goal }))
+}
+
+/** Lagret oppsett med trygge verdier: mål 1–7, pauser som mandager (en pause gjelder en hel uke) og målhistorikk. */
 export function normalizeSettings(raw) {
   const pauses = Array.isArray(raw?.pauses)
     ? [...new Set(raw.pauses.filter(isIsoDate).map(weekStart))].sort().slice(-MAX_PAUSES)
     : []
-  return { goal: raw?.goal == null ? DEFAULT_GOAL : clampGoal(raw.goal), pauses }
+  const goals = normalizeGoals(raw?.goals)
+  return { goal: raw?.goal == null ? DEFAULT_GOAL : clampGoal(raw.goal), pauses, ...(goals.length ? { goals } : {}) }
+}
+
+/** Målet som gjaldt i uka som starter på `weekIso`: siste endring på eller før uka, ellers `fallback` (uten historikk). */
+export function goalForWeek(goals, fallback, weekIso) {
+  if (!goals?.length) return clampGoal(fallback)
+  let goal = goals[0].goal // uker før første oppføring: målet slik det var fra starten
+  for (const e of goals) {
+    if (e.from <= weekIso) goal = e.goal
+    else break
+  }
+  return goal
+}
+
+/**
+ * Nytt oppsett med et annet ukemål fra uka `todayIso` ligger i. Tidligere uker beholder målet de hadde, så serien påvirkes ikke
+ * bakover. Uendret mål gir samme oppsett tilbake. Muterer ikke `settings`.
+ */
+export function withGoal(settings, goal, todayIso) {
+  const next = clampGoal(goal)
+  const current = clampGoal(settings?.goal)
+  if (next === current) return settings
+  const thisWeek = weekStart(todayIso)
+  const timeline = settings?.goals?.length ? settings.goals.map((e) => ({ ...e })) : [{ from: BASE_WEEK, goal: current }]
+  const last = timeline.at(-1)
+  if (last.from === thisWeek) last.goal = next
+  else timeline.push({ from: thisWeek, goal: next })
+  return normalizeSettings({ ...settings, goal: next, goals: timeline })
 }
 
 /**
@@ -92,11 +137,12 @@ function step(st, days, goal) {
 /**
  * Regner ut serien.
  * @param workouts  økter med `date` (YYYY-MM-DD)
- * @param opts.goal treningsdager per uke (standard 3)
+ * @param opts.goal treningsdager per uke nå (standard 3)
+ * @param opts.goals målhistorikk [{ from: mandag, goal }] (se withGoal); utelatt = `goal` gjelder alle uker
  * @param opts.pauses mandager (YYYY-MM-DD) for pausede uker
  * @param opts.today dagens dato (YYYY-MM-DD, norsk tid)
  */
-export function computeStreak(workouts, { goal = DEFAULT_GOAL, pauses = [], today } = {}) {
+export function computeStreak(workouts, { goal = DEFAULT_GOAL, goals, pauses = [], today } = {}) {
   goal = clampGoal(goal)
   const paused = new Set(pauses.filter(isIsoDate).map(weekStart))
   const byWeek = new Map()
@@ -107,6 +153,8 @@ export function computeStreak(workouts, { goal = DEFAULT_GOAL, pauses = [], toda
     byWeek.get(start).add(w.date)
   }
   const thisWeek = weekStart(today)
+  const goalOf = (start) => goalForWeek(goals, goal, start)
+  goal = goalOf(thisWeek) // målet som gjelder uka som pågår
   const days = (start) => byWeek.get(start)?.size ?? 0
   const past = [...byWeek.keys()].filter((s) => s <= thisWeek)
 
@@ -117,9 +165,10 @@ export function computeStreak(workouts, { goal = DEFAULT_GOAL, pauses = [], toda
     const first = past.reduce((a, b) => (a < b ? a : b))
     for (let start = first; start < thisWeek; start = addDays(start, 7)) {
       const d = days(start)
+      const g = goalOf(start) // målet som gjaldt DEN uka, ikke dagens
       if (paused.has(start)) { weeks.push({ start, days: d, status: 'pause' }); continue }
-      if (start === first && d < goal) { weeks.push({ start, days: d, status: 'start' }); continue }
-      const r = step(st, d, goal)
+      if (start === first && d < g) { weeks.push({ start, days: d, status: 'start' }); continue }
+      const r = step(st, d, g)
       st = r.next
       if (r.earnedCard) earned.push(start)
       weeks.push({ start, days: d, status: r.status })

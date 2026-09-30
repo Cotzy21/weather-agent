@@ -35,6 +35,35 @@ class UserSettingsServiceTest {
     }
 
     @Test
+    void storesTheGoalHistorySortedAndDeduplicatedByDate() throws Exception {
+        JsonNode out = UserSettingsService.normalizeStreak(json(
+                "{\"goal\":5,\"goals\":[{\"from\":\"2026-09-28\",\"goal\":5},{\"from\":\"1970-01-05\",\"goal\":3},"
+                        + "{\"from\":\"2026-09-28\",\"goal\":4,\"junk\":1}]}"));
+
+        assertEquals("[{\"from\":\"1970-01-05\",\"goal\":3},{\"from\":\"2026-09-28\",\"goal\":4}]", out.get("goals").toString());
+    }
+
+    @Test
+    void rejectsAnInvalidGoalHistory() throws Exception {
+        for (String bad : new String[] {
+                "{\"goals\":\"x\"}",
+                "{\"goals\":[{\"from\":\"2026-09-28\"}]}",
+                "{\"goals\":[{\"goal\":3}]}",
+                "{\"goals\":[{\"from\":\"i går\",\"goal\":3}]}",
+                "{\"goals\":[{\"from\":\"2026-09-28\",\"goal\":0}]}",
+                "{\"goals\":[{\"from\":\"2026-09-28\",\"goal\":8}]}",
+                "{\"goals\":[{\"from\":\"2026-09-28\",\"goal\":\"3\"}]}",
+                "{\"goals\":[5]}"}) {
+            String input = bad;
+            assertThrows(IllegalArgumentException.class, () -> UserSettingsService.normalizeStreak(json(input)), bad);
+        }
+        StringBuilder many = new StringBuilder("{\"goals\":[");
+        for (int i = 0; i < 53; i++) many.append(i == 0 ? "" : ",").append("{\"from\":\"2026-01-05\",\"goal\":3}");
+        many.append("]}");
+        assertThrows(IllegalArgumentException.class, () -> UserSettingsService.normalizeStreak(json(many.toString())));
+    }
+
+    @Test
     void allowsAnEmptySettingSoTheDefaultsApply() throws Exception {
         assertEquals("{}", UserSettingsService.normalizeStreak(json("{}")).toString());
     }

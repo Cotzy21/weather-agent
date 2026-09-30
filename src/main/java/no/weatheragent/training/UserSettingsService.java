@@ -11,6 +11,7 @@ import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
 
@@ -20,7 +21,10 @@ public class UserSettingsService {
 
     public static final String DASHBOARD = "dashboard";
     public static final String PROGRAM = "program";
-    /** Ukeserien: {@code {"goal": 3, "pauses": ["2026-09-28"]}} (mål i treningsdager per uke, pausede uker som datoer). */
+    /**
+     * Ukeserien: {@code {"goal": 3, "pauses": ["2026-09-28"], "goals": [{"from": "2026-09-28", "goal": 4}]}}: målet i
+     * treningsdager per uke nå, pausede uker som datoer, og målhistorikken (fra hvilken uke et annet mål gjelder).
+     */
     public static final String STREAK = "streak";
     static final Set<String> KEYS = Set.of(DASHBOARD, PROGRAM, STREAK);
     /** Nøkler frontenden kan lese og skrive direkte via /api/innstillinger/{key}. Programmet har egne endepunkter. */
@@ -29,6 +33,7 @@ public class UserSettingsService {
     static final int MIN_GOAL = 1;
     static final int MAX_GOAL = 7;
     static final int MAX_PAUSES = 52;
+    static final int MAX_GOAL_CHANGES = 52;
 
     private final UserSettingsRepository repository;
 
@@ -61,8 +66,8 @@ public class UserSettingsService {
     }
 
     /**
-     * Ukeserie-innstillingen lagres bare med kjente felt og gyldige verdier (mål 1-7, høyst 52 pausede uker som datoer), så
-     * en klient ikke kan legge vilkårlig JSON i kontoen. Pausene sorteres og dedupliseres.
+     * Ukeserie-innstillingen lagres bare med kjente felt og gyldige verdier (mål 1-7, høyst 52 pausede uker og 52 målendringer
+     * som datoer), så en klient ikke kan legge vilkårlig JSON i kontoen. Pauser og målhistorikk sorteres og dedupliseres.
      */
     static JsonNode normalizeStreak(JsonNode value) {
         if (!value.isObject()) throw new IllegalArgumentException("Ugyldig innstilling.");
@@ -88,6 +93,26 @@ public class UserSettingsService {
             }
             ArrayNode array = out.putArray("pauses");
             dates.forEach(array::add);
+        }
+        JsonNode goals = value.get("goals");
+        if (goals != null && !goals.isNull()) {
+            if (!goals.isArray() || goals.size() > MAX_GOAL_CHANGES) throw new IllegalArgumentException("Ugyldig målhistorikk.");
+            TreeMap<String, Integer> byWeek = new TreeMap<>();
+            for (JsonNode g : goals) {
+                JsonNode from = g.get("from");
+                JsonNode weekGoal = g.get("goal");
+                if (from == null || !from.isTextual() || weekGoal == null || !weekGoal.isInt()
+                        || weekGoal.asInt() < MIN_GOAL || weekGoal.asInt() > MAX_GOAL) {
+                    throw new IllegalArgumentException("Ugyldig målhistorikk.");
+                }
+                try {
+                    byWeek.put(LocalDate.parse(from.asText()).toString(), weekGoal.asInt());
+                } catch (DateTimeException e) {
+                    throw new IllegalArgumentException("Ugyldig målhistorikk.");
+                }
+            }
+            ArrayNode array = out.putArray("goals");
+            byWeek.forEach((week, wg) -> array.addObject().put("from", week).put("goal", wg.intValue()));
         }
         return out;
     }
