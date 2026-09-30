@@ -40,3 +40,6 @@ docs/
 
 # Bygd frontend (genereres av `npm run build` i frontend/ -> Spring static)
 src/main/resources/static/
+
+# Python
+__pycache__/
