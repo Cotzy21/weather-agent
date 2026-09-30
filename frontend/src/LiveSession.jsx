@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useI18n } from './i18n.jsx'
 import { saveLive, liveExercise, findSuggestion, toContent } from './liveSession.js'
 import ExercisePicker from './ExercisePicker.jsx'
 import ExerciseHistory from './ExerciseHistory.jsx'
 import { sameGroup, exerciseKey } from './exercises'
+import { priorBests, livePRSets } from './prDetection.js'
 
 const fmtClock = (sec) => {
   const h = Math.floor(sec / 3600)
@@ -40,8 +41,18 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
   const [scrollTick, setScrollTick] = useState(0)
   const audio = useRef(null)
   const alerted = useRef(null)
+  // Rekorder mens økta pågår: sammenlignet med historikken (uten denne økta) får det beste avhukede settet en 🏆.
+  const bests = useMemo(() => priorBests(workouts), [workouts])
+  const prSets = useMemo(() => livePRSets(s.exercises, bests), [s.exercises, bests])
+  const seenPrs = useRef(prSets)
 
   useEffect(() => { saveLive(userId, s) }, [userId, s])
+
+  // Kort vibrasjon når et sett blir en NY rekord (ikke ved hvert tegn man skriver, og ikke for rekorder som allerede var markert).
+  useEffect(() => {
+    if ([...prSets].some((k) => !seenPrs.current.has(k))) navigator.vibrate?.([30, 50, 30])
+    seenPrs.current = prSets
+  }, [prSets])
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000)
@@ -229,7 +240,9 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
             </div>
             {ex.sets.map((set, si) => (
               <div className={`live-grid live-set ${set.done ? 'done' : ''} ${current === `${ei}-${si}` ? 'current' : ''}`} key={si}>
-                <span className="live-set-no">{si + 1}</span>
+                {prSets.has(`${ei}-${si}`)
+                  ? <span className="live-set-no live-pr" role="img" aria-label={t('Ny rekord')}>🏆</span>
+                  : <span className="live-set-no">{si + 1}</span>}
                 <input
                   inputMode="decimal"
                   aria-label={t('Vekt (kg)')}

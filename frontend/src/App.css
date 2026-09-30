@@ -2305,3 +2305,18 @@ header .sub { margin-top: 6px; color: var(--muted); }
 /* ---------- Fortell om turen ---------- */
 .route-story { margin: 10px 0; }
 .story-text { margin: 8px 0 4px; line-height: 1.55; }
+
+/* Rekord-feiring (PrCelebration) og 🏆 på rekordsett i live-økta. Konfettien er ren CSS. */
+.pr-sheet { position: relative; overflow: hidden; text-align: center; gap: 6px; }
+.pr-sheet .primary { width: 100%; padding: 14px; border-radius: 14px; font-size: 16px; font-weight: 700; }
+.pr-title { margin: 8px 0 4px; font-size: var(--fs-lg); }
+.pr-list { list-style: none; margin: 8px 0 12px; padding: 0; display: flex; flex-direction: column; gap: 10px; text-align: left; }
+.pr-list li { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; background: var(--tint); border-radius: 12px; }
+.pr-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.pr-confetti span { position: absolute; top: -24px; font-size: 20px; animation: pr-fall 2.2s ease-in forwards; opacity: 0; }
+@keyframes pr-fall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(320px) rotate(300deg); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .pr-confetti { display: none; } }
+.live-set-no.live-pr { font-size: 1.1em; }

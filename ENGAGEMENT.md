@@ -38,8 +38,8 @@ Merking: 🟢 etisk/brukeralignet. Status: ✅ ferdig · 🚧 pågår · ⏳ nes
 
 | # | Mekanisme | Lokal/server | Status |
 |---|---|---|---|
-| 0.1 | **Ukeserie** med mål per uke, opptjente hvilekort (1 per 4 gode uker, maks 2), pause (sykdom/ferie), reparasjon ved comeback. Kort «Ukeserie» på Hjem. 🟢 | Lokal regning, mål og pauser i `user_settings` (`streak`) | 🚧 |
-| 0.2 | **PR-deteksjon og feiring** etter lagret økt (e1RM- og rep-rekord mot egen historikk). 🟢 | Lokal | 🚧 |
+| 0.1 | **Ukeserie** med mål per uke, opptjente hvilekort (1 per 4 gode uker, maks 2), pause (sykdom/ferie), reparasjon ved comeback. Kort «Ukeserie» på Hjem. 🟢 | Lokal regning, mål og pauser i `user_settings` (`streak`) | ✅ (0c720ff) |
+| 0.2 | **PR-deteksjon og feiring** etter lagret økt (e1RM- og rep-rekord mot egen historikk), 🏆 på rekordsett i live-økta. 🟢 | Lokal | ✅ |
 | 0.3 | Fremgangsvisualisering: kalender-heatmap og «denne måneden mot forrige» (grafer per øvelse finnes) | Lokal | ⏳ |
 | 0.4 | Daglig restitusjonsinnsjekk som «dagens vane»: kort med GOD/MIDDELS/LAV + anbefaling (dagsform finnes, mangler innsjekk-flyt) | Lokal | ⏳ |
 | 0.5 | Volumvarsel koblet til serien: en uke der ACWR er høy telles som oppfylt («hviluke»); nedtrapping bryter aldri serien | Lokal | ⏳ |
@@ -65,6 +65,15 @@ Merking: 🟢 etisk/brukeralignet. Status: ✅ ferdig · 🚧 pågår · ⏳ nes
 - **Pause:** brukeren kan pause en uke (sykdom, ferie, skade). En pauset uke verken bryter, øker eller bruker hvilekort. Lagres som uke-start-datoer
   (maks 52).
 - **Ingen serie før første økt:** vurderingen starter uka med første loggede økt.
+
+## Beslutninger for 0.2 (rekorder)
+- **Rekord** = høyere estimert 1RM (Epley, bare sett på 1–12 reps) enn noen tidligere økt, eller flere reps i en kroppsvektøvelse (0 kg).
+  Én rekord per øvelse per økt; «tyngste vekt noensinne» nevnes når det også stemmer.
+- **Første gang en øvelse logges er ikke en rekord**, og uten lastet historikk feires ingenting (ingen falske rekorder). Samme øvelse
+  på norsk og engelsk er samme øvelse (`exerciseKey`).
+- **Live-økta:** det beste avhukede settet som slår rekorden får 🏆 i stedet for settnummeret, med kort vibrasjon første gang.
+  **Etter lagring** (live og manuell) vises en feiring med tallene og forrige rekord. Manuelle økter eldre enn 2 dager feires ikke.
+- Ikke bygget med vilje: «X reps til rekord»-hint (krever presist mål for hvert sett; kommer hvis Oskar vil ha det) og delbart rekordkort.
 
 ## Metrikker (senere, lokalt dev-panel)
 Kjerne: D1/D7/D30 med «aktiv» = kjernehandling (økt, innsjekk, måltid). Ukeretensjon (CURR/NURR/RURR i uker). Fordeling av serielengde.

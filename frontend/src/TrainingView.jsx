@@ -5,6 +5,9 @@ import MusclePicker from './MusclePicker'
 import { useReveal } from './anim'
 import { useI18n } from './i18n.jsx'
 import LiveSession from './LiveSession.jsx'
+import PrCelebration from './PrCelebration.jsx'
+import { detectPRs } from './prDetection.js'
+import { addDays } from './weeklyStreak.js'
 import ExercisePicker from './ExercisePicker.jsx'
 import { exerciseKey } from './exercises'
 import TrainingMemoryCard from './TrainingMemoryCard.jsx'
@@ -101,6 +104,7 @@ export default function TrainingView({ session }) {
   const [mode, setMode] = useState(() => (session && loadLive(session.user.id) ? 'live' : 'overview'))
   const [live, setLive] = useState(() => (session ? loadLive(session.user.id) : null))
   const [liveSaved, setLiveSaved] = useState(false) // true | 'queued' (lagret på enheten, venter på nett)
+  const [prs, setPrs] = useState(null) // rekorder i økta som nettopp ble lagret (feires i PrCelebration)
   const queue = workoutQueue(authHeaders)
   const [pendingCount, setPendingCount] = useState(0) // økter som venter på nett
 
@@ -275,8 +279,10 @@ export default function TrainingView({ session }) {
   async function finishLive({ title, content }) {
     const clientId = live?.clientId ?? newId()
     const body = { date: today(), title, type: 'STYRKE', content, notes: null, clientId, plannedId: live?.plannedId ?? null }
+    const found = detectPRs(workouts, content, { date: body.date }) // mot historikken FØR denne økta
     const { queued } = await queue.submit({ clientId, body })
     endLive()
+    if (found.length) setPrs(found)
     setLiveSaved(queued ? 'queued' : true)
     setTimeout(() => setLiveSaved(false), 4000)
     if (!queued) {
@@ -386,9 +392,13 @@ export default function TrainingView({ session }) {
     setError(null)
     try {
       const clientId = newId()
+      const content = buildContent()
+      // Rekorder feires bare for styrkeøkter fra de siste dagene (ikke når man fyller inn gamle økter i ettertid).
+      const found = type === 'STYRKE' && date >= addDays(today(), -2) ? detectPRs(workouts, content, { date }) : []
       const { queued } = await queue.submit({ clientId, body: {
-        date, title: title.trim(), type, content: buildContent(), notes: notes.trim() || null, clientId,
+        date, title: title.trim(), type, content, notes: notes.trim() || null, clientId,
       } })
+      if (found.length) setPrs(found)
       setSavedQueued(queued)
       setTitle(''); setNotes(''); setBlocks([newExercise()]); setCardio({ distanceKm: '', durationMin: '', ascentM: '' })
       setSaved(true)
@@ -645,6 +655,8 @@ export default function TrainingView({ session }) {
 
   return (
     <div className="training" ref={revealRef}>
+
+      {prs && <PrCelebration prs={prs} fmtKg={fmtKg} onClose={() => setPrs(null)} />}
 
       {mode === 'live' && live && (
         <LiveSession

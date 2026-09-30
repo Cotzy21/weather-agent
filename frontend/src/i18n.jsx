@@ -306,6 +306,15 @@ const EN = {
   'Finn turvær →': 'Find hiking weather →',
   'I fokus': 'In focus',
   '🏋️ Trening denne uka': '🏋️ Training this week',
+  // Rekorder (PrCelebration, live-økta)
+  'Ny rekord': 'New record',
+  'Ny rekord!': 'New record!',
+  '{n} nye rekorder!': '{n} new records!',
+  'Estimert 1RM {value} kg': 'Estimated 1RM {value} kg',
+  'tyngste vekt noensinne': 'heaviest weight ever',
+  '{value} reps (forrige rekord: {previous})': '{value} reps (previous record: {previous})',
+  '+ {n} til': '+ {n} more',
+  'Kjempebra!': 'Awesome!',
   // Ukeserie (Hjem-kortet)
   'Ukeserie': 'Weekly streak',
   '🔥 Ukeserie': '🔥 Weekly streak',

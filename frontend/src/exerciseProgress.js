@@ -11,7 +11,7 @@ export function estimate1RM(weightKg, reps) {
 const num = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0)
 
 // Alle (øvelse, sett) i en styrkeøkt, også i supersett og dropsett (der teller toppsettet).
-function* exercisesIn(content) {
+export function* exercisesIn(content) {
   for (const b of content?.blocks ?? []) {
     if (b.kind === 'superset') {
       for (const e of b.exercises ?? []) yield { name: e.name, sets: e.sets ?? [] }
