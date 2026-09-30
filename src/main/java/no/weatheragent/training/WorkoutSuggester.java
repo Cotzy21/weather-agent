@@ -209,9 +209,10 @@ public class WorkoutSuggester {
                   "rationale": "kort norsk begrunnelse"
                 }
                 For STYRKE skal content være {"blocks":[ ... ]} der hver blokk er én av:
-                  {"kind":"exercise","name":"...","sets":[{"reps":5,"weightKg":80}]}
+                  {"kind":"exercise","name":"...","sets":[{"reps":5,"weightKg":80},{"reps":5,"weightKg":80},{"reps":5,"weightKg":80}]}
                   {"kind":"dropset","name":"...","drops":[{"reps":10,"weightKg":15}]}
-                  {"kind":"superset","exercises":[{"name":"...","sets":[{"reps":8,"weightKg":20}]}]}
+                  {"kind":"superset","rounds":3,"exercises":[{"name":"...","sets":[{"reps":8,"weightKg":20}]}]}
+                Hvert arbeidssett er ett eget objekt i "sets" - vanligvis 3-4 sett per øvelse, aldri bare 1.
                 For kondisjon: {"distanceKm":5,"durationMin":30} (HIKING kan ha "ascentM").
                 """;
     }
@@ -248,9 +249,10 @@ public class WorkoutSuggester {
                   ]
                 }
                 For STYRKE skal content være {"blocks":[ ... ]} der hver blokk er én av:
-                  {"kind":"exercise","name":"...","sets":[{"reps":8,"weightKg":60}]}
+                  {"kind":"exercise","name":"...","sets":[{"reps":8,"weightKg":60},{"reps":8,"weightKg":60},{"reps":8,"weightKg":60}]}
                   {"kind":"dropset","name":"...","drops":[{"reps":10,"weightKg":20}]}
                   {"kind":"superset","rounds":3,"exercises":[{"name":"...","sets":[{"reps":10,"weightKg":15}]}]}
+                Hvert arbeidssett er ett eget objekt i "sets" - vanligvis 3-4 sett per øvelse, aldri bare 1.
                 For kondisjon: {"distanceKm":5,"durationMin":30} (HIKING kan ha "ascentM").
                 """;
     }
@@ -300,9 +302,10 @@ public class WorkoutSuggester {
                 Bruk "questions" (og utelat/null "plan") når du spør. Bruk "plan" (og tomt
                 "questions") når du lager opplegget.
                 For STYRKE skal content være {"blocks":[ ... ]} der hver blokk er én av:
-                  {"kind":"exercise","name":"...","sets":[{"reps":8,"weightKg":60}]}
+                  {"kind":"exercise","name":"...","sets":[{"reps":8,"weightKg":60},{"reps":8,"weightKg":60},{"reps":8,"weightKg":60}]}
                   {"kind":"dropset","name":"...","drops":[{"reps":10,"weightKg":20}]}
                   {"kind":"superset","rounds":3,"exercises":[{"name":"...","sets":[{"reps":10,"weightKg":15}]}]}
+                Hvert arbeidssett er ett eget objekt i "sets" - vanligvis 3-4 sett per øvelse, aldri bare 1.
                 For kondisjon: {"distanceKm":5,"durationMin":30} (HIKING kan ha "ascentM").
                 """;
     }
