@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { localIso } from './trainingStats.js'
 import { authHeaders } from './supabase'
 import { apiUrl, readError } from './api'
 import { useI18n } from './i18n.jsx'
@@ -18,7 +19,7 @@ const SUGGESTIONS = [
   { name: 'Vann', emoji: '💧', unit: 'glass' },
 ]
 
-const toIso = (d) => d.toISOString().slice(0, 10)
+const toIso = localIso
 
 /** De siste 7 dagene, eldst først, som { iso, label } (label = "M", "T" …). */
 function lastDays(n, locale) {

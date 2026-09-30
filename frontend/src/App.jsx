@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, lazy, Suspense } from 'react'
+import { localIso } from './trainingStats.js'
 import { supabase, authHeaders } from './supabase'
 import ChoiceChips from './ChoiceChips.jsx'
 import { apiUrl, readError, clearCache, cachedGet } from './api'
@@ -318,8 +319,8 @@ export default function App() {
       try {
         const headers = await authHeaders()
         if (!alive) return
-        const iso = new Date().toISOString().slice(0, 10)
-        const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
+        const iso = localIso(new Date())
+        const weekAgo = localIso(new Date(Date.now() - 7 * 86400000))
         const lang = localStorage.getItem('lang') ?? 'en' // recovery-tekst genereres på språket
         // Rask først: siste ukes økter (fremsiden blir klar raskt).
         await cachedGet(`/api/treningsokter?siden=${weekAgo}`, headers).catch(() => {})

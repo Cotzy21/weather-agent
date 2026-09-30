@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { localIso } from './trainingStats.js'
 import { apiUrl, readError } from './api'
 import ChoiceChips from './ChoiceChips.jsx'
 import { authHeaders } from './supabase'
@@ -68,7 +69,7 @@ const EMPTY_FOOD = {
   portionName: '', portionGrams: '', isPublic: false,
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => localIso(new Date())
 
 export default function MealDiary({ session }) {
   const { t } = useI18n()

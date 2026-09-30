@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { localIso } from './trainingStats.js'
 import { authHeaders } from './supabase'
 import { cachedGet, getCached } from './api'
 import { useReveal, useCountUp } from './anim'
@@ -15,7 +16,7 @@ function startOfWeek() {
   return d
 }
 
-const isoToday = () => new Date().toISOString().slice(0, 10)
+const isoToday = () => localIso(new Date())
 
 /**
  * Hjem-dashboard i Garmin Connect-stil: «I fokus»-kort i et grid til venstre
@@ -24,7 +25,7 @@ const isoToday = () => new Date().toISOString().slice(0, 10)
  */
 export default function Dashboard({ session, onNavigate }) {
   const { t } = useI18n()
-  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
+  const weekAgo = localIso(new Date(Date.now() - 7 * 86400000))
   // Hydrer fra cachen så fanen tegnes med forrige data straks (ingen tomt glimt).
   // Foretrekk full liste hvis den finnes, ellers siste-uke-slicen (forhåndshentet).
   const [workouts, setWorkouts] = useState(() =>
