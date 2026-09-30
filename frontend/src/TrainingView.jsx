@@ -109,6 +109,16 @@ export default function TrainingView({ session }) {
   const [live, setLive] = useState(() => (session ? loadLive(session.user.id) : null))
   const [liveSaved, setLiveSaved] = useState(false)
 
+  // «Ny»-arket (økt vs. plan) og om muskelvelgeren skal vises i byggeren.
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [showPicker, setShowPicker] = useState(false)
+
+  // AI-økt: én økt til i dag (forskjellig fra AI-treningsplan, som lager flere).
+  const [aiwFocus, setAiwFocus] = useState('')
+  const [aiwBusy, setAiwBusy] = useState(false)
+  const [aiwError, setAiwError] = useState(null)
+  const [aiwResult, setAiwResult] = useState(null)
+
   const [plans, setPlans] = useState(() => getCached('/api/trening/planer') ?? [])
 
   // Progressive overload: vekt/reps-forslag for neste økt per øvelse. Begrunnelsene
@@ -163,7 +173,9 @@ export default function TrainingView({ session }) {
       })),
     }
     setBlocks((prev) => [...prev.filter((b) => b.kind !== 'exercise' || b.name.trim()), block])
+    setShowPicker(false)
     setMode('builder')
+    window.scrollTo(0, 0)
   }
 
   function startLive(title, exercises) {
@@ -222,6 +234,7 @@ export default function TrainingView({ session }) {
       setAiFocus('')
       setAiMessages([])
       loadPlans()
+      setMode('overview')
     } catch (e) {
       setAiError(e.message)
     } finally {
@@ -343,10 +356,45 @@ export default function TrainingView({ session }) {
     } catch { /* ignorer */ }
   }
 
-  async function loadProgress() {
-    if (!progressName.trim()) return
+  function pickNew(kind) {
+    setSheetOpen(false)
+    if (kind === 'build' || kind === 'muscles') {
+      setShowPicker(kind === 'muscles')
+      setMode('builder')
+    } else {
+      setMode(kind)
+    }
+    window.scrollTo(0, 0)
+  }
+
+  async function suggestWorkout(preset) {
+    const focus = (typeof preset === 'string' ? preset : aiwFocus).trim()
+    if (!focus || aiwBusy) return
+    setAiwFocus(focus)
+    setAiwBusy(true)
+    setAiwError(null)
+    setAiwResult(null)
     try {
-      const params = new URLSearchParams({ navn: progressName.trim() })
+      const res = await fetch(apiUrl('/api/trening/forslag'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({ focus, type: 'STYRKE' }),
+      })
+      if (!res.ok) throw new Error(await readError(res))
+      setAiwResult(await res.json())
+    } catch (e) {
+      setAiwError(e.message)
+    } finally {
+      setAiwBusy(false)
+    }
+  }
+
+  async function loadProgress(name = progressName) {
+    if (!name.trim()) return
+    setProgressName(name)
+    setProgress(null)
+    try {
+      const params = new URLSearchParams({ navn: name.trim() })
       const res = await fetch(apiUrl(`/api/ovelser/progresjon?${params}`), { headers: await authHeaders() })
       if (res.ok) setProgress(await res.json())
     } catch { setProgress([]) }
@@ -431,7 +479,9 @@ export default function TrainingView({ session }) {
     } else {
       setCardio({ distanceKm: c.distanceKm ?? '', durationMin: c.durationMin ?? '', ascentM: c.ascentM ?? '' })
     }
+    setShowPicker(false)
     setMode('builder') // ta brukeren til byggeren med økta forhåndsutfylt
+    window.scrollTo(0, 0)
   }
 
   const revealRef = useReveal([session, mode])
@@ -450,6 +500,35 @@ export default function TrainingView({ session }) {
 
   const maxW = progress && progress.length ? Math.max(...progress.map((p) => p.maxWeight)) : 0
   const summaries = computeSummaries(workouts)
+
+  const progressChart = progress && (progress.length === 0
+    ? <p className="muted">{t('Ingen logget for denne øvelsen ennå.')}</p>
+    : (
+      <div className="progress">
+        {progress.map((p, i) => (
+          <div className="prog-row" key={i}>
+            <span className="prog-date">{p.date}</span>
+            <span className="prog-bar"><span style={{ width: `${maxW ? (p.maxWeight / maxW) * 100 : 0}%` }} /></span>
+            <span className="prog-val">{fmtKg(p.maxWeight)} kg</span>
+          </div>
+        ))}
+      </div>
+    ))
+
+  const dayKey = (p) => { const i = dayIndex(p.content?.day); return i < 0 ? 7 : i }
+  const sortedPlans = [...plans].sort((a, b) => dayKey(a) - dayKey(b))
+
+  function planSubtitle(p) {
+    const parts = []
+    if (p.content?.day) parts.push(p.content.day)
+    if (p.type === 'STYRKE') {
+      const n = (p.content?.blocks || []).reduce((sum, b) => sum + (b.kind === 'superset' ? (b.exercises || []).length : 1), 0)
+      parts.push(t('{n} øvelser', { n }))
+    } else {
+      parts.push(t((TYPES.find((tp) => tp.v === p.type)?.t) || p.type))
+    }
+    return parts.join(' · ')
+  }
 
   return (
     <div className="training" ref={revealRef}>
@@ -470,55 +549,130 @@ export default function TrainingView({ session }) {
       {mode === 'overview' && (
         <>
           <h2 className="detail-title" data-reveal>{t('Trening')}</h2>
-          <button className="create-workout" data-reveal onClick={() => setMode('builder')}>
-            <span className="cw-icon">➕</span>
-            <span className="cw-text">
-              <strong>{t('Lag en økt')}</strong>
-              <span className="muted">{t('Bygg fra kroppen, en mal, eller fra bunnen av')}</span>
-            </span>
-            <span className="cw-arrow">→</span>
-          </button>
-          <button className="create-workout" data-reveal onClick={() => startLive('', [])}>
-            <span className="cw-icon">▶</span>
-            <span className="cw-text">
-              <strong>{t('Start live økt')}</strong>
-              <span className="muted">{t('Huk av sett mens du trener, med pausetimer')}</span>
-            </span>
-            <span className="cw-arrow">→</span>
-          </button>
-          {liveSaved && <p className="success" data-reveal>{t('✓ Økt lagret')}</p>}
+          <div className="train-actions" data-reveal>
+            <button className="train-action" onClick={() => setSheetOpen(true)}>
+              <span className="ta-icon" aria-hidden="true">＋</span>{t('Ny')}
+            </button>
+            <button className="train-action go" onClick={() => startLive('', [])}>
+              <span className="ta-icon" aria-hidden="true">▶</span>{t('Start')}
+            </button>
+            <button className="train-action" onClick={() => { setMode('progress'); window.scrollTo(0, 0) }}>
+              <span className="ta-icon" aria-hidden="true">📈</span>{t('Progresjon')}
+            </button>
+          </div>
+          {liveSaved && <p className="success">{t('✓ Økt lagret')}</p>}
+          {importBusy && <p className="muted">{t('Importerer …')}</p>}
+          {importMsg && (
+            <p className={importMsg.startsWith('✓') ? 'success' : importMsg.startsWith('Feil') ? 'error' : 'muted'}>{importMsg}</p>
+          )}
 
           {readiness && !readiness.none && (
-            <div className={`readiness ${readiness.level.toLowerCase()}`} data-reveal>
-              <span className="readiness-head">
+            <details className={`readiness-line ${readiness.level.toLowerCase()}`} data-reveal>
+              <summary>
                 {READINESS_ICONS[readiness.level]} {t('Dagsform')}: <strong>{t(READINESS_LABELS[readiness.level])}</strong>
-                <span className="muted">
-                  {' · '}{fmtHours(readiness.lastNightHours)} {t('t søvn')}
-                  {' · '}{t('snitt 3 netter')} {fmtHours(readiness.avg3Hours)} {t('t')}
-                </span>
-              </span>
-              <span className="readiness-advice">{readiness.advice}</span>
+                <span className="muted"> · {fmtHours(readiness.lastNightHours)} {t('t søvn')}</span>
+              </summary>
+              <p className="muted">{readiness.advice}</p>
+            </details>
+          )}
+
+          <h3 className="detail-h3" data-reveal>{t('Mine planer')}</h3>
+          {plans.length === 0 ? (
+            <button className="plan-empty" data-reveal onClick={() => pickNew('ai-plan')}>
+              ✨ {t('Lag en treningsplan med AI')}
+            </button>
+          ) : (
+            <ul className="plan-cards" data-reveal>
+              {sortedPlans.map((p) => (
+                <li key={p.id} className="plan-card">
+                  <button className="plan-card-main" onClick={() => applySuggestion(p)} title={t('Rediger i byggeren')}>
+                    <strong>{p.title}</strong>
+                    <span className="muted">{planSubtitle(p)}</span>
+                  </button>
+                  {p.type === 'STYRKE' && (
+                    <button className="plan-play" aria-label={t('Start live')}
+                            onClick={() => startLive(p.title, fromPlan(p.content, nextSets))}>▶</button>
+                  )}
+                  <button className="del" onClick={() => deletePlan(p.id)} aria-label={t('Slett plan')}>✕</button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+
+      {sheetOpen && (
+        <div className="sheet-backdrop" onClick={() => setSheetOpen(false)}>
+          <div className="sheet" role="dialog" aria-label={t('Ny')} onClick={(e) => e.stopPropagation()}>
+            <span className="sheet-handle" aria-hidden="true" />
+            <p className="sheet-label">{t('Økt')}</p>
+            <button className="sheet-item" onClick={() => pickNew('build')}>
+              <span className="sheet-icon">✏️</span><span className="sheet-text">{t('Bygg selv')}</span>
+            </button>
+            <button className="sheet-item" onClick={() => pickNew('muscles')}>
+              <span className="sheet-icon">💪</span><span className="sheet-text">{t('Velg muskler')}</span>
+            </button>
+            <button className="sheet-item" onClick={() => pickNew('ai-workout')}>
+              <span className="sheet-icon">✨</span>
+              <span className="sheet-text">{t('AI-økt')}<small>{t('Én økt til i dag')}</small></span>
+            </button>
+            <p className="sheet-label">{t('Plan')}</p>
+            <button className="sheet-item" onClick={() => pickNew('ai-plan')}>
+              <span className="sheet-icon">🗓️</span>
+              <span className="sheet-text">{t('AI-treningsplan')}<small>{t('Flere økter i uka')}</small></span>
+            </button>
+            <p className="sheet-label">{t('Import')}</p>
+            <label className="sheet-item">
+              <span className="sheet-icon">⌚</span>
+              <span className="sheet-text">{t('Importer fra Garmin')}<small>{t('Garmin Connect → Aktiviteter → «Eksporter CSV»')}</small></span>
+              <input type="file" accept=".csv,text/csv" hidden
+                     onChange={(e) => { setSheetOpen(false); importGarmin(e.target.files[0]); e.target.value = '' }} />
+            </label>
+          </div>
+        </div>
+      )}
+
+      {mode !== 'overview' && mode !== 'live' && (
+        <button className="back" onClick={() => setMode('overview')}>← {t('Trening')}</button>
+      )}
+
+      {mode === 'builder' && showPicker && <MusclePicker onCreate={applyMuscles} />}
+
+      {mode === 'ai-workout' && (
+        <div className="ai-panel">
+          <h2 className="detail-title">{t('AI-økt')}</h2>
+          <p className="muted ai-intro">{t('Hva vil du trene i dag? Økta tilpasses historikken din.')}</p>
+          <div className="ai-examples">
+            {[t('Push, 45 min'), t('Bein'), t('Overkropp'), t('Fullkropp')].map((ex) => (
+              <button key={ex} className="ai-example" disabled={aiwBusy} onClick={() => suggestWorkout(ex)}>{ex}</button>
+            ))}
+          </div>
+          <form className="ai-row" onSubmit={(e) => { e.preventDefault(); suggestWorkout() }}>
+            <input placeholder={t('F.eks. «rygg og biceps»')} value={aiwFocus} onChange={(e) => setAiwFocus(e.target.value)} />
+            <button className="primary" type="submit" disabled={aiwBusy || !aiwFocus.trim()}>{t('Lag')}</button>
+          </form>
+          {aiwBusy && <p className="muted typing">{t('Assistenten tenker')} <span>·</span><span>·</span><span>·</span></p>}
+          {aiwError && <p className="error">{aiwError}</p>}
+          {aiwResult && (
+            <div className="ai-workout">
+              <div className="ai-workout-head"><strong>{aiwResult.title}</strong></div>
+              {aiwResult.rationale && <p className="muted ai-workout-why">{aiwResult.rationale}</p>}
+              <WorkoutBody workout={aiwResult} />
+              <div className="ai-plan-actions">
+                <button className="primary" onClick={() => startLive(aiwResult.title, fromPlan(aiwResult.content, nextSets))}>
+                  ▶ {t('Start nå')}
+                </button>
+                <button className="mini" onClick={() => applySuggestion(aiwResult)}>{t('Rediger')}</button>
+              </div>
             </div>
           )}
-          {readiness?.none && (
-            <p className="muted readiness-hint" data-reveal>
-              {t('😴 Tips: legg til vanen «Søvn» (timer) under Restitusjon, så tilpasser vi treningsrådene til hvor godt du har sovet.')}
-            </p>
-          )}
-        </>
+        </div>
       )}
 
-      {mode === 'builder' && (
-        <>
-          <button className="back" data-reveal onClick={() => setMode('overview')}>← {t('Til oversikt')}</button>
-          <MusclePicker onCreate={applyMuscles} />
-        </>
-      )}
-
-      {mode === 'overview' && (
-      <div className="ai-panel" data-reveal>
+      {mode === 'ai-plan' && (
+      <div className="ai-panel">
         <div className="ai-panel-head">
-          <span className="ai-title">{t('🤖 AI-treningsassistent')}</span>
+          <h2 className="detail-title">{t('AI-treningsplan')}</h2>
           {aiMessages.length > 0 && (
             <button className="mini" onClick={resetChat} disabled={aiBusy || aiSaving}>{t('Ny samtale')}</button>
           )}
@@ -592,45 +746,6 @@ export default function TrainingView({ session }) {
           </div>
         )}
 
-        {plans.length > 0 && (
-          <div className="plan-list">
-            <span className="ai-title">{t('📋 Mine planer')}</span>
-
-            {plans.some((p) => dayIndex(p.content?.day) >= 0) && (
-              <div className="week-strip">
-                {WEEKDAYS.map((d, i) => {
-                  const onDay = plans.filter((p) => dayIndex(p.content?.day) === i)
-                  return (
-                    <div className={`week-cell ${onDay.length ? 'has' : ''}`} key={i}>
-                      <span className="week-cell-day">{t(d)}</span>
-                      {onDay.length
-                        ? onDay.map((p) => (
-                            <button key={p.id} className="week-cell-plan" onClick={() => applySuggestion(p)}
-                                    title={t('Bruk i ny økt')}>{p.title}</button>
-                          ))
-                        : <span className="week-cell-rest muted">–</span>}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-
-            <ul>
-              {plans.map((p) => (
-                <li key={p.id}>
-                  {p.content?.day && <span className="plan-day">{p.content.day}</span>}
-                  <strong>{p.title}</strong>{' '}
-                  <span className="muted">({t((TYPES.find((tp) => tp.v === p.type)?.t) || p.type)})</span>
-                  <button className="mini" onClick={() => applySuggestion(p)}>{t('Bruk i ny økt')}</button>
-                  {p.type === 'STYRKE' && (
-                    <button className="mini" onClick={() => startLive(p.title, fromPlan(p.content, nextSets))}>▶ {t('Live')}</button>
-                  )}
-                  <button className="del" onClick={() => deletePlan(p.id)} aria-label={t('Slett plan')}>✕</button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
       )}
 
@@ -770,56 +885,12 @@ export default function TrainingView({ session }) {
       </div>
       {error && <p className="error">{error}</p>}
 
-      <h3 className="detail-h3">{t('Progresjon (styrke)')}</h3>
-      <div className="progress-search">
-        <input list="exercises" placeholder={t('Øvelse, f.eks. Benkpress')} value={progressName} onChange={(e) => setProgressName(e.target.value)} />
-        <button onClick={loadProgress}>{t('Vis')}</button>
-      </div>
-      {progress && (progress.length === 0
-        ? <p className="muted">{t('Ingen logget for denne øvelsen ennå.')}</p>
-        : (
-          <div className="progress">
-            {progress.map((p, i) => (
-              <div className="prog-row" key={i}>
-                <span className="prog-date">{p.date}</span>
-                <span className="prog-bar"><span style={{ width: `${maxW ? (p.maxWeight / maxW) * 100 : 0}%` }} /></span>
-                <span className="prog-val">{p.maxWeight.toFixed(1)} kg</span>
-              </div>
-            ))}
-          </div>
-        ))}
       </>
       )}
 
       {mode === 'overview' && (
       <>
-      {nextSets.length > 0 && (
-        <div className="next-sets" data-reveal>
-          <span className="ai-title">{t('📈 Neste gang – progressive overload')}</span>
-          <ul>
-            {nextSets.map((s) => (
-              <li key={s.exercise} className={`next-set ${s.action.toLowerCase()}`}>
-                <span className="next-set-name"><strong>{s.exercise}</strong></span>
-                <span className="next-set-change">
-                  {s.lastWeightKg > 0 ? `${fmtKg(s.lastWeightKg)} kg` : t('kroppsvekt')} × {s.lastReps.join(', ')}
-                  {' → '}
-                  <strong>
-                    {s.nextWeightKg > 0 ? `${fmtKg(s.nextWeightKg)} kg` : t('kroppsvekt')} × {s.sets}×{s.nextReps}
-                  </strong>
-                  <span className={`next-set-tag ${s.action.toLowerCase()}`}>{t(ACTION_LABELS[s.action])}</span>
-                </span>
-                <span className="next-set-reason muted">{s.reason}</span>
-                <button className="mini" onClick={() => addNextToBuilder(s)}>{t('+ Legg i økt')}</button>
-              </li>
-            ))}
-          </ul>
-          <p className="muted source-note">
-            {t('Dobbel progresjon: flere reps til alle sett når toppen av området, så mer vekt. Tommelfingerregler – lytt til kroppen.')}
-          </p>
-        </div>
-      )}
-
-      <h3 className="detail-h3" data-reveal>{t('Oppsummering (siste 7 dager)')}</h3>
+      <h3 className="detail-h3" data-reveal>{t('Siste 7 dager')}</h3>
       {summaries.length > 0 ? (
         <div className="train-summary" data-reveal>
           {summaries.map((s) => <SummaryCard key={s.type} s={s} />)}
@@ -828,25 +899,7 @@ export default function TrainingView({ session }) {
         <p className="muted" data-reveal>{t('Logg noen økter, så ser du progresjonen din her.')}</p>
       )}
 
-      <div className="import-panel">
-        <span className="ai-title">{t('⌚ Importer fra Garmin')}</span>
-        <p className="muted import-hint">
-          {t('Garmin Connect → Aktiviteter → Alle aktiviteter → «Eksporter CSV», og velg fila her.')}
-          {' '}{t('Øktene dine havner i dagboka med ekte kalorier, og dagsbalansen bruker dem automatisk.')}
-        </p>
-        <label className={`file-btn ${importBusy ? 'busy' : ''}`}>
-          {importBusy ? t('Importerer …') : t('📂 Velg CSV-fil')}
-          <input type="file" accept=".csv,text/csv" hidden disabled={importBusy}
-                 onChange={(e) => { importGarmin(e.target.files[0]); e.target.value = '' }} />
-        </label>
-        {importMsg && (
-          <p className={importMsg.startsWith('✓') ? 'success' : importMsg.startsWith('Feil') ? 'error' : 'muted'}>
-            {importMsg}
-          </p>
-        )}
-      </div>
-
-      <h3 className="detail-h3">{t('Tidligere økter')}</h3>
+      <h3 className="detail-h3">{t('Historikk')}</h3>
       {workouts.length === 0 ? (
         <p className="muted">{t('Ingen økter ennå.')}</p>
       ) : (
@@ -858,13 +911,60 @@ export default function TrainingView({ session }) {
       )}
       </>
       )}
+
+      {mode === 'progress' && (
+        <div className="progress-page">
+          <h2 className="detail-title">{t('Progresjon')}</h2>
+          {nextSets.length === 0 && (
+            <p className="muted">{t('Logg noen styrkeøkter, så ser du hva som forventes neste gang.')}</p>
+          )}
+          <ul className="prog-list">
+            {nextSets.map((s) => {
+              const open = progressName === s.exercise
+              const kg = (v) => (v > 0 ? `${fmtKg(v)} kg` : t('kroppsvekt'))
+              return (
+                <li key={s.exercise} className={`prog-item ${open ? 'open' : ''}`}>
+                  <button className="prog-item-head" aria-expanded={open}
+                          onClick={() => (open ? setProgressName('') : loadProgress(s.exercise))}>
+                    <span className="prog-item-name">
+                      <strong>{s.exercise}</strong>
+                      <span className="muted">
+                        {kg(s.lastWeightKg)} × {s.lastReps.join(', ')} → <strong>{kg(s.nextWeightKg)} × {s.nextReps}</strong>
+                      </span>
+                    </span>
+                    <span className={`next-set-tag ${s.action.toLowerCase()}`}>{t(ACTION_LABELS[s.action])}</span>
+                  </button>
+                  {open && (
+                    <div className="prog-detail">
+                      <p><strong>{t('Neste økt')}:</strong> {s.sets} × {s.nextReps} · {kg(s.nextWeightKg)}</p>
+                      <p className="muted">{s.reason}</p>
+                      {progressChart}
+                      <button className="mini" onClick={() => addNextToBuilder(s)}>{t('+ Legg i økt')}</button>
+                    </div>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+
+          <h3 className="detail-h3">{t('Søk etter øvelse')}</h3>
+          <form className="progress-search" onSubmit={(e) => { e.preventDefault(); loadProgress(progressName) }}>
+            <input list="exercises" placeholder={t('Øvelse, f.eks. Benkpress')} value={progressName}
+                   onChange={(e) => { setProgressName(e.target.value); setProgress(null) }} />
+            <button type="submit">{t('Vis')}</button>
+          </form>
+          {progressName && !nextSets.some((s) => s.exercise === progressName) && progressChart}
+
+          <p className="muted source-note">
+            {t('Dobbel progresjon: flere reps til alle sett når toppen av området, så mer vekt. Tommelfingerregler – lytt til kroppen.')}
+          </p>
+        </div>
+      )}
     </div>
   )
 }
 
-// Ukedager (mandag først). Nøklene oversettes via t(); dayIndex tåler både
-// norske og engelske dagnavn (assistenten skriver på brukerens språk).
-const WEEKDAYS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag']
+// dayIndex tåler både norske og engelske dagnavn (assistenten skriver på brukerens språk).
 const DAY_ALIASES = {
   mandag: 0, monday: 0, tirsdag: 1, tuesday: 1, onsdag: 2, wednesday: 2,
   torsdag: 3, thursday: 3, fredag: 4, friday: 4,

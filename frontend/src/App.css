@@ -1848,3 +1848,82 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .live-rest-time { font-size: 20px; font-weight: 800; }
 .live-rest-btns { display: flex; gap: 6px; }
 .live-rest-btns button { padding: 8px 12px; border-radius: 10px; }
+
+/* ---------- Trening: kompakt oversikt (ikonknapper, plankort, «Ny»-ark) ---------- */
+.train-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 4px 0 14px; }
+.train-action {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 6px 12px; border-radius: 16px;
+  border: 1px solid var(--border); background: var(--card-solid);
+  color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: transform 0.12s, border-color 0.2s;
+}
+.train-action:active { transform: scale(0.97); }
+.train-action:hover { border-color: var(--accent); }
+.ta-icon { font-size: 22px; line-height: 1; }
+.train-action.go { background: var(--accent); border-color: var(--accent); color: #06251a; }
+
+.readiness-line { margin: 0 0 6px; font-size: var(--fs-sm); }
+.readiness-line summary { cursor: pointer; list-style: none; padding: 6px 0; }
+.readiness-line summary::-webkit-details-marker { display: none; }
+.readiness-line p { margin: 2px 0 8px; }
+
+.plan-cards { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.plan-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 10px 6px 4px; border-radius: 14px;
+  border: 1px solid var(--border); background: var(--card-solid);
+}
+.plan-card-main {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 8px 10px; background: none; border: none; color: var(--text); text-align: left; cursor: pointer;
+}
+.plan-card-main strong { font-size: 16px; }
+.plan-card-main .muted { font-size: var(--fs-sm); }
+.plan-card .del { margin-left: 0; }
+.plan-play {
+  width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%;
+  border: none; background: var(--accent-soft); color: var(--accent-strong);
+  font-size: 15px; cursor: pointer;
+}
+.plan-empty {
+  width: 100%; padding: 14px; border-radius: 14px; border: 1px dashed var(--border-strong);
+  background: none; color: var(--accent-strong); font-weight: 600; cursor: pointer;
+}
+
+.sheet-backdrop {
+  position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.35);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.sheet {
+  width: 100%; max-width: 520px; background: var(--card-solid);
+  border-radius: 20px 20px 0 0; padding: 8px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; gap: 4px;
+  box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.2);
+  animation: sheet-up 0.22s ease-out;
+}
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+.sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--border-strong); align-self: center; margin-bottom: 6px; }
+.sheet-label { margin: 10px 4px 2px; font-size: 12px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted); }
+.sheet-item {
+  display: flex; align-items: center; gap: 14px; width: 100%;
+  padding: 12px 8px; border: none; border-radius: 12px; background: none;
+  color: var(--text); font-size: 16px; font-weight: 500; text-align: left; cursor: pointer;
+}
+.sheet-item:hover, .sheet-item:active { background: var(--tint); }
+.sheet-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: var(--tint); font-size: 18px; flex-shrink: 0; }
+.sheet-text { display: flex; flex-direction: column; }
+.sheet-text small { color: var(--muted); font-size: 13px; font-weight: 400; }
+
+.prog-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.prog-item { border: 1px solid var(--border); border-radius: 14px; background: var(--card-solid); overflow: hidden; }
+.prog-item.open { border-color: var(--accent); }
+.prog-item-head {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 12px 14px; background: none; border: none; color: var(--text); text-align: left; cursor: pointer;
+}
+.prog-item-name { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.prog-item-name .muted { font-size: var(--fs-sm); }
+.prog-detail { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 6px; }
+.prog-detail p { margin: 0; }
+.prog-detail .mini { align-self: flex-start; }
