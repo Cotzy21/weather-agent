@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import LifetimeStats from './LifetimeStats.jsx'
 import { localIso } from './trainingStats.js'
 import { authHeaders } from './supabase'
 import { cachedGet, getCached } from './api'
@@ -196,6 +197,8 @@ export default function Dashboard({ session, onNavigate }) {
           </div>
         </aside>
       </div>
+
+      <LifetimeStats workouts={workouts} />
 
       <h3 className="detail-h3" data-reveal>{t('Nylig aktivitet')}</h3>
       {workouts.length === 0 ? (
