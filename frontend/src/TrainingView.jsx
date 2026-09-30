@@ -10,6 +10,9 @@ import { exerciseKey } from './exercises'
 import TrainingMemoryCard from './TrainingMemoryCard.jsx'
 import TrainingOnboarding from './TrainingOnboarding.jsx'
 import ThinkingText from './ThinkingText.jsx'
+import GarminImport from './GarminImport.jsx'
+import ExerciseTrends from './ExerciseTrends.jsx'
+import { useGarminImport } from './useGarminImport.js'
 import { loadLive, clearLive, newLive, newId, fromPlan } from './liveSession.js'
 import { workoutQueue, onPendingChange, setQueueOwner } from './offlineQueue.js'
 import { dayIndex, strengthVolume, localIso } from './trainingStats.js'
@@ -78,9 +81,8 @@ export default function TrainingView({ session }) {
   const [dragIdx, setDragIdx] = useState(null)
   const [dragOver, setDragOver] = useState(null)
 
-  // Garmin-import (CSV-eksport fra Garmin Connect).
-  const [importBusy, setImportBusy] = useState(false)
-  const [importMsg, setImportMsg] = useState(null)
+  // Garmin-import: CSV (alle økter) og FIT/ZIP (øvelser og vekter), lest på enheten.
+  const imp = useGarminImport({ onDone: () => Promise.all([loadWorkouts(), loadNextSets()]) })
 
   const [progressName, setProgressName] = useState('')
   const [progress, setProgress] = useState(null)
@@ -401,31 +403,6 @@ export default function TrainingView({ session }) {
     }
   }
 
-  // Les CSV-fila i nettleseren og send råteksten til backend, som parser og
-  // hopper over økter som finnes fra før (idempotent).
-  async function importGarmin(file) {
-    if (!file) return
-    setImportBusy(true)
-    setImportMsg(null)
-    try {
-      const text = await file.text()
-      const res = await fetch(apiUrl('/api/trening/import/garmin'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain', ...(await authHeaders()) },
-        body: text,
-      })
-      if (!res.ok) throw new Error(await readError(res))
-      const r = await res.json()
-      setImportMsg(r.imported === 0 && r.skipped === 0
-        ? t('Fant ingen aktiviteter i fila – er det CSV-eksporten fra Garmin Connect?')
-        : `✓ ${r.imported} ${t('økter importert')}${r.skipped ? ` · ${r.skipped} ${t('hoppet over (fantes fra før)')}` : ''}`)
-      loadWorkouts()
-    } catch (e) {
-      setImportMsg(`Feil: ${e.message}`)
-    } finally {
-      setImportBusy(false)
-    }
-  }
 
   async function deleteWorkout(id) {
     try {
@@ -725,10 +702,7 @@ export default function TrainingView({ session }) {
             </p>
           )}
           {liveSaved && <p className="success">{liveSaved === 'queued' ? t('✓ Lagret på enheten – sendes når nettet er tilbake') : t('✓ Økt lagret')}</p>}
-          {importBusy && <p className="muted">{t('Importerer …')}</p>}
-          {importMsg && (
-            <p className={importMsg.startsWith('✓') ? 'success' : importMsg.startsWith('Feil') ? 'error' : 'muted'}>{importMsg}</p>
-          )}
+          <GarminImport imp={imp} />
 
           {readiness && !readiness.none && (
             <details className={`readiness-line ${readiness.level.toLowerCase()}`} data-reveal>
@@ -791,7 +765,7 @@ export default function TrainingView({ session }) {
               <span className="sheet-icon">⌚</span>
               <span className="sheet-text">{t('Importer fra Garmin')}<small>{t('Garmin Connect → Aktiviteter → «Eksporter CSV»')}</small></span>
               <input type="file" accept=".csv,text/csv" hidden
-                     onChange={(e) => { setSheetOpen(false); importGarmin(e.target.files[0]); e.target.value = '' }} />
+                     onChange={(e) => { setSheetOpen(false); imp.runCsv(e.target.files[0]); e.target.value = '' }} />
             </label>
           </div>
         </div>
@@ -1134,6 +1108,13 @@ export default function TrainingView({ session }) {
               )
             })}
           </ul>
+
+          <ExerciseTrends
+            workouts={workouts}
+            openName={progressName}
+            chart={progressChart}
+            onOpen={(name) => (progressName === name ? (setProgressName(''), setProgress(null)) : loadProgress(name))}
+          />
 
           <h3 className="detail-h3">{t('Søk etter øvelse')}</h3>
           <button className="exercise-pick" onClick={() => setPickFor('progress')}>

@@ -11,7 +11,8 @@
    ],
    "aliases": [
     "Bench",
-    "Flat bench press"
+    "Flat bench press",
+    "Barbell Bench Press"
    ]
   },
   {
@@ -25,7 +26,8 @@
    ],
    "aliases": [
     "Incline press",
-    "Skråpress"
+    "Skråpress",
+    "Incline Barbell Bench Press"
    ]
   },
   {
@@ -40,7 +42,9 @@
    "aliases": [
     "Manualpress",
     "Dumbbell bench press",
-    "Dumbbell chest press"
+    "Dumbbell chest press",
+    "Dumbbell Bench Press",
+    "Neutral Grip Dumbbell Bench Press"
    ]
   },
   {
@@ -55,7 +59,9 @@
    "aliases": [
     "Fly",
     "Dumbbell fly",
-    "Flyes"
+    "Flyes",
+    "Dumbbell Flye",
+    "Dumbbell Fly"
    ]
   },
   {
@@ -67,7 +73,10 @@
     "dip-bars"
    ],
    "aliases": [
-    "Dip"
+    "Dip",
+    "Body Weight Dip",
+    "Weighted Dip",
+    "Bodyweight Dip"
    ]
   },
   {
@@ -92,7 +101,8 @@
     "barbell"
    ],
    "aliases": [
-    "Markløft med stang"
+    "Markløft med stang",
+    "Barbell Deadlift"
    ],
    "heavyLower": true
   },
@@ -122,7 +132,9 @@
     "Lat pulldown",
     "Lat pull down",
     "Nedtrekk til bryst",
-    "Lat pulldowns"
+    "Lat pulldowns",
+    "Wide Grip Lat Pulldown",
+    "Close Grip Lat Pulldown"
    ]
   },
   {
@@ -136,7 +148,10 @@
    "aliases": [
     "Bent over row",
     "Stangroing",
-    "Barbell row"
+    "Barbell row",
+    "Barbell Row",
+    "Bent Over Row With Barbell",
+    "Bent Over Row"
    ]
   },
   {
@@ -163,7 +178,10 @@
    "aliases": [
     "Pullups",
     "Pull up",
-    "Pull-up"
+    "Pull-up",
+    "Wide Grip Pull Up",
+    "Weighted Pull Up",
+    "Neutral Grip Pull Up"
    ]
   },
   {
@@ -177,7 +195,10 @@
    "aliases": [
     "Chinups",
     "Chin up",
-    "Chin-up"
+    "Chin-up",
+    "Weighted Chin Up",
+    "Neutral Grip Chin Up",
+    "Close Grip Chin Up"
    ]
   },
   {
@@ -230,7 +251,11 @@
    ],
    "aliases": [
     "Back squat",
-    "Knebøy med stang"
+    "Knebøy med stang",
+    "Barbell Back Squat",
+    "Back Squats",
+    "Barbell Squat",
+    "Weighted Back Squats"
    ],
    "heavyLower": true
   },
@@ -244,7 +269,8 @@
     "rack"
    ],
    "aliases": [
-    "Front knebøy"
+    "Front knebøy",
+    "Barbell Front Squat"
    ],
    "heavyLower": true
   },
@@ -281,7 +307,11 @@
    "requires": [],
    "aliases": [
     "Lunge",
-    "Walking lunges"
+    "Walking lunges",
+    "Dumbbell Lunge",
+    "Barbell Lunge",
+    "Weighted Lunge",
+    "Barbell Reverse Lunge"
    ]
   },
   {
@@ -292,7 +322,9 @@
    "requires": [],
    "aliases": [
     "Bulgarian split squats",
-    "Bulgarsk utfall"
+    "Bulgarsk utfall",
+    "Dumbbell Bulgarian Split Squat",
+    "Barbell Bulgarian Split Squat"
    ]
   },
   {
@@ -317,7 +349,8 @@
    ],
    "aliases": [
     "Hamstring curl",
-    "Lying leg curl"
+    "Lying leg curl",
+    "Weighted Leg Curl"
    ]
   },
   {
@@ -328,7 +361,10 @@
    "requires": [],
    "aliases": [
     "Calf raise",
-    "Tåhev stående"
+    "Tåhev stående",
+    "Standing Calf Raise",
+    "Standing Dumbbell Calf Raise",
+    "Weighted Standing Calf Raise"
    ]
   },
   {
@@ -340,7 +376,9 @@
     "bench"
    ],
    "aliases": [
-    "Hip thrusts"
+    "Hip thrusts",
+    "Barbell Hip Thrust With Bench",
+    "Barbell Hip Thrust On Floor"
    ],
    "heavyLower": true
   },
@@ -356,7 +394,11 @@
     "Militærpress",
     "OHP",
     "Shoulder press",
-    "Skulderpress med manualer"
+    "Barbell Shoulder Press",
+    "Overhead Barbell Press",
+    "Seated Barbell Shoulder Press",
+    "Military Press",
+    "Strict Press"
    ]
   },
   {
@@ -370,7 +412,9 @@
    "aliases": [
     "Lateral raise",
     "Side raises",
-    "Sidehev med manualer"
+    "Sidehev med manualer",
+    "Dumbbell Lateral Raise",
+    "Seated Lateral Raise"
    ]
   },
   {
@@ -382,7 +426,8 @@
     "dumbbell"
    ],
    "aliases": [
-    "Front raise"
+    "Front raise",
+    "Dumbbell Front Raise"
    ]
   },
   {
@@ -395,7 +440,9 @@
    ],
    "aliases": [
     "Reverse fly",
-    "Bakre skulder flies"
+    "Bakre skulder flies",
+    "Bent Over Lateral Raise",
+    "Seated Rear Lateral Raise"
    ]
   },
   {
@@ -417,7 +464,8 @@
     "barbell"
    ],
    "aliases": [
-    "Upright rows"
+    "Upright rows",
+    "Barbell Upright Row"
    ]
   },
   {
@@ -437,7 +485,12 @@
     "Curls",
     "Bicep Curls",
     "Manualcurl",
-    "Dumbbell curl"
+    "Dumbbell curl",
+    "Dumbbell Biceps Curl",
+    "Standing Dumbbell Biceps Curl",
+    "Seated Dumbbell Biceps Curl",
+    "Alternating Dumbbell Biceps Curl",
+    "Standing Alternating Dumbbell Curls"
    ]
   },
   {
@@ -450,7 +503,8 @@
    ],
    "aliases": [
     "Hammer curl",
-    "Hammercurls"
+    "Hammercurls",
+    "Dumbbell Hammer Curl"
    ]
   },
   {
@@ -476,7 +530,9 @@
    "aliases": [
     "Triceps pushdowns",
     "Tricep pushdowns",
-    "Pushdown"
+    "Pushdown",
+    "Triceps Pressdown",
+    "Cable Triceps Pressdown"
    ]
   },
   {
@@ -490,7 +546,9 @@
    "aliases": [
     "Triceps extensions",
     "Tricep extensions",
-    "Overhead triceps extension"
+    "Overhead triceps extension",
+    "Overhead Dumbbell Triceps Extension",
+    "Seated Dumbbell Overhead Triceps Extension"
    ]
   },
   {
@@ -504,7 +562,9 @@
    ],
    "aliases": [
     "Skullcrusher",
-    "Skull crushers"
+    "Skull crushers",
+    "Lying Ez Bar Triceps Extension",
+    "Lying Triceps Extension"
    ]
   },
   {
@@ -618,6 +678,77 @@
    "requires": [],
    "aliases": [
     "Mountain climber"
+   ]
+  },
+  {
+   "id": "dumbbell-shoulder-press",
+   "group": "Skuldre",
+   "nb": "Skulderpress manualer",
+   "en": "Dumbbell Shoulder Press",
+   "requires": [
+    "dumbbell"
+   ],
+   "aliases": [
+    "Seated Dumbbell Shoulder Press",
+    "Overhead Dumbbell Press",
+    "Skulderpress med manualer",
+    "Seated Dumbbell Press"
+   ]
+  },
+  {
+   "id": "barbell-curl",
+   "group": "Armer",
+   "nb": "Stangcurl",
+   "en": "Barbell Curl",
+   "requires": [
+    "barbell"
+   ],
+   "aliases": [
+    "Barbell Biceps Curl",
+    "Standing Ez Bar Biceps Curl",
+    "Ez Bar Curl",
+    "EZ-stangcurl"
+   ]
+  },
+  {
+   "id": "shrugs",
+   "group": "Rygg",
+   "nb": "Shrugs",
+   "en": "Shrugs",
+   "requires": [
+    "dumbbell"
+   ],
+   "aliases": [
+    "Dumbbell Shrug",
+    "Barbell Shrug",
+    "Skuldertrekk"
+   ]
+  },
+  {
+   "id": "cable-crossover",
+   "group": "Bryst",
+   "nb": "Kabelcrossover",
+   "en": "Cable Crossover",
+   "requires": [
+    "cable"
+   ],
+   "aliases": [
+    "Cable Fly",
+    "Kabelflies"
+   ]
+  },
+  {
+   "id": "incline-dumbbell-press",
+   "group": "Bryst",
+   "nb": "Skråpress manualer",
+   "en": "Incline Dumbbell Press",
+   "requires": [
+    "dumbbell",
+    "bench"
+   ],
+   "aliases": [
+    "Incline Dumbbell Bench Press",
+    "Skråbenkpress manualer"
    ]
   }
  ]

@@ -2213,3 +2213,30 @@ header .sub { margin-top: 6px; color: var(--muted); }
   position: sticky; top: 0; z-index: 50; padding: 10px 16px; text-align: center;
   background: var(--tint); border-bottom: 1px solid var(--border-strong); font-size: var(--fs-sm); font-weight: 600;
 }
+
+/* ---------- Garmin-import og utvikling per øvelse ---------- */
+.garmin-import { margin: 12px 0; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border-strong); background: var(--card-solid); }
+.gi-head { margin-bottom: 8px; }
+.gi-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.gi-btn { cursor: pointer; }
+.gi-btn.disabled { opacity: .5; pointer-events: none; }
+.gi-note { margin: 8px 0 0; font-size: var(--fs-sm); }
+.gi-help { margin-top: 6px; font-size: var(--fs-sm); }
+.gi-help summary { cursor: pointer; color: var(--accent-strong); font-weight: 600; }
+.gi-help ol { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+
+.trend-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.trend-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 12px;
+  border-radius: 12px; border: 1px solid var(--border); background: var(--card-solid); color: var(--text); cursor: pointer;
+}
+.trend-row.static { cursor: default; }
+.trend-row.open { border-color: var(--accent); }
+.trend-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.trend-main .muted { font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.trend-pct { min-width: 56px; text-align: right; font-weight: 700; font-size: var(--fs-sm); }
+.trend-pct.up { color: var(--accent-strong); }
+.trend-pct.down { color: var(--danger); }
+.sparkline { flex: none; stroke: var(--muted); fill: var(--muted); }
+.sparkline.up { stroke: var(--accent-strong); fill: var(--accent-strong); }
+.sparkline.down { stroke: var(--danger); fill: var(--danger); }

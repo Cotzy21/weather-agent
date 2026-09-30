@@ -7,7 +7,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -26,8 +29,18 @@ public class WorkoutImportService {
     /** Tak på antall rader per import - mot både uhell og misbruk. */
     static final int MAX_ROWS = 2000;
 
-    public record ImportResult(int imported, int skipped) {
+    /** {@code merged}: CSV-rader som ble slått sammen med en styrkeøkt fra FIT-import i stedet for å bli en duplikat. */
+    public record ImportResult(int imported, int skipped, int merged) {
+        public ImportResult(int imported, int skipped) {
+            this(imported, skipped, 0);
+        }
     }
+
+    /** Tittelen en styrkeøkt får når den kommer fra en FIT-fil uten navn; CSV-tittelen (f.eks. «Push») overstyrer den. */
+    static final String GENERIC_TITLE = "Styrkeøkt";
+
+    /** CSV og FIT gjelder samme økt når varigheten ligger så nære hverandre (ellers er det to økter samme dag). */
+    static final double MERGE_MAX_DURATION_GAP_MIN = 25;
 
     /** Tak på sett per forespørsel (50 økter x 60 blokker x 100 sett er i praksis aldri nådd). */
     static final int MAX_SETS_PER_REQUEST = 5000;
@@ -46,6 +59,17 @@ public class WorkoutImportService {
         List<GarminActivity> activities = GarminCsvParser.parse(csv);
 
         Set<String> seen = new HashSet<>();
+        // Styrkeøkter som allerede er importert fra FIT (har øvelser, men ingen CSV-tittel): CSV-raden slås sammen med dem.
+        Map<LocalDate, List<Workout>> fitStrength = new HashMap<>();
+        if (!activities.isEmpty()) {
+            LocalDate first = activities.stream().map(GarminActivity::date).min(Comparator.naturalOrder()).orElseThrow();
+            LocalDate last = activities.stream().map(GarminActivity::date).max(Comparator.naturalOrder()).orElseThrow();
+            for (Workout w : repository.findByUserIdAndTypeAndDateBetween(userId, "STYRKE", first, last)) {
+                if (w.getClientId() != null && GENERIC_TITLE.equals(w.getTitle())) {
+                    fitStrength.computeIfAbsent(w.getDate(), d -> new ArrayList<>()).add(w);
+                }
+            }
+        }
         if (!activities.isEmpty()) {
             LocalDate from = activities.stream().map(GarminActivity::date).min(Comparator.naturalOrder()).orElseThrow();
             LocalDate to = activities.stream().map(GarminActivity::date).max(Comparator.naturalOrder()).orElseThrow();
@@ -56,6 +80,7 @@ public class WorkoutImportService {
 
         int imported = 0;
         int skipped = 0;
+        int merged = 0;
         for (GarminActivity a : activities) {
             if (imported >= MAX_ROWS) {
                 skipped++;
@@ -65,11 +90,39 @@ public class WorkoutImportService {
                 skipped++;
                 continue;
             }
+            Workout fit = "STYRKE".equals(a.type()) ? takeMatchingFit(fitStrength.get(a.date()), a) : null;
+            if (fit != null) {
+                fit.absorbCsv(a.title(), content(a));
+                repository.save(fit);
+                merged++;
+                continue;
+            }
             repository.save(new Workout(userId, a.date(), a.title(), a.type(),
                     content(a), "Importert fra Garmin"));
             imported++;
         }
-        return new ImportResult(imported, skipped);
+        return new ImportResult(imported, skipped, merged);
+    }
+
+    /** Nærmeste FIT-økt samme dag (og fjerner den fra listen, så to CSV-rader ikke deler én økt). Null om ingen passer. */
+    private static Workout takeMatchingFit(List<Workout> candidates, GarminActivity a) {
+        if (candidates == null || candidates.isEmpty()) {
+            return null;
+        }
+        Workout best = null;
+        double bestGap = Double.MAX_VALUE;
+        for (Workout w : candidates) {
+            double have = w.getContent().path("durationMin").asDouble(-1);
+            double gap = have < 0 || a.durationMin() == null ? 0 : Math.abs(have - a.durationMin());
+            if (gap <= MERGE_MAX_DURATION_GAP_MIN && gap < bestGap) {
+                best = w;
+                bestGap = gap;
+            }
+        }
+        if (best != null) {
+            candidates.remove(best);
+        }
+        return best;
     }
 
     private static ObjectNode content(GarminActivity a) {

@@ -61,6 +61,14 @@ koden og testet lokalt (369 backend-tester, 34 frontend-tester, og en ekte Postg
   fonter, manifest og service worker laster). Kartfliser og innlogging mot Supabase er ikke prøvd (ingen nett/nøkler i sandkassen).
 - **React:** ingen `dangerouslySetInnerHTML`, `eval` eller `innerHTML`; eneste HTML-sink var Leaflet-popupene (fikset).
 
+## Tillegg: Garmin-import
+
+- `POST /api/trening/import/fit` krever innlogging, validerer alt (maks 50 økter, 60 øvelser, 100 sett, reps 1–1000, vekt 0–1000 kg,
+  maks 5000 sett per forespørsel, dato siste 30 år) og er idempotent. Størrelsesgrensen er 8 MB som for CSV-importen.
+- FIT-/zip-filene pakkes ut og tolkes i nettleseren (aldri på serveren), så en ondsinnet fil kan ikke belaste serveren.
+  Zip i zip er begrenset til tre nivåer, og bare `.fit`-filer pakkes ut.
+- `@garmin/fitsdk` har en egen lisens (se `THIRD_PARTY.md`).
+
 ## Kjente restrisikoer (akseptert eller utenfor kode)
 
 - **Rate limit bak proxy:** klient-IP leses fra første `X-Forwarded-For`-verdi, som en angriper kan forfalske for å

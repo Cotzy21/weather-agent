@@ -53,4 +53,34 @@ class ExerciseCatalogTest {
         assertTrue(ExerciseCatalog.missingEquipment("Bicep Curls", ExerciseCatalog.equipmentFor("BODYWEIGHT")));
         assertTrue(!ExerciseCatalog.missingEquipment("Face Pulls", ExerciseCatalog.equipmentFor("GYM")));
     }
+
+    @Test
+    void noNameOrAliasBelongsToTwoDifferentExercises() {
+        java.util.Map<String, String> seen = new java.util.HashMap<>();
+        for (var e : ExerciseCatalog.get().all()) {
+            seen.putIfAbsent(ExerciseCatalog.normalize(e.nb()), e.id());
+            seen.putIfAbsent(ExerciseCatalog.normalize(e.en()), e.id());
+        }
+        // Alle navn slår opp til øvelsen de står under (fanger at et alias «stjeles» av en annen øvelse).
+        for (var e : ExerciseCatalog.get().all()) {
+            assertEquals(e.id(), ExerciseCatalog.get().resolve(e.nb()).orElseThrow().id(), e.nb());
+            assertEquals(e.id(), ExerciseCatalog.get().resolve(e.en()).orElseThrow().id(), e.en());
+        }
+    }
+
+    @Test
+    void garminExerciseNamesJoinTheAppsOwnExercises() {
+        // Navnene Garmin-klokka skriver i FIT-filer skal samles med det du logger selv i appen.
+        assertEquals("bench-press", ExerciseCatalog.groupKey("Barbell Bench Press"));
+        assertEquals("bench-press", ExerciseCatalog.groupKey("Benkpress"));
+        assertEquals("squat", ExerciseCatalog.groupKey("Barbell Back Squat"));
+        assertEquals("deadlift", ExerciseCatalog.groupKey("Barbell Deadlift"));
+        assertEquals("lat-pulldown", ExerciseCatalog.groupKey("Lat Pulldown"));
+        assertEquals("bicep-curls", ExerciseCatalog.groupKey("Standing Dumbbell Biceps Curl"));
+        assertEquals("leg-press", ExerciseCatalog.groupKey("Leg Press"));
+        assertEquals("overhead-press", ExerciseCatalog.groupKey("Barbell Shoulder Press"));
+        // manual- og stangvarianter er ulike øvelser (helt ulike vekter), og skal ikke blandes
+        assertEquals("dumbbell-shoulder-press", ExerciseCatalog.groupKey("Seated Dumbbell Shoulder Press"));
+        assertEquals("barbell-curl", ExerciseCatalog.groupKey("Barbell Biceps Curl"));
+    }
 }

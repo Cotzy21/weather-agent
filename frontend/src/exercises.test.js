@@ -35,4 +35,13 @@ describe('exercise catalog', () => {
     expect(en).not.toContain('Bench Press')
     expect(sameGroup('Helt egen øvelse')).toEqual([])
   })
+
+  it("joins the names Garmin's watch writes with the app's own exercises, but keeps dumbbell and barbell apart", () => {
+    expect(exerciseKey('Barbell Bench Press')).toBe(exerciseKey('Benkpress'))
+    expect(exerciseKey('Barbell Back Squat')).toBe(exerciseKey('Knebøy'))
+    expect(exerciseKey('Standing Dumbbell Biceps Curl')).toBe(exerciseKey('Bicepscurl'))
+    expect(exerciseKey('Leg Press')).toBe('leg-press')
+    expect(exerciseKey('Seated Dumbbell Shoulder Press')).not.toBe(exerciseKey('Barbell Shoulder Press'))
+    expect(exerciseKey('Barbell Biceps Curl')).not.toBe(exerciseKey('Bicepscurl'))
+  })
 })

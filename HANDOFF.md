@@ -78,6 +78,18 @@ Dockerfile + PORT-config for backend-deploy finnes.
   størrelsesgrense på forespørsler, begrensede cacher, CSP/HSTS-hoder, tidsavbrudd og `max_tokens` mot LLM, generiske
   feilsvar, escapede kart-popups, container som ikke-root, Spring Boot 3.5.16. Keep-alive mot Render:
   `.github/workflows/keepalive.yml` (må ligge i `main`).
+- **Garmin-import** (knapp «Importer fra Garmin» synlig øverst på Trening, samt i «＋ Ny»-menyen):
+  - **CSV** (alle aktiviteter): sendes i biter på 250 rader (`csvChunks.js`), så hundrevis av økter ikke tar alt på én gang
+    (Render 512 MB, tidsavbrudd). Lagrer nå også totaler for styrkeøkter (sett, reps, puls) og dedupe bruker en lett nøkkelspørring.
+    CSV har ALDRI øvelser eller vekter; det er en begrensning hos Garmin.
+  - **FIT / ZIP** (`garminZip.js`, `garminFit.js`, `garminImport.js`): øvelser, reps og vekter per sett. Zip (også zip i zip, som
+    Garmins fulle dataeksport) leses strømmende og FIT tolkes i nettleseren; serveren får bare ferdige økter (`POST /api/trening/import/fit`,
+    små grupper, idempotent på `clientId` = hash av starttid). En FIT-økt fyller inn øvelser på CSV-økten fra samme dag (nærmeste varighet)
+    i stedet for å lage duplikat, og omvendt. Dette er løsningen på 512 MB-problemet: all tung regning skjer på telefonen/PC-en.
+  - **Progresjon**: «Progresjon»-fanen har «Utvikling per øvelse» (første → siste, % endring, trendlinje; regnet ut i nettleseren over hele
+    historikken) og «Økter over tid» per økttype (Push/Pull/Legs) fra CSV-totaler. Garmin-øvelsesnavn er lagt som aliaser i `exercises.json`,
+    så de samles med øvelsene du logger selv. Manual- og stangvarianter holdes bevisst adskilt.
+  - Ikke verifisert mot en ekte Garmin-eksport (bare FIT-filer laget med Garmins egen koder i tester). Lisens for `@garmin/fitsdk`: se `THIRD_PARTY.md`.
 - Gjenstår: real-time tracking (sen fase i planen), klokke-integrasjoner.
 
 ### Kosthold ✅

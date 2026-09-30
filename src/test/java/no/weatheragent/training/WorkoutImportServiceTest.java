@@ -186,4 +186,57 @@ class WorkoutImportServiceTest {
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> service.importFit(user,
                 List.of(fit(UUID.randomUUID(), LocalDate.now().plusYears(2), 50.0, "Squat"))));
     }
+
+    // --- CSV etter FIT: samme økt skal ikke bli to ---
+
+    @Test
+    void csvRowIsMergedIntoAnAlreadyImportedFitSessionInsteadOfDuplicatingIt() {
+        LocalDate day = LocalDate.of(2026, 6, 30);
+        var content = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        content.put("durationMin", 51);
+        content.putArray("blocks").addObject().put("name", "Barbell Bench Press");
+        Workout fromFit = new Workout(user, day, "Styrkeøkt", "STYRKE", content, "Importert fra Garmin (FIT)")
+                .withOrigin(UUID.randomUUID(), null);
+        when(repo.findKeysBetween(org.mockito.ArgumentMatchers.eq(user), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of());
+        when(repo.findByUserIdAndTypeAndDateBetween(org.mockito.ArgumentMatchers.eq(user), org.mockito.ArgumentMatchers.eq("STYRKE"),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(List.of(fromFit));
+        String csv = """
+                Aktivitetstype,Dato,Tittel,Kalorier,Tid,Totalt antall sett
+                Styrketrening,2026-06-30 17:00:00,"Push","310","00:52:10","18"
+                """;
+
+        var r = service.importGarmin(user, csv);
+
+        assertEquals(0, r.imported());
+        assertEquals(1, r.merged());
+        assertEquals("Push", fromFit.getTitle()); // CSV-tittelen erstatter den generiske
+        assertEquals(310, fromFit.getContent().path("kcal").asInt()); // totaler fylles inn
+        assertEquals(18, fromFit.getContent().path("totalSets").asInt());
+        assertEquals(51, fromFit.getContent().path("durationMin").asInt()); // FIT-verdier overstyres ikke
+        assertEquals("Barbell Bench Press", fromFit.getContent().path("blocks").get(0).path("name").asText()); // øvelser urørt
+        verify(repo, org.mockito.Mockito.never()).save(org.mockito.ArgumentMatchers.argThat(w -> w != fromFit));
+    }
+
+    @Test
+    void aCsvRowWithVeryDifferentDurationIsNotMergedIntoAnotherSessionTheSameDay() {
+        LocalDate day = LocalDate.of(2026, 6, 30);
+        var content = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        content.put("durationMin", 20);
+        Workout fromFit = new Workout(user, day, "Styrkeøkt", "STYRKE", content, "FIT").withOrigin(UUID.randomUUID(), null);
+        when(repo.findKeysBetween(org.mockito.ArgumentMatchers.eq(user), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of());
+        when(repo.findByUserIdAndTypeAndDateBetween(org.mockito.ArgumentMatchers.eq(user), org.mockito.ArgumentMatchers.eq("STYRKE"),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(List.of(fromFit));
+        String csv = """
+                Aktivitetstype,Dato,Tittel,Tid
+                Styrketrening,2026-06-30 19:00:00,"Legs","01:10:00"
+                """;
+
+        var r = service.importGarmin(user, csv);
+
+        assertEquals(1, r.imported());
+        assertEquals(0, r.merged());
+        assertEquals("Styrkeøkt", fromFit.getTitle());
+    }
 }

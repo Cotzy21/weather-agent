@@ -83,6 +83,23 @@ public class Workout {
         this.clientId = clientId;
     }
 
+    /**
+     * En CSV-rad for samme økt kommer etter FIT-importen: øktnavnet fra Garmin Connect (f.eks. «Push») erstatter det
+     * generiske, og totalene fra CSV fylles inn der de mangler. Øvelser og vekter fra FIT-filen røres ikke.
+     */
+    public void absorbCsv(String csvTitle, com.fasterxml.jackson.databind.JsonNode csvContent) {
+        this.title = csvTitle;
+        if (content instanceof com.fasterxml.jackson.databind.node.ObjectNode merged) {
+            var fields = csvContent.fields();
+            while (fields.hasNext()) {
+                var f = fields.next();
+                if (!merged.has(f.getKey())) {
+                    merged.set(f.getKey(), f.getValue());
+                }
+            }
+        }
+    }
+
     public UUID getClientId() { return clientId; }
     public UUID getPlannedId() { return plannedId; }
     public UUID getId() { return id; }

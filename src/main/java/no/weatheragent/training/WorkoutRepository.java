@@ -33,6 +33,8 @@ public interface WorkoutRepository extends JpaRepository<Workout, UUID> {
                                      @org.springframework.data.repository.query.Param("from") LocalDate from,
                                      @org.springframework.data.repository.query.Param("to") LocalDate to);
 
+    List<Workout> findByUserIdAndTypeAndDateBetween(UUID userId, String type, LocalDate from, LocalDate to);
+
     java.util.Optional<Workout> findByUserIdAndClientId(UUID userId, UUID clientId);
 
     long deleteByIdAndUserId(UUID id, UUID userId);
