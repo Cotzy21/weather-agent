@@ -74,6 +74,17 @@ class OpenEndpointsSecurityTest {
     }
 
     @Test
+    void whenOverpassIsBusyTheSearchAnswers503WithAClearMessageAndRetryAfter() throws Exception {
+        org.mockito.Mockito.when(service.finnBesteVaer(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any()))
+                .thenThrow(new no.weatheragent.hiking.OverpassUnavailableException(null));
+
+        mvc.perform(get("/api/turvaer").param("q", "finest vær i Rogaland"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string("Retry-After", "30"))
+                .andExpect(jsonPath("$.error").value(no.weatheragent.hiking.OverpassUnavailableException.USER_MESSAGE));
+    }
+
+    @Test
     void errorResponsesDoNotLeakInternals() throws Exception {
         mvc.perform(post("/api/rute").contentType("application/json").content("{bad json"))
                 .andExpect(status().isBadRequest())

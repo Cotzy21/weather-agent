@@ -5,6 +5,7 @@ import no.weatheragent.geo.Location;
 import no.weatheragent.geo.OpenMeteoGeocodingClient;
 import no.weatheragent.hiking.CandidateSelector;
 import no.weatheragent.hiking.OverpassClient;
+import no.weatheragent.hiking.OverpassUnavailableException;
 import no.weatheragent.hiking.Peak;
 import no.weatheragent.hiking.Trail;
 import no.weatheragent.interpret.Interpretation;
@@ -18,6 +19,8 @@ import no.weatheragent.ranking.ScoreWeights;
 import no.weatheragent.ranking.WeatherScorer;
 import no.weatheragent.weather.Forecast;
 import no.weatheragent.weather.ResilientWeatherClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -26,6 +29,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Tur-assistentens kjerne: fra et fritekst-spørsmål til en rangering av steder
@@ -37,6 +41,8 @@ import java.util.Map;
  */
 @Component
 public class TurvaerService {
+
+    private static final Logger log = LoggerFactory.getLogger(TurvaerService.class);
 
     // Større rute = færre kandidater = færre vær-oppslag (raskere).
     private static final double CELL_DEGREES = 0.40;
@@ -116,7 +122,7 @@ public class TurvaerService {
         // merkede turer nær topp-stedene (idé #1). Gjelder også VARSEL-stedet.
         List<Trail> trails = tolkning.target() == Target.TUR
                 ? List.of()
-                : overpassClient.trailsNear(topLocations(ranking), TRAIL_RADIUS_M);
+                : optionalTrails(() -> overpassClient.trailsNear(topLocations(ranking), TRAIL_RADIUS_M));
 
         // Klær/utstyr-råd basert på været hos vinneren (idé #3).
         RankedPlaceOverPeriod winner = ranking.getFirst();
@@ -124,6 +130,19 @@ public class TurvaerService {
                 winner.avgMaxTempC(), winner.avgPrecipMm(), winner.avgWindMs());
 
         return new TurResult(tolkning, ranking, trails, clothing);
+    }
+
+    /**
+     * Turruter rundt stedene er et TILLEGG til værsvaret. Er Overpass travel, viser vi værsvaret uten turer i stedet for
+     * å la hele søket feile. (Selve rangeringen trenger topper eller ruter fra Overpass og feiler tydelig hvis de mangler.)
+     */
+    private static List<Trail> optionalTrails(Supplier<List<Trail>> lookup) {
+        try {
+            return lookup.get();
+        } catch (OverpassUnavailableException e) {
+            log.warn("Overpass er travel: viser værsvaret uten turruter");
+            return List.of();
+        }
     }
 
     /** Topper i området, redusert til et spredt kandidatsett. */
@@ -179,7 +198,7 @@ public class TurvaerService {
         }
 
         // Med linjegeometri: detaljsiden tegner og highlighter selve stiene rundt stedet.
-        List<Trail> trails = overpassClient.trailGeometriesNear(loc, TRAIL_RADIUS_M);
+        List<Trail> trails = optionalTrails(() -> overpassClient.trailGeometriesNear(loc, TRAIL_RADIUS_M));
 
         List<String> clothing = days.isEmpty() ? List.of() : ClothingAdvisor.recommend(
                 days.getFirst().maxTempC(), days.getFirst().totalPrecipMm(), days.getFirst().avgWindMs());

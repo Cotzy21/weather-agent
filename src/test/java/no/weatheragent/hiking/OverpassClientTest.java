@@ -21,6 +21,11 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
  */
 class OverpassClientTest {
 
+    /** Klient mot mock-serveren (den offentlige konstruktøren bytter ut request factory, som ville brutt mocken). */
+    private static OverpassClient client(RestClient.Builder builder) {
+        return new OverpassClient(builder.build(), OverpassClient.ENDPOINTS, 6_000, 35_000);
+    }
+
     private static final String PEAKS_JSON = """
             {"elements":[
               {"type":"node","id":1,"lat":62.18,"lon":6.86,
@@ -39,7 +44,7 @@ class OverpassClientTest {
         server.expect(requestTo("https://overpass.kumi.systems/api/interpreter"))
                 .andRespond(withSuccess(PEAKS_JSON, MediaType.APPLICATION_JSON));
 
-        List<Peak> peaks = new OverpassClient(builder).peaksInArea("Sunnmøre", "NO");
+        List<Peak> peaks = client(builder).peaksInArea("Sunnmøre", "NO");
 
         assertEquals(1, peaks.size());
         assertEquals("Slogen", peaks.getFirst().location().name());
@@ -55,7 +60,7 @@ class OverpassClientTest {
         server.expect(requestTo("https://overpass-api.de/api/interpreter"))
                 .andRespond(withBadRequest());
 
-        OverpassClient client = new OverpassClient(builder);
+        OverpassClient client = client(builder);
         assertThrows(HttpClientErrorException.class,
                 () -> client.peaksInArea("Sunnmøre", "NO"));
         server.verify();

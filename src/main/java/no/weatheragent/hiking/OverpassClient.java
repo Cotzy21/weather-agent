@@ -2,7 +2,9 @@ package no.weatheragent.hiking;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import no.weatheragent.geo.Location;
-import no.weatheragent.support.Retry;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
+import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -12,10 +14,17 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 /**
  * Henter navngitte fjelltopper innenfor et navngitt område fra OpenStreetMap via
@@ -37,23 +46,47 @@ public class OverpassClient {
      * rekkefølge. Hovedinstansen (overpass-api.de) er ofte overbelastet (429/504);
      * da prøver vi neste speil i stedet for å gi opp.
      */
-    private static final List<String> ENDPOINTS = List.of(
+    static final List<String> ENDPOINTS = List.of(
             "https://overpass-api.de/api/interpreter",
             "https://overpass.kumi.systems/api/interpreter",
             "https://overpass.private.coffee/api/interpreter");
 
-    // Overpass er ofte travel og svarer 504. Prøv et par ganger med økende pause
-    // per endepunkt før vi går videre til neste speil.
-    private static final int MAX_ATTEMPTS_PER_ENDPOINT = 2;
-    private static final long BACKOFF_MS = 2000;
+    /**
+     * Tidsstyring. Overpass svarer ofte sakte eller ikke i det hele tatt. Uten disse grensene kunne ett oppslag ta
+     * 3 speil x 2 forsøk x 90 s, langt over vertens tidsgrense (Render kutter etter ca. 100 s og gir en tom 502).
+     * Nå: hvert kall gir opp etter 30 s, neste speil settes i gang PARALLELT hvis det første ikke har svart etter 6 s
+     * (og med en gang hvis det feiler), det første svaret vinner, og hele oppslaget har et tak på 35 s.
+     */
+    static final long HEDGE_DELAY_MS = 6_000;
+    static final long TOTAL_BUDGET_MS = 35_000;
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(3);
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(30);
+
+    /** Selve kallene går på virtuelle tråder, så en hengende tilkobling ikke tar en plattformtråd. */
+    private static final ExecutorService ATTEMPTS = Executors.newVirtualThreadPerTaskExecutor();
 
     /** Maks antall ruter vi returnerer (etter dedup på navn) for et helt område. */
     private static final int MAX_TRAILS = 25;
 
     private final RestClient http;
+    private final List<String> endpoints;
+    private final long hedgeDelayMs;
+    private final long totalBudgetMs;
 
+    @Autowired
     public OverpassClient(RestClient.Builder builder) {
-        this.http = builder.build();
+        this(builder
+                .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(ClientHttpRequestFactorySettings.defaults()
+                        .withConnectTimeout(CONNECT_TIMEOUT).withReadTimeout(READ_TIMEOUT)))
+                .build(), ENDPOINTS, HEDGE_DELAY_MS, TOTAL_BUDGET_MS);
+    }
+
+    /** For tester: ferdig bygd klient (f.eks. mot en mock-server) og egne tidsgrenser. */
+    OverpassClient(RestClient http, List<String> endpoints, long hedgeDelayMs, long totalBudgetMs) {
+        this.http = http;
+        this.endpoints = endpoints;
+        this.hedgeDelayMs = hedgeDelayMs;
+        this.totalBudgetMs = totalBudgetMs;
     }
 
     /**
@@ -72,29 +105,80 @@ public class OverpassClient {
     }
 
     /**
-     * Kjør spørringen mot instansene i tur og orden: et par forsøk med pause per
-     * instans, og ved «travelt»-feil (429/5xx/timeout) videre til neste speil.
-     * Andre 4xx betyr feil i VÅR spørring og kastes med en gang - da hjelper
-     * verken retry eller speilbytte. Kaster siste feil hvis alle speil feiler.
+     * Kjør spørringen mot Overpass-instansene og ta det første gyldige svaret (se {@link #raceMirrors}). Kaster
+     * {@link OverpassUnavailableException} når ingen svarer i tide, og andre 4xx (feil i VÅR spørring) kastes med en
+     * gang, siden verken speilbytte eller nytt forsøk hjelper da.
      */
     private JsonNode fetch(String query) {
-        RestClientException last = null;
-        for (String endpoint : ENDPOINTS) {
-            try {
-                return Retry.withRetry(MAX_ATTEMPTS_PER_ENDPOINT, BACKOFF_MS, () -> http.post()
+        return raceMirrors(endpoints, endpoint -> http.post()
                         .uri(endpoint)
                         .contentType(MediaType.TEXT_PLAIN)
                         .body(query)
                         .retrieve()
-                        .body(JsonNode.class));
-            } catch (RestClientException e) {
-                if (!isBusy(e)) {
-                    throw e;
+                        .body(JsonNode.class),
+                hedgeDelayMs, totalBudgetMs);
+    }
+
+    /**
+     * Prøver speilene i rekkefølge, men uten å vente på et som henger: feiler et (travelt/utilgjengelig) settes neste i
+     * gang UMIDDELBART, og har ingen svart etter {@code hedgeDelayMs} settes neste i gang PARALLELT med de som
+     * fortsatt venter. Første gyldige svar vinner. Gir opp med {@link OverpassUnavailableException} når alle har feilet
+     * eller {@code totalBudgetMs} er brukt opp. Et kall som henger får gå ut på sin egen leseterskel i bakgrunnen.
+     */
+    static JsonNode raceMirrors(List<String> endpoints, Function<String, JsonNode> call, long hedgeDelayMs, long totalBudgetMs) {
+        BlockingQueue<Object> events = new LinkedBlockingQueue<>();
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(totalBudgetMs);
+        int started = 0;
+        int finished = 0;
+        RestClientException lastBusy = null;
+
+        launch(endpoints.get(started++), call, events);
+        while (true) {
+            long remainingMs = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime());
+            if (remainingMs <= 0) {
+                throw new OverpassUnavailableException(lastBusy);
+            }
+            Object event;
+            try {
+                event = events.poll(Math.min(hedgeDelayMs, remainingMs), TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new OverpassUnavailableException(e);
+            }
+            if (event == null) { // ingen har svart ennå: sett neste speil i gang ved siden av (hedging)
+                if (started < endpoints.size()) {
+                    launch(endpoints.get(started++), call, events);
                 }
-                last = e;
+                continue;
+            }
+            if (event instanceof JsonNode node) {
+                return node;
+            }
+            RestClientException failure = (RestClientException) event;
+            finished++;
+            if (!isBusy(failure)) {
+                throw failure;
+            }
+            lastBusy = failure;
+            if (started < endpoints.size()) {
+                launch(endpoints.get(started++), call, events);
+            } else if (finished >= started) {
+                throw new OverpassUnavailableException(lastBusy);
             }
         }
-        throw last;
+    }
+
+    private static void launch(String endpoint, Function<String, JsonNode> call, BlockingQueue<Object> events) {
+        ATTEMPTS.execute(() -> {
+            try {
+                JsonNode node = call.apply(endpoint);
+                events.add(node != null ? node : new ResourceAccessException("Tomt svar fra Overpass"));
+            } catch (RestClientException e) {
+                events.add(e);
+            } catch (RuntimeException e) {
+                events.add(new ResourceAccessException("Overpass-kallet feilet: " + e.getClass().getSimpleName()));
+            }
+        });
     }
 
     /** Overbelastet/utilgjengelig instans: 429, 5xx eller nettverks-/timeout-feil. */

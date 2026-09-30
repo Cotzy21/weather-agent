@@ -174,6 +174,13 @@ Dockerfile + PORT-config for backend-deploy finnes.
    `alter table flyway_schema_history …`): RLS-løkka tok med Flyways egen historikktabell, som Flyway selv har låst.
    Rettet (V16 hopper over den) og sikret med `MigrationLockSafetyTest`; verifisert ved å starte appen mot ekte Postgres.
    Se SECURITY.md. Lockdownen av Supabase Data API er først aktiv når en deploy med rettet V16 har gått gjennom.
+6. **Værsøket hang / ga tom 502 når Overpass var treg** (2026-09-30, funnet i live-test): Render kutter forespørsler etter ca. 100 s, og
+   Overpass-klienten kunne bruke 3 speil x 2 forsøk x 90 s. Nå (`OverpassClient.raceMirrors`): 30 s per kall, neste speil
+   PARALLELT etter 6 s (med en gang hvis et feiler), første svar vinner, og et tak på 35 s for hele oppslaget. Gir det opp, får
+   brukeren 503 med «Kartdata-tjenesten (OpenStreetMap) er travel …» (`OverpassUnavailableException`). Turruter rundt steder er et
+   tillegg: er Overpass travel vises værsvaret uten turer (stedsside og vanlig søk); topper/ruter til selve rangeringen er
+   nødvendige og gir den vennlige feilen. Testet mot ekte nettverksfeil (stedsside med Overpass utilgjengelig: 200 etter 36 s
+   i stedet for å henge).
 
 ## Oppsett på ny maskin (det som IKKE følger med git)
 
