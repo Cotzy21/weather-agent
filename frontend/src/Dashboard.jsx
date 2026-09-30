@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { BodyweightCard, BodyweightSheet } from './Bodyweight.jsx'
 import LifetimeStats from './LifetimeStats.jsx'
 import DashboardCustomizer from './DashboardCustomizer.jsx'
-import { WIDGET_BY_ID, loadLayout, storeLayout } from './dashboardLayout.js'
+import { WIDGET_BY_ID, loadLayout, storeLayout, mergeLayout, hasStoredLayout } from './dashboardLayout.js'
 import { localIso } from './trainingStats.js'
 import { authHeaders } from './supabase'
 import { cachedGet, getCached, apiUrl, readError } from './api'
@@ -44,6 +44,33 @@ export default function Dashboard({ session, onNavigate }) {
   function saveLayout(next) {
     setLayout(next)
     storeLayout(session?.user?.id ?? 'anon', next)
+    pushLayout(next)
+  }
+
+  // Oppsettet følger kontoen: server er fasit, lokal kopi gir rask oppstart og fungerer offline.
+  async function pushLayout(next) {
+    if (!session) return
+    try {
+      await fetch(apiUrl('/api/innstillinger/dashboard'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify(next),
+      })
+    } catch { /* offline: lokal kopi er lagret, neste lagring prøver igjen */ }
+  }
+
+  async function syncLayout() {
+    try {
+      const uid = session.user.id
+      const res = await fetch(apiUrl('/api/innstillinger/dashboard'), { headers: await authHeaders() })
+      if (res.status === 200) {
+        const merged = mergeLayout(await res.json())
+        setLayout(merged)
+        storeLayout(uid, merged)
+      } else if (res.status === 204 && hasStoredLayout(uid)) {
+        pushLayout(loadLayout(uid)) // engangs: løft eksisterende lokalt oppsett opp til kontoen
+      }
+    } catch { /* sekundært */ }
   }
 
   useEffect(() => {
@@ -51,6 +78,7 @@ export default function Dashboard({ session, onNavigate }) {
     loadWorkouts()
     loadNutrition()
     loadWeighIns()
+    syncLayout()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 

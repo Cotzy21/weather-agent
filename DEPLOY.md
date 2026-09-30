@@ -97,3 +97,13 @@
   LLM-/API-kost fra punktet over.
 - Backend-i18n (Accept-Language) for råd/feilmeldinger.
 - Strekkodeskanning, offentlig deling av egne matvarer.
+
+## Kaldstart på gratis-hosting (Render)
+
+Render sin gratisplan legger tjenesten i dvale, og første kall etter en pause tar rundt ett minutt.
+Appen viser nå «Vekker serveren …» etter 4 sekunder i stedet for å se ødelagt ut, men det fjerner ikke ventetiden.
+Reelle løsninger, i rekkefølge:
+- **Betalt instans** (ingen dvale). Enkleste og eneste som er garantert.
+- Gratis: en ekstern helsesjekk som pinger backend hvert 10. minutt holder den våken, men det er ikke garantert
+  og kan stride mot vilkårene på gratisplanen.
+

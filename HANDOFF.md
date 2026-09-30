@@ -56,6 +56,23 @@ Dockerfile + PORT-config for backend-deploy finnes.
   enkle øvelser, lavt volum, teknikktips). **Modellvalg:** nybegynner/«litt erfaren»,
   usikker teknikk eller skader → `LlmTier.PRO` (`llm.model.pro`, faller tilbake til
   smart); ellers SMART. `GET/PUT /api/trening/profil` (204 = ikke onboardet).
+- **Kvalitet på AI-planer** (`PlanValidator`): etter at planen er laget sjekkes den regelbasert mot
+  utstyr (profilens `equipment` + `requires` i øvelseskatalogen), liker-ikke-lista, tung bein samme
+  dag/dagen før kampsport og styrke på kampsportdager når brukeren ba om det. Ved brudd: ETT retry
+  (PRO-modell) med konkrete rettelser, deretter fjernes øvelser som fortsatt bryter utstyr/liker-ikke,
+  og resten blir en ⚠-advarsel i sammendraget. Koster ett ekstra AI-kall kun ved brudd.
+- **Øvelseskatalog** (`src/main/resources/exercises.json`, delt med frontend): faste id-er med nb/en-navn
+  og aliaser. Progresjon, historikk, minne og «neste sett» grupperer på id (`ExerciseCatalog.groupKey`),
+  så «Bicep Curls» og «Bicepscurl» er samme øvelse. Nye økter får `exerciseId` på blokkene; gamle økter
+  trenger ingen migrering fordi gruppering slår opp på navn ved lesing. Legg nye øvelser i JSON-fila.
+- **AI-kvote** (`AiRateLimiter`): 20 kall/time og 60/døgn per bruker (`ai.limit.per-hour`/`per-day`),
+  429 med `Retry-After`. Latens per LLM-kall logges. Streaming er ikke bygget (se IMPROVEMENTS.md).
+- **Program med startdato/lengde** (`user_settings`, V15): `GET/PUT/DELETE /api/trening/program`,
+  «Dag 12/56» i ukekortet. **Dashboard-oppsett** lagres i kontoen (`/api/innstillinger/dashboard`).
+- **Offline** (`offlineQueue.js`, `sw.js`): fullførte økter lagres i IndexedDB med `clientId` og sendes
+  når nettet er tilbake (backend er idempotent på `clientId`); treningsdata ligger også lokalt, og
+  service worker cacher app-skallet. Økter kobles til planer på `plannedId` (tittel som reserve).
+- **Tester/CI:** Vitest i frontend (`npm test`), GitHub Actions i `.github/workflows/ci.yml`.
 - Gjenstår: real-time tracking (sen fase i planen), klokke-integrasjoner.
 
 ### Kosthold ✅

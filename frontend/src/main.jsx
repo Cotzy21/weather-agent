@@ -12,3 +12,11 @@ createRoot(document.getElementById('root')).render(
     </I18nProvider>
   </StrictMode>,
 )
+
+// Service worker (kun produksjon på http/https, ikke i den native Capacitor-appen som har filene lokalt).
+if (import.meta.env.PROD && 'serviceWorker' in navigator && location.protocol.startsWith('http')
+    && !window.Capacitor?.isNativePlatform?.()) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => { /* ikke kritisk */ })
+  })
+}

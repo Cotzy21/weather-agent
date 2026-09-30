@@ -1,3 +1,5 @@
+import { exerciseKey } from './exercises.js'
+
 // Live-økt: tilstand, mellomlagring og konvertering til/fra øktformatet.
 // Mellomlagres per bruker så økta overlever at Safari lukker/laster siden på nytt.
 
@@ -15,16 +17,26 @@ export function clearLive(userId) {
   try { localStorage.removeItem(storeKey(userId)) } catch { /* privat modus o.l. */ }
 }
 
-export function newLive(title, exercises) {
-  return { title, startedAt: Date.now(), exercises, restSec: 90, restEnd: null }
+// plannedId: planen økta ble startet fra (så uke-oversikten kobler på id, ikke tittel).
+// clientId: lages én gang per økt, så innsending på nytt aldri lager en duplikat.
+export function newLive(title, exercises, plannedId = null) {
+  return { title, startedAt: Date.now(), exercises, restSec: 90, restEnd: null, plannedId, clientId: newId() }
+}
+
+export function newId() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+  })
 }
 
 // Norsk tastatur gir komma som desimaltegn.
 export const toNum = (x) => Number(String(x ?? '').replace(',', '.'))
 
 export function findSuggestion(name, nextSets) {
-  const n = name.trim().toLowerCase()
-  return (nextSets || []).find((s) => s.exercise.toLowerCase() === n)
+  const key = exerciseKey(name)
+  return (nextSets || []).find((s) => exerciseKey(s.exercise) === key)
 }
 
 // Progresjonsforslaget vinner over planens tall: det bygger på siste faktiske økt.
@@ -78,7 +90,7 @@ export function toContent(exercises, startedAt, now = Date.now()) {
 
 // Tidligere sett for én øvelse, nyest først. Leter i vanlige blokker, dropsett og supersett.
 export function exerciseHistory(workouts, name, limit = 12) {
-  const key = name.trim().toLowerCase()
+  const key = exerciseKey(name)
   const out = []
   for (const w of workouts || []) {
     if (w.type !== 'STYRKE') continue
@@ -87,7 +99,7 @@ export function exerciseHistory(workouts, name, limit = 12) {
         ? (b.exercises || []).map((e) => ({ name: e.name, sets: e.sets, note: e.note }))
         : [{ name: b.name, sets: b.kind === 'dropset' ? b.drops : b.sets, note: b.note }]
       for (const e of entries) {
-        if ((e.name || '').trim().toLowerCase() === key && e.sets?.length) {
+        if (exerciseKey(e.name || '') === key && e.sets?.length) {
           out.push({ id: w.id, date: w.date, title: w.title, sets: e.sets, note: e.note })
         }
       }

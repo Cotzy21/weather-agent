@@ -1,6 +1,6 @@
 # Forbedringer — forberedt plan
 
-Status: **planlagt, ikke bygget.** Hvert punkt har problem, løsning, berørte filer, størrelse
+Status: **bygget** (se HANDOFF.md for hva som ble gjort), bortsett fra punktene under «Ikke gjort». Hvert punkt har problem, løsning, berørte filer, størrelse
 (S ≈ timer, M ≈ 1–2 dager, L ≈ flere dager) og åpne spørsmål. Anbefalt rekkefølge nederst.
 
 ---
@@ -170,3 +170,14 @@ Se `DEPLOY.md`.
 4. **Punkt 4:** Én aktiv plan om gangen?
 5. **Punkt 5:** PWA først eller også native (Capacitor)?
 6. **Punkt 6d:** Betalt Render, eller gratis med pinging?
+
+## Ikke gjort / forbehold
+
+- **Streaming av AI-svar (3B):** ikke bygget. Fremdriftstekst under ventingen og latens-logging er på plass;
+  streaming venter til vi har målt hvor mye tid modellene faktisk bruker.
+- **Render:** kan ikke løses i kode. Se DEPLOY.md (betalt instans er den eneste garanterte løsningen).
+- **Øvelses-migrering (2):** ingen engangsjobb, fordi gruppering slår opp navn ved lesing; gamle økter får
+  `exerciseId` bare hvis de skrives på nytt.
+- **Utstyrssjekken** kjenner bare utstyr fra profilen (treningssenter / manualer hjemme / kroppsvekt), ikke
+  fritekstnotater som «har bare kettlebells».
+- **Offline** er testet som logikk (kø, idempotens, cache) men ikke prøvd på ekte telefon med flymodus.

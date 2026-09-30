@@ -2199,3 +2199,17 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .onboarding-actions { display: flex; gap: 10px; padding-top: 8px; }
 .onboarding-actions button { flex: 1; padding: 14px; border-radius: 14px; font-size: 16px; font-weight: 600; }
 .onboarding-actions button:disabled { opacity: .5; }
+
+.offline-banner {
+  margin: 8px 0; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border-strong);
+  background: var(--tint); color: var(--text); font-size: var(--fs-sm); font-weight: 600;
+}
+
+.program-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 10px; font-size: var(--fs-sm); }
+.program-progress { flex: 1 1 120px; height: 8px; border-radius: 99px; background: var(--tint); overflow: hidden; }
+.program-progress span { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+
+.wake-banner {
+  position: sticky; top: 0; z-index: 50; padding: 10px 16px; text-align: center;
+  background: var(--tint); border-bottom: 1px solid var(--border-strong); font-size: var(--fs-sm); font-weight: 600;
+}

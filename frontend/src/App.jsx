@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, lazy, Suspense } from 'react'
 import { localIso } from './trainingStats.js'
 import { supabase, authHeaders } from './supabase'
 import ChoiceChips from './ChoiceChips.jsx'
-import { apiUrl, readError, clearCache, cachedGet } from './api'
+import { apiUrl, readError, cachedGet, switchCacheOwner, onSlowRequest } from './api'
 import { useI18n } from './i18n.jsx'
 import { useTabTransition } from './anim'
 import './App.css'
@@ -264,6 +264,9 @@ export default function App() {
   // at innloggingsveggen blinker forbi ved oppstart.
   const [authReady, setAuthReady] = useState(!supabase)
   const [menuOpen, setMenuOpen] = useState(false)
+  // Gratis hosting sover; første kall kan ta ~1 minutt. Si fra i stedet for å la appen se ødelagt ut.
+  const [slow, setSlow] = useState(false)
+  useEffect(() => onSlowRequest(setSlow), [])
 
   function go(id) {
     setTab(id)
@@ -303,7 +306,7 @@ export default function App() {
     let lastUser = null
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       const uid = s?.user?.id ?? null
-      if (uid !== lastUser) { clearCache(); lastUser = uid }
+      if (uid !== lastUser) { switchCacheOwner(uid); lastUser = uid }
       setSession(s)
     })
     return () => sub.subscription.unsubscribe()
@@ -352,6 +355,7 @@ export default function App() {
 
   return (
     <div className="app">
+      {slow && <div className="wake-banner" role="status">⏳ {t('Vekker serveren … første innlasting kan ta opptil ett minutt.')}</div>}
       {menuOpen && <div className="menu-backdrop" onClick={() => setMenuOpen(false)} />}
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${menuOpen ? 'menu-open' : ''}`}>
         <button

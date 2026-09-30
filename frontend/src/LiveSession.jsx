@@ -3,7 +3,7 @@ import { useI18n } from './i18n.jsx'
 import { saveLive, liveExercise, findSuggestion, toContent } from './liveSession.js'
 import ExercisePicker from './ExercisePicker.jsx'
 import ExerciseHistory from './ExerciseHistory.jsx'
-import { sameGroup } from './exercises'
+import { sameGroup, exerciseKey } from './exercises'
 
 const fmtClock = (sec) => {
   const h = Math.floor(sec / 3600)
@@ -143,7 +143,7 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
 
   const allSets = s.exercises.flatMap((e) => e.sets)
   const doneCount = allSets.filter((x) => x.done).length
-  const inSession = new Set(s.exercises.map((e) => e.name.trim().toLowerCase()))
+  const inSession = new Set(s.exercises.map((e) => exerciseKey(e.name)))
   // Første sett som ikke er huket av = «nå»-settet som utheves.
   let current = null
   s.exercises.some((ex, ei) => {
@@ -276,8 +276,8 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
       {picking && (
         <ExercisePicker
           title={t('Legg til øvelse')}
-          mine={(nextSets || []).map((x) => x.exercise).filter((n) => !inSession.has(n.toLowerCase()))}
-          liked={(memory?.liked || []).filter((n) => !inSession.has(n.toLowerCase()))}
+          mine={(nextSets || []).map((x) => x.exercise).filter((n) => !inSession.has(exerciseKey(n)))}
+          liked={(memory?.liked || []).filter((n) => !inSession.has(exerciseKey(n)))}
           disliked={memory?.disliked}
           onPick={(name) => { addExercise(name); setPicking(false) }}
           onClose={() => setPicking(false)}
@@ -297,9 +297,9 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
       {sheet?.kind === 'swap' && s.exercises[sheet.ei] && (
         <ExercisePicker
           title={t('Bytt {name}', { name: s.exercises[sheet.ei].name })}
-          recommended={sameGroup(s.exercises[sheet.ei].name).filter((n) => !inSession.has(n.toLowerCase()))}
-          mine={(nextSets || []).map((x) => x.exercise).filter((n) => !inSession.has(n.toLowerCase()))}
-          liked={(memory?.liked || []).filter((n) => !inSession.has(n.toLowerCase()))}
+          recommended={sameGroup(s.exercises[sheet.ei].name).filter((n) => !inSession.has(exerciseKey(n)))}
+          mine={(nextSets || []).map((x) => x.exercise).filter((n) => !inSession.has(exerciseKey(n)))}
+          liked={(memory?.liked || []).filter((n) => !inSession.has(exerciseKey(n)))}
           disliked={memory?.disliked}
           onClose={() => setSheet(null)}
           onPick={(name) => { swapExercise(sheet.ei, name); setSheet(null) }}

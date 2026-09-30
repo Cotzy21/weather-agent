@@ -6,9 +6,12 @@ import { useReveal } from './anim'
 import { useI18n } from './i18n.jsx'
 import LiveSession from './LiveSession.jsx'
 import ExercisePicker from './ExercisePicker.jsx'
+import { exerciseKey } from './exercises'
 import TrainingMemoryCard from './TrainingMemoryCard.jsx'
 import TrainingOnboarding from './TrainingOnboarding.jsx'
-import { loadLive, clearLive, newLive, fromPlan } from './liveSession.js'
+import ThinkingText from './ThinkingText.jsx'
+import { loadLive, clearLive, newLive, newId, fromPlan } from './liveSession.js'
+import { workoutQueue, onPendingChange } from './offlineQueue.js'
 import { dayIndex, strengthVolume, localIso } from './trainingStats.js'
 import WeekProgram from './WeekProgram.jsx'
 
@@ -69,6 +72,7 @@ export default function TrainingView({ session }) {
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState(false) // kort kvittering etter lagring
+  const [savedQueued, setSavedQueued] = useState(false) // lagret på enheten, sendes når nettet er tilbake
 
   // Drag-and-drop-omorganisering av blokker (pilene finnes fortsatt for touch).
   const [dragIdx, setDragIdx] = useState(null)
@@ -94,7 +98,9 @@ export default function TrainingView({ session }) {
   // Tredje modus: 'live' (økt pågår). En påbegynt økt gjenopptas automatisk.
   const [mode, setMode] = useState(() => (session && loadLive(session.user.id) ? 'live' : 'overview'))
   const [live, setLive] = useState(() => (session ? loadLive(session.user.id) : null))
-  const [liveSaved, setLiveSaved] = useState(false)
+  const [liveSaved, setLiveSaved] = useState(false) // true | 'queued' (lagret på enheten, venter på nett)
+  const queue = workoutQueue(authHeaders)
+  const [pendingCount, setPendingCount] = useState(0) // økter som venter på nett
 
   // «Ny»-arket (økt vs. plan) og om muskelvelgeren skal vises i byggeren.
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -136,6 +142,19 @@ export default function TrainingView({ session }) {
     else { setWorkouts([]); setPlans([]); setNextSets([]); setReadiness(null); setMemory(null); setProfile(undefined) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, lang])
+
+  // Send økter som ventet på nett: ved oppstart, når nettet kommer tilbake, og jevnlig.
+  useEffect(() => {
+    if (!session) return undefined
+    const off = onPendingChange(setPendingCount)
+    const flush = () => queue.flush().then((sent) => { if (sent) { loadWorkouts(); loadNextSets() } }).catch(() => {})
+    queue.count().then(setPendingCount).catch(() => {})
+    flush()
+    window.addEventListener('online', flush)
+    const timer = setInterval(flush, 60000)
+    return () => { off(); window.removeEventListener('online', flush); clearInterval(timer) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session])
 
   // 204 = brukeren logger ikke søvn -> vis et hint i stedet for kortet.
   async function loadReadiness() {
@@ -190,7 +209,7 @@ export default function TrainingView({ session }) {
   // ♥ / 👎 på en øvelse: legg den i listen (og ut av den motsatte), eller ta den ut igjen.
   function toggleMemory(name, list) {
     if (!memory) return
-    const same = (x) => x.toLowerCase() === name.toLowerCase()
+    const same = (x) => exerciseKey(x) === exerciseKey(name)
     const other = list === 'liked' ? 'disliked' : 'liked'
     const has = memory[list].some(same)
     setMemoryError(null)
@@ -237,8 +256,8 @@ export default function TrainingView({ session }) {
     window.scrollTo(0, 0)
   }
 
-  function startLive(title, exercises) {
-    setLive(newLive(title, exercises))
+  function startLive(title, exercises, plannedId = null) {
+    setLive(newLive(title, exercises, plannedId))
     setMode('live')
     window.scrollTo(0, 0)
   }
@@ -249,18 +268,18 @@ export default function TrainingView({ session }) {
     setMode('overview')
   }
 
+  // Økta lagres først på enheten og sendes så; uten nett blir den liggende i køen til nettet er tilbake.
   async function finishLive({ title, content }) {
-    const res = await fetch(apiUrl('/api/treningsokter'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-      body: JSON.stringify({ date: today(), title, type: 'STYRKE', content, notes: null }),
-    })
-    if (!res.ok) throw new Error(await readError(res))
+    const clientId = live?.clientId ?? newId()
+    const body = { date: today(), title, type: 'STYRKE', content, notes: null, clientId, plannedId: live?.plannedId ?? null }
+    const { queued } = await queue.submit({ clientId, body })
     endLive()
-    setLiveSaved(true)
-    setTimeout(() => setLiveSaved(false), 3000)
-    loadWorkouts()
-    loadNextSets()
+    setLiveSaved(queued ? 'queued' : true)
+    setTimeout(() => setLiveSaved(false), 4000)
+    if (!queued) {
+      loadWorkouts()
+      loadNextSets()
+    }
   }
 
   async function loadWorkouts() {
@@ -363,12 +382,11 @@ export default function TrainingView({ session }) {
     setBusy(true)
     setError(null)
     try {
-      const res = await fetch(apiUrl('/api/treningsokter'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({ date, title: title.trim(), type, content: buildContent(), notes: notes.trim() || null }),
-      })
-      if (!res.ok) throw new Error(await readError(res))
+      const clientId = newId()
+      const { queued } = await queue.submit({ clientId, body: {
+        date, title: title.trim(), type, content: buildContent(), notes: notes.trim() || null, clientId,
+      } })
+      setSavedQueued(queued)
       setTitle(''); setNotes(''); setBlocks([newExercise()]); setCardio({ distanceKm: '', durationMin: '', ascentM: '' })
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
@@ -698,9 +716,14 @@ export default function TrainingView({ session }) {
           <WeekProgram
             plans={plans}
             workouts={workouts}
-            onStart={(p) => (p.type === 'STYRKE' ? startLive(p.title, fromPlan(p.content, nextSets)) : applySuggestion(p))}
+            onStart={(p) => (p.type === 'STYRKE' ? startLive(p.title, fromPlan(p.content, nextSets), p.id ?? null) : applySuggestion(p))}
           />
-          {liveSaved && <p className="success">{t('✓ Økt lagret')}</p>}
+          {pendingCount > 0 && (
+            <p className="offline-banner" role="status">
+              📡 {t('{n} økter venter på nett og sendes automatisk', { n: pendingCount })}
+            </p>
+          )}
+          {liveSaved && <p className="success">{liveSaved === 'queued' ? t('✓ Lagret på enheten – sendes når nettet er tilbake') : t('✓ Økt lagret')}</p>}
           {importBusy && <p className="muted">{t('Importerer …')}</p>}
           {importMsg && (
             <p className={importMsg.startsWith('✓') ? 'success' : importMsg.startsWith('Feil') ? 'error' : 'muted'}>{importMsg}</p>
@@ -732,7 +755,7 @@ export default function TrainingView({ session }) {
                   </button>
                   {p.type === 'STYRKE' && (
                     <button className="plan-play" aria-label={t('Start live')}
-                            onClick={() => startLive(p.title, fromPlan(p.content, nextSets))}>▶</button>
+                            onClick={() => startLive(p.title, fromPlan(p.content, nextSets), p.id)}>▶</button>
                   )}
                   <button className="del" onClick={() => deletePlan(p.id)} aria-label={t('Slett plan')}>✕</button>
                 </li>
@@ -799,7 +822,7 @@ export default function TrainingView({ session }) {
             <input placeholder={t('F.eks. «rygg og biceps»')} value={aiwFocus} onChange={(e) => setAiwFocus(e.target.value)} />
             <button className="primary" type="submit" disabled={aiwBusy || !aiwFocus.trim()}>{t('Lag')}</button>
           </form>
-          {aiwBusy && <p className="muted typing">{t('Assistenten tenker')} <span>·</span><span>·</span><span>·</span></p>}
+          {aiwBusy && <ThinkingText />}
           {aiwError && <p className="error">{aiwError}</p>}
           {aiwResult && (
             <div className="ai-workout">
@@ -850,7 +873,7 @@ export default function TrainingView({ session }) {
             )}
           </div>
         ))}
-        {aiBusy && <p className="muted typing">{t('Assistenten tenker')} <span>·</span><span>·</span><span>·</span></p>}
+        {aiBusy && <ThinkingText />}
 
         <div className="ai-row">
           <input placeholder={aiMessages.length === 0
@@ -1031,7 +1054,7 @@ export default function TrainingView({ session }) {
 
       <div className="log-actions">
         <button className="primary" onClick={submit} disabled={busy}>{busy ? t('Lagrer …') : t('Lagre økt')}</button>
-        {saved && <span className="success">{t('✓ Økt lagret')}</span>}
+        {saved && <span className="success">{savedQueued ? t('✓ Lagret på enheten – sendes når nettet er tilbake') : t('✓ Økt lagret')}</span>}
       </div>
       {error && <p className="error">{error}</p>}
 
@@ -1095,7 +1118,7 @@ export default function TrainingView({ session }) {
                       <div className="prog-actions">
                         <button className="mini" onClick={() => addNextToBuilder(s)}>{t('+ Legg i økt')}</button>
                         {memory && ['liked', 'disliked'].map((list) => {
-                          const on = memory[list].some((x) => x.toLowerCase() === s.exercise.toLowerCase())
+                          const on = memory[list].some((x) => exerciseKey(x) === exerciseKey(s.exercise))
                           return (
                             <button key={list} className={`mini memory-toggle ${on ? 'on' : ''}`} aria-pressed={on}
                                     onClick={() => toggleMemory(s.exercise, list)}>

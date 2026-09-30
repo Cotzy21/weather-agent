@@ -51,3 +51,10 @@ export function countSets(content) {
 export function localIso(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+
+// Hører den loggede økta til denne planlagte? Økter startet fra en plan kobles på plan-id (tåler at
+// tittelen endres); eldre økter uten plan-id kobles på tittel som før.
+export function matchesPlan(workout, plan) {
+  if (workout.plannedId) return workout.plannedId === plan.id
+  return (workout.title || '').toLowerCase() === (plan.title || '').toLowerCase()
+}

@@ -1,5 +1,6 @@
 import { useI18n } from './i18n.jsx'
-import { dayIndex, strengthVolume, countSets, localIso } from './trainingStats.js'
+import { dayIndex, strengthVolume, countSets, localIso, matchesPlan } from './trainingStats.js'
+import ProgramBar from './ProgramBar.jsx'
 
 const SHORT = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn']
 
@@ -31,7 +32,7 @@ export default function WeekProgram({ plans, workouts, onStart }) {
     else if (logged.length) status = 'partial'
     else if (i === todayIdx && planned.length) status = 'today'
     else if (planned.length) status = i < todayIdx ? 'missed' : 'planned'
-    const remaining = planned.filter((p) => !logged.some((w) => w.title.toLowerCase() === p.title.toLowerCase()))
+    const remaining = planned.filter((p) => !logged.some((w) => matchesPlan(w, p)))
     return { i, date, dayNum: day.getDate(), planned, logged, remaining, status }
   })
 
@@ -51,6 +52,7 @@ export default function WeekProgram({ plans, workouts, onStart }) {
       {hasSchedule && (
         <>
           <span className="week-program-label">{t('Denne uka')}</span>
+          <ProgramBar />
           <div className="week-dots">
             {days.map((d) => (
               <div className="week-dot-col" key={d.i}>

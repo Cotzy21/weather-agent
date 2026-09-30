@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useI18n } from './i18n.jsx'
 import ExercisePicker from './ExercisePicker.jsx'
+import { exerciseKey } from './exercises'
 
 const WEEKDAYS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag']
-const same = (a, b) => a.toLowerCase() === b.toLowerCase()
+const same = (a, b) => exerciseKey(a) === exerciseKey(b)
 
 // Det appen husker om treningen din, og som AI-forslagene bruker.
 const LEVEL_LABELS = { BEGINNER: 'Helt ny', NOVICE: 'Litt erfaren', INTERMEDIATE: 'Middels erfaren', ADVANCED: 'Avansert' }

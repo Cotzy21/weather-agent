@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useI18n } from './i18n.jsx'
-import { groupsFor } from './exercises'
+import { groupsFor, exerciseKey } from './exercises'
 
 // Ark nederfra med søk + øvelsesliste. Erstatter <input list="exercises">.
 // `mine` = brukerens egne øvelser (fra historikk/forslag), vises øverst.
@@ -11,19 +11,19 @@ export default function ExercisePicker({ title, mine = [], liked = [], disliked 
   const match = (name) => !query || name.toLowerCase().includes(query)
 
   // Favoritter øverst, så egne øvelser; det brukeren ikke liker vises bare i gruppene, merket 👎.
-  const lower = (list) => new Set(list.map((n) => n.toLowerCase()))
+  const lower = (list) => new Set(list.map(exerciseKey))
   const likedSet = lower(liked)
   const dislikedSet = lower(disliked)
-  const rec = recommended.filter((n) => !dislikedSet.has(n.toLowerCase()))
+  const rec = recommended.filter((n) => !dislikedSet.has(exerciseKey(n)))
   const recSet = lower(rec)
   const mineUnique = [...new Set(mine.filter(Boolean))]
-    .filter((n) => !likedSet.has(n.toLowerCase()) && !dislikedSet.has(n.toLowerCase()) && !recSet.has(n.toLowerCase()))
+    .filter((n) => !likedSet.has(exerciseKey(n)) && !dislikedSet.has(exerciseKey(n)) && !recSet.has(exerciseKey(n)))
   const shown = new Set([...recSet, ...likedSet, ...lower(mineUnique)])
   const sections = [
     { group: 'Anbefalt (samme muskler)', items: rec },
-    { group: 'Favoritter', items: liked.filter((n) => !recSet.has(n.toLowerCase())) },
+    { group: 'Favoritter', items: liked.filter((n) => !recSet.has(exerciseKey(n))) },
     { group: 'Dine øvelser', items: mineUnique },
-    ...groupsFor(lang).map((g) => ({ ...g, items: g.items.filter((n) => !shown.has(n.toLowerCase())) })),
+    ...groupsFor(lang).map((g) => ({ ...g, items: g.items.filter((n) => !shown.has(exerciseKey(n))) })),
   ]
     .map((s) => ({ ...s, items: s.items.filter(match) }))
     .filter((s) => s.items.length)
@@ -56,9 +56,9 @@ export default function ExercisePicker({ title, mine = [], liked = [], disliked 
             <div key={s.group}>
               <p className="sheet-label">{t(s.group)}</p>
               {s.items.map((name) => (
-                <button key={name} className={`picker-item ${dislikedSet.has(name.toLowerCase()) ? 'disliked' : ''}`}
+                <button key={name} className={`picker-item ${dislikedSet.has(exerciseKey(name)) ? 'disliked' : ''}`}
                         onClick={() => onPick(name)}>
-                  {s.group === 'Favoritter' && '♥ '}{name}{dislikedSet.has(name.toLowerCase()) && ' 👎'}
+                  {s.group === 'Favoritter' && '♥ '}{name}{dislikedSet.has(exerciseKey(name)) && ' 👎'}
                 </button>
               ))}
             </div>

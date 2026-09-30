@@ -1,43 +1,47 @@
-// Øvelsesbiblioteket, gruppert for velgeren. Gruppenavnene oversettes via t().
-// `en` er engelske navn i samme rekkefølge; velgeren viser listen for valgt språk,
-// og matching (bytt/anbefalinger) tåler begge språk.
-export const EXERCISE_GROUPS = [
-  {
-    group: 'Bryst',
-    items: ['Benkpress', 'Skråbenkpress', 'Hantelpress', 'Flies', 'Dips', 'Push-ups'],
-    en: ['Bench Press', 'Incline Bench Press', 'Dumbbell Press', 'Chest Fly', 'Dips', 'Push-ups'],
-  },
-  {
-    group: 'Rygg',
-    items: ['Markløft', 'Rumensk markløft', 'Nedtrekk', 'Stående roing', 'Sittende roing', 'Pull-ups', 'Chins', 'T-bar roing', 'Face pulls'],
-    en: ['Deadlift', 'Romanian Deadlift', 'Lat Pull Downs', 'Bent Over Rows', 'Seated Cable Row', 'Pull-ups', 'Chin-ups', 'T-Bar Row', 'Face Pulls'],
-  },
-  {
-    group: 'Bein',
-    items: ['Knebøy', 'Frontbøy', 'Leg press', 'Utfall', 'Bulgarske utfall', 'Leg extension', 'Leg curl', 'Tåhev', 'Hip thrust'],
-    en: ['Squat', 'Front Squat', 'Leg Press', 'Lunges', 'Bulgarian Split Squat', 'Leg Extension', 'Leg Curl', 'Calf Raises', 'Hip Thrust'],
-  },
-  {
-    group: 'Skuldre',
-    items: ['Skulderpress', 'Sidehev', 'Fronthev', 'Bakre flies', 'Arnold press', 'Opprekk'],
-    en: ['Overhead Press', 'Lateral Raises', 'Front Raises', 'Rear Delt Fly', 'Arnold Press', 'Upright Row'],
-  },
-  {
-    group: 'Armer',
-    items: ['Bicepscurl', 'Hammercurl', 'Konsentrasjonscurl', 'Triceps pushdown', 'Triceps extension', 'Skullcrushers'],
-    en: ['Bicep Curls', 'Hammer Curls', 'Concentration Curls', 'Tricep Pushdown', 'Tricep Extension', 'Skullcrushers'],
-  },
-  {
-    group: 'Mage',
-    items: ['Planke', 'Sit-ups', 'Russian twists', 'Hanging leg raise', 'Cable crunch'],
-    en: ['Plank', 'Sit-ups', 'Russian Twists', 'Hanging Leg Raise', 'Cable Crunch'],
-  },
-  {
-    group: 'Helkropp',
-    items: ['Kettlebell swing', 'Clean and press', 'Thruster', 'Burpees', 'Mountain climbers'],
-    en: ['Kettlebell Swing', 'Clean and Press', 'Thruster', 'Burpees', 'Mountain Climbers'],
-  },
-]
+// Øvelsesbiblioteket, gruppert for velgeren. Kilden er katalogen som deles med backend
+// (src/main/resources/exercises.json): faste id-er med norske og engelske navn, så
+// «Bicep Curls» og «Bicepscurl» er samme øvelse overalt. Gruppenavnene oversettes via t().
+import catalog from '../../src/main/resources/exercises.json'
+
+const ENTRIES = catalog.exercises
+
+export const EXERCISE_GROUPS = (() => {
+  const groups = new Map()
+  for (const e of ENTRIES) {
+    if (!groups.has(e.group)) groups.set(e.group, { group: e.group, items: [], en: [] })
+    const g = groups.get(e.group)
+    g.items.push(e.nb)
+    g.en.push(e.en)
+  }
+  return [...groups.values()]
+})()
+
+/** Samme normalisering som backend (ExerciseCatalog.normalize): små bokstaver, uten aksenter/tegn/flertalls-s. */
+export function normalizeName(name) {
+  const s = String(name ?? '')
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]/gu, '')
+  return s.length > 3 && s.endsWith('s') ? s.slice(0, -1) : s
+}
+
+const BY_KEY = new Map()
+for (const e of ENTRIES) {
+  for (const n of [e.nb, e.en, ...(e.aliases || [])]) {
+    if (!BY_KEY.has(normalizeName(n))) BY_KEY.set(normalizeName(n), e)
+  }
+}
+
+/** Katalogøvelsen et navn (på norsk, engelsk eller som alias) peker til, eller undefined. */
+export function resolveExercise(name) {
+  return BY_KEY.get(normalizeName(name))
+}
+
+/** Nøkkel å sammenligne øvelser på: katalog-id, ellers navnet normalisert (som backend). */
+export function exerciseKey(name) {
+  return resolveExercise(name)?.id ?? normalizeName(name)
+}
 
 /** Biblioteket på valgt språk: [{ group, items }]. */
 export function groupsFor(lang) {
@@ -47,13 +51,10 @@ export function groupsFor(lang) {
 // Andre øvelser i samme muskelgruppe, på samme språk som øvelsen selv
 // (tomt for øvelser utenfor biblioteket).
 export function sameGroup(name) {
-  const key = name.trim().toLowerCase()
-  for (const g of EXERCISE_GROUPS) {
-    for (const list of [g.items, g.en]) {
-      if (list.some((n) => n.toLowerCase() === key)) {
-        return list.filter((n) => n.toLowerCase() !== key)
-      }
-    }
-  }
-  return []
+  const hit = resolveExercise(name)
+  if (!hit) return []
+  const g = EXERCISE_GROUPS.find((x) => x.group === hit.group)
+  const key = normalizeName(name)
+  const list = g.en.some((n) => normalizeName(n) === key) ? g.en : g.items
+  return list.filter((n) => exerciseKey(n) !== hit.id)
 }
