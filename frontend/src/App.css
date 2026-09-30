@@ -2281,3 +2281,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .barcode-manual { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .barcode-manual input { flex: 1 1 160px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-2); color: var(--text); font-size: 15px; }
 .scan-note { margin: 4px 0 8px; font-size: var(--fs-sm); }
+
+/* ---------- Fortell om turen ---------- */
+.route-story { margin: 10px 0; }
+.story-text { margin: 8px 0 4px; line-height: 1.55; }

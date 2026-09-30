@@ -3,6 +3,7 @@ import RouteMap from './RouteMap'
 import { apiUrl, readError } from './api'
 import { authHeaders } from './supabase'
 import { useI18n } from './i18n.jsx'
+import { fetchRouteStory } from './routeStory.js'
 
 function distanceKm(a, b) {
   const R = 6371
@@ -15,7 +16,7 @@ function distanceKm(a, b) {
 }
 
 export default function RoutePlanner({ session, target, onClearTarget }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [waypoints, setWaypoints] = useState([])
   const [weight, setWeight] = useState(75)
   const [plan, setPlan] = useState(null)
@@ -23,6 +24,10 @@ export default function RoutePlanner({ session, target, onClearTarget }) {
   const [loading, setLoading] = useState(false)
 
   const [routeName, setRouteName] = useState('')
+  // «Fortell om turen»: omtalen hører til én bestemt beregning (plan), så den skjules når ruta endres.
+  const [story, setStory] = useState(null) // { plan, text }
+  const [storyBusy, setStoryBusy] = useState(false)
+  const [storyError, setStoryError] = useState(null)
   const [saved, setSaved] = useState([])
   const [shown, setShown] = useState(null) // geometri fra en lagret rute vist på kartet
   const [panelOpen, setPanelOpen] = useState(true) // det flytende panelet over kartet
@@ -93,6 +98,20 @@ export default function RoutePlanner({ session, target, onClearTarget }) {
       setError(e.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function tellStory() {
+    if (!plan) return
+    setStoryBusy(true)
+    setStoryError(null)
+    try {
+      const text = await fetchRouteStory({ plan, name: routeName || target?.name, lang, headers: await authHeaders() })
+      setStory({ plan, text })
+    } catch (e) {
+      setStoryError(e.message)
+    } finally {
+      setStoryBusy(false)
     }
   }
 
@@ -207,6 +226,20 @@ export default function RoutePlanner({ session, target, onClearTarget }) {
             <span className="gear-title">{t('🍫 Mat & drikke')}</span>
             <ul>{plan.snacks.map((s, i) => <li key={i}>{s}</li>)}</ul>
           </div>
+          {session && (
+            <div className="route-story">
+              <button className="mini" onClick={tellStory} disabled={storyBusy}>
+                {storyBusy ? t('Skriver …') : t('✨ Fortell om turen')}
+              </button>
+              {storyError && <p className="error">{storyError}</p>}
+              {story?.plan === plan && (
+                <>
+                  <p className="story-text">{story.text}</p>
+                  <p className="muted estimate-note">{t('Laget av AI ut fra tallene over. Sjekk været og ruta før du går.')}</p>
+                </>
+              )}
+            </div>
+          )}
           <p className="muted estimate-note">
             {plan.snappedToTrails
               ? t('Rute langs faktiske stier. Stigning fra høydeprofil. Grovt estimat (~4 km/t, ~6 MET).')

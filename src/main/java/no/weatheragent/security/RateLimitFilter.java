@@ -62,7 +62,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 rule("rute", List.of("/api/rute"), "POST", 30, 300, 3000, clock),
                 // AI-treningsforslag (betalt LLM). I tillegg til kvoten per bruker: alle kontoer fra én IP
                 // deler denne grensen, og den globale grensen stopper masseregistrering av kontoer.
-                rule("ai", List.of("/api/trening/forslag", "/api/trening/plan-forslag", "/api/trening/assistent", "/api/trening/ovelser/koble"),
+                rule("ai", List.of("/api/trening/forslag", "/api/trening/plan-forslag", "/api/trening/assistent", "/api/trening/ovelser/koble",
+                                "/api/ruter/fortelling"),
                         "POST", 10, 60, 3000, clock),
                 // Alt annet: bred grense mot skripting og passord-/token-gjetting. Romslig, siden
                 // søk-mens-du-skriver og innlasting av faner gir mange kall fra ett nettsted/nettverk.

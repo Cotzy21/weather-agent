@@ -477,6 +477,11 @@ const EN = {
   'Hentet fra Open Food Facts – sjekk verdiene mot pakningen. Varen er lagret blant dine egne matvarer.': 'Fetched from Open Food Facts – check the values against the package. The food has been saved among your own foods.',
   'Fant ikke strekkoden {code}. Legg inn varen selv – strekkoden er fylt ut.': 'Barcode {code} not found. Add the food yourself – the barcode is filled in.',
 
+  // Fortell om turen
+  '✨ Fortell om turen': '✨ Tell me about the trip',
+  'Skriver …': 'Writing …',
+  'Laget av AI ut fra tallene over. Sjekk været og ruta før du går.': 'Written by AI from the numbers above. Check the weather and the route before you go.',
+
   'Kalorimål og næringsråd er generelle veiledninger, ikke medisinske råd.': 'Calorie goals and nutrition advice are general guidance, not medical advice.',
 
   'Navn (f.eks. Tøying)': 'Name (e.g. Stretching)',
