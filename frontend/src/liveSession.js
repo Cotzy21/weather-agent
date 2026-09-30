@@ -68,8 +68,30 @@ export function toContent(exercises, startedAt, now = Date.now()) {
       const done = e.sets
         .filter((s) => s.done && s.reps !== '')
         .map((s) => ({ reps: toNum(s.reps), weightKg: toNum(s.weightKg) || 0 }))
-      return { kind: e.kind, name: e.name.trim(), [e.kind === 'dropset' ? 'drops' : 'sets']: done }
+      const block = { kind: e.kind, name: e.name.trim(), [e.kind === 'dropset' ? 'drops' : 'sets']: done }
+      if (e.note?.trim()) block.note = e.note.trim()
+      return block
     })
     .filter((b) => b.name && (b.sets || b.drops).length)
   return { blocks, durationMin: Math.max(1, Math.round((now - startedAt) / 60000)) }
+}
+
+// Tidligere sett for én øvelse, nyest først. Leter i vanlige blokker, dropsett og supersett.
+export function exerciseHistory(workouts, name, limit = 12) {
+  const key = name.trim().toLowerCase()
+  const out = []
+  for (const w of workouts || []) {
+    if (w.type !== 'STYRKE') continue
+    for (const b of w.content?.blocks || []) {
+      const entries = b.kind === 'superset'
+        ? (b.exercises || []).map((e) => ({ name: e.name, sets: e.sets, note: e.note }))
+        : [{ name: b.name, sets: b.kind === 'dropset' ? b.drops : b.sets, note: b.note }]
+      for (const e of entries) {
+        if ((e.name || '').trim().toLowerCase() === key && e.sets?.length) {
+          out.push({ id: w.id, date: w.date, title: w.title, sets: e.sets, note: e.note })
+        }
+      }
+    }
+  }
+  return out.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)).slice(0, limit)
 }

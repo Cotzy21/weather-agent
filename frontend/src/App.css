@@ -2026,3 +2026,19 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .prog-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .memory-toggle.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); }
 .picker-item.disliked { color: var(--muted); }
+
+/* ---------- Handlingslinje per øvelse i live-økten ---------- */
+.live-actions-bar { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 8px; padding-bottom: 2px; scrollbar-width: none; }
+.live-actions-bar::-webkit-scrollbar { display: none; }
+.live-action {
+  flex-shrink: 0; padding: 7px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
+  border: 1px solid var(--border); background: var(--tint); color: var(--text); cursor: pointer;
+}
+.live-action.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); }
+.live-note { width: 100%; font-family: inherit; font-size: 15px; margin: 0 0 8px; resize: vertical; }
+.live-note-preview { font-size: var(--fs-sm); margin: 0 0 8px; }
+.hist-entry { padding: 12px 4px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
+.hist-date { display: flex; justify-content: space-between; gap: 10px; font-size: 15px; }
+.hist-date .muted { font-size: var(--fs-sm); text-align: right; }
+.hist-sets { display: flex; flex-wrap: wrap; gap: 6px 14px; font-variant-numeric: tabular-nums; font-size: 15px; }
+.hist-note { margin: 0; font-size: var(--fs-sm); }

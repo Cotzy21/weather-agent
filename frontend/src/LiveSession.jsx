@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useI18n } from './i18n.jsx'
 import { saveLive, liveExercise, findSuggestion, toContent } from './liveSession.js'
 import ExercisePicker from './ExercisePicker.jsx'
+import ExerciseHistory from './ExerciseHistory.jsx'
+import { sameGroup } from './exercises'
 
 const fmtClock = (sec) => {
   const h = Math.floor(sec / 3600)
@@ -23,7 +25,7 @@ function beep(ctx) {
   } catch { /* lyd er bare en bonus */ }
 }
 
-export default function LiveSession({ userId, initial, nextSets, memory, fmtKg, onFinish, onCancel }) {
+export default function LiveSession({ userId, initial, nextSets, memory, workouts, fmtKg, onFinish, onCancel }) {
   const { t, lang } = useI18n()
   const [s, setS] = useState(initial)
   const [now, setNow] = useState(() => Date.now())
@@ -32,7 +34,9 @@ export default function LiveSession({ userId, initial, nextSets, memory, fmtKg, 
   const [confirming, setConfirming] = useState(null) // null | 'discard' | 'end'
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
-  const [infoOpen, setInfoOpen] = useState(null)
+  // Handlingslinjen per øvelse: tips/notat folder ut i kortet, historikk/bytt åpner et ark.
+  const [panel, setPanel] = useState(null) // { ei, kind: 'tip' | 'note' }
+  const [sheet, setSheet] = useState(null) // { ei, kind: 'history' | 'swap' }
   const [scrollTick, setScrollTick] = useState(0)
   const audio = useRef(null)
   const alerted = useRef(null)
@@ -107,6 +111,21 @@ export default function LiveSession({ userId, initial, nextSets, memory, fmtKg, 
     edit((c) => { c.exercises.push(liveExercise(n, null, nextSets)) })
   }
 
+  // Bytt øvelse: avhukede sett beholdes som de er. Resten får forslaget for den nye
+  // øvelsen hvis det finnes; ellers beholdes reps og vekten tømmes (annen øvelse, annen vekt).
+  function swapExercise(ei, name) {
+    const sug = findSuggestion(name, nextSets)
+    edit((c) => {
+      const ex = c.exercises[ei]
+      ex.name = name
+      ex.sets = ex.sets.map((set) => {
+        if (set.done) return set
+        if (sug) return { ...set, reps: String(sug.nextReps), weightKg: sug.nextWeightKg > 0 ? String(sug.nextWeightKg) : '' }
+        return { ...set, weightKg: '' }
+      })
+    })
+  }
+
   async function finish() {
     const content = toContent(s.exercises, s.startedAt)
     if (!content.blocks.length) { setError(t('Huk av minst ett sett før du fullfører.')); return }
@@ -170,7 +189,8 @@ export default function LiveSession({ userId, initial, nextSets, memory, fmtKg, 
         const target = first
           ? `${ex.sets.length} × ${first.reps || '–'}${first.weightKg ? ` · ${String(first.weightKg).replace('.', lang === 'en' ? '.' : ',')} kg` : ''}`
           : ''
-        const showInfo = infoOpen === ei
+        const open = (kind) => panel?.ei === ei && panel.kind === kind
+        const toggle = (kind) => setPanel(open(kind) ? null : { ei, kind })
         return (
           <div className="live-ex" key={ei}>
             <div className="live-ex-head">
@@ -178,18 +198,32 @@ export default function LiveSession({ userId, initial, nextSets, memory, fmtKg, 
                 <strong>{ex.name}{ex.kind === 'dropset' && <span className="muted"> · {t('dropsett')}</span>}</strong>
                 <span className="muted live-target">{target}</span>
               </span>
-              {sug && (
-                <button className={`live-info ${showInfo ? 'on' : ''}`} aria-label={t('Hvorfor dette målet?')}
-                        aria-expanded={showInfo} onClick={() => setInfoOpen(showInfo ? null : ei)}>i</button>
-              )}
               <button className="del" aria-label={t('Fjern øvelse')}
                       onClick={() => edit((c) => { c.exercises.splice(ei, 1) })}>✕</button>
             </div>
-            {sug && showInfo && (
+            <div className="live-actions-bar">
+              {sug && (
+                <button className={`live-action ${open('tip') ? 'on' : ''}`} aria-expanded={open('tip')} onClick={() => toggle('tip')}>
+                  💡 {t('Tips')}
+                </button>
+              )}
+              <button className="live-action" onClick={() => setSheet({ ei, kind: 'history' })}>🕘 {t('Historikk')}</button>
+              <button className="live-action" onClick={() => setSheet({ ei, kind: 'swap' })}>⇄ {t('Bytt')}</button>
+              <button className={`live-action ${open('note') || ex.note ? 'on' : ''}`} aria-expanded={open('note')} onClick={() => toggle('note')}>
+                ✎ {t('Notat')}
+              </button>
+            </div>
+            {sug && open('tip') && (
               <p className="live-hint muted">
                 📈 {sug.lastWeightKg > 0 ? `${fmtKg(sug.lastWeightKg)} kg` : t('kroppsvekt')} × {sug.lastReps.join(', ')} → {sug.reason}
               </p>
             )}
+            {open('note') && (
+              <textarea className="live-note" rows="2" maxLength={300} value={ex.note || ''}
+                        placeholder={t('F.eks. «setehøyde 4, smal grep»')}
+                        onChange={(e) => { const v = e.target.value; edit((c) => { c.exercises[ei].note = v }) }} />
+            )}
+            {!open('note') && ex.note && <p className="muted live-note-preview">✎ {ex.note}</p>}
             <div className="live-grid live-grid-head" aria-hidden="true">
               <span>{t('Sett')}</span><span>kg</span><span>{t('Reps')}</span><span>✓</span>
             </div>
@@ -247,6 +281,28 @@ export default function LiveSession({ userId, initial, nextSets, memory, fmtKg, 
           disliked={memory?.disliked}
           onPick={(name) => { addExercise(name); setPicking(false) }}
           onClose={() => setPicking(false)}
+        />
+      )}
+
+      {sheet?.kind === 'history' && s.exercises[sheet.ei] && (
+        <ExerciseHistory
+          name={s.exercises[sheet.ei].name}
+          planTitle={s.title}
+          workouts={workouts}
+          fmtKg={fmtKg}
+          onClose={() => setSheet(null)}
+        />
+      )}
+
+      {sheet?.kind === 'swap' && s.exercises[sheet.ei] && (
+        <ExercisePicker
+          title={t('Bytt {name}', { name: s.exercises[sheet.ei].name })}
+          recommended={sameGroup(s.exercises[sheet.ei].name).filter((n) => !inSession.has(n.toLowerCase()))}
+          mine={(nextSets || []).map((x) => x.exercise).filter((n) => !inSession.has(n.toLowerCase()))}
+          liked={(memory?.liked || []).filter((n) => !inSession.has(n.toLowerCase()))}
+          disliked={memory?.disliked}
+          onClose={() => setSheet(null)}
+          onPick={(name) => { swapExercise(sheet.ei, name); setSheet(null) }}
         />
       )}
 

@@ -611,6 +611,7 @@ export default function TrainingView({ session }) {
           initial={live}
           nextSets={nextSets}
           memory={memory}
+          workouts={workouts}
           fmtKg={fmtKg}
           onFinish={finishLive}
           onCancel={endLive}
