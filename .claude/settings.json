@@ -1,0 +1,10 @@
+{
+  "extraKnownMarketplaces": {
+    "hindsight": {
+      "source": { "source": "github", "repo": "vectorize-io/hindsight" }
+    }
+  },
+  "enabledPlugins": {
+    "hindsight-memory@hindsight": true
+  }
+}
