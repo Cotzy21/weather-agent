@@ -9,7 +9,7 @@ koden og testet lokalt (369 backend-tester, 34 frontend-tester, og en ekte Postg
 
 | # | Funn | Alvor | Status |
 |---|------|-------|--------|
-| 1 | **Supabase Data API åpent for hele databasen.** Tabellene våre har radnivåsikkerhet (RLS) av og full tilgang for rollene `anon`/`authenticated`. Anon-nøkkelen ligger i frontend-koden, så hvem som helst kunne lese og endre alle brukeres økter, vekt, måltider og profiler direkte mot `…supabase.co/rest/v1/<tabell>`, forbi backend. Bekreftet mot en lokal Postgres som etterligner Supabase. | **Kritisk** | Fikset i `V16` (kjøres ved neste deploy). **Se «Det du må gjøre»** |
+| 1 | **Supabase Data API åpent for hele databasen.** Tabellene våre har radnivåsikkerhet (RLS) av og full tilgang for rollene `anon`/`authenticated`. Anon-nøkkelen ligger i frontend-koden, så hvem som helst kunne lese og endre alle brukeres økter, vekt, måltider og profiler direkte mot `…supabase.co/rest/v1/<tabell>`, forbi backend. Bekreftet mot en lokal Postgres som etterligner Supabase. | **Kritisk** | Fikset i `V16`. **OBS 2026-09-30:** V16 kjørte aldri i prod: den stoppet oppstarten (timeout på `alter table flyway_schema_history`, se under). Rettet samme dag; lockdown gjelder først når en deploy med den rettede V16 har gått gjennom. **Se «Det du må gjøre»** |
 | 2 | **Lagret XSS via OpenStreetMap-data.** Navn på topper, stier og operatører ble satt inn som HTML i kart-popups. Hvem som helst kan endre OSM, så et manipulert navn kunne kjøre skript i offerets nettleser og stjele innloggingen. | Høy | Fikset (`escapeHtml`) + CSP |
 | 3 | **Anon-/service-nøkkel godtatt som innlogging.** Supabase signerer de offentlige `anon`- og `service_role`-nøklene med samme hemmelighet, så de passerte signaturkontrollen. De mangler bruker-id, og ga 500-feil på alle beskyttede endepunkter. | Høy | Fikset (`SupabaseClaimsValidator`: kun `authenticated` + gyldig bruker-UUID) |
 | 4 | **Åpne endepunkter uten grenser mot betalte tjenester.** `/api/turvaer` (LLM + Overpass + MET), `/api/sted` og `/api/rute` (delt kartnøkkel) kunne kalles i det uendelige uten innlogging: kostnad, utestenging hos Overpass, tømt kartkvote. | Høy | Fikset (per-IP + global grense, `RateLimitFilter`) |
@@ -91,6 +91,18 @@ koden og testet lokalt (369 backend-tester, 34 frontend-tester, og en ekte Postg
 - Nye tabeller (`food_reports`, V18) har RLS på og ingen rettigheter for `anon`/`authenticated`, som V17.
 - Verifisert mot en ekte PostgreSQL 16 med alle migreringer og en etterlignet `auth.users` (2026-09-30): kontoslettingens SQL, V18
   (unik rapport, fremmednøkkel, cascade, RLS). Ikke prøvd mot ekte Supabase.
+
+## Tillegg: V16 stoppet deployen (2026-09-30)
+
+Første deploy med V16 feilet på Render: `ERROR: canceling statement due to statement timeout` på
+`alter table public.flyway_schema_history enable row level security`, og appen startet ikke (Render beholder den gamle
+versjonen når en deploy feiler, så siden lå oppe, men uten lockdown og uten nye funksjoner). Årsak: RLS-løkka i V16 tok med
+Flyways egen historikktabell, og Flyway holder selv en lås på den mens migreringen kjører, så `alter table` ventet på seg selv.
+`psql` og H2 avslørte det ikke fordi de bruker én tilkobling. Reprodusert og rettet ved å starte selve appen mot en ekte
+PostgreSQL med 8 s `statement_timeout`: V16 hopper nå over `flyway_schema_history` (tabellen er likevel stengt for
+`anon`/`authenticated` av `revoke all on all tables`). `MigrationLockSafetyTest` hindrer at en migrering gjør DDL på den
+tabellen igjen. På Render rullet V16 tilbake, så der gir endringen ingen sjekksumfeil. Har du selv anvendt V16 mot en lokal
+database (det er lite sannsynlig: samme selvlås gjelder der), må den repareres (`flyway repair`) eller lages på nytt.
 
 ## Kjente restrisikoer (akseptert eller utenfor kode)
 

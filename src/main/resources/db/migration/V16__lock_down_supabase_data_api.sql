@@ -8,11 +8,15 @@
 -- går gjennom Spring-API-et, så vi slår på RLS UTEN policyer (= nekt alt via Data API) og trekker tilbake
 -- rettighetene til API-rollene. Lokale Postgres-oppsett uten Supabase-roller hopper over rettighetsdelen.
 
+-- MERK: flyway_schema_history hoppes over i RLS-løkka. Flyway holder selv en lås på den tabellen mens denne migreringen
+-- kjører, så «alter table ... enable row level security» ville vente på seg selv til databasen avbryter den
+-- (statement timeout, SQL State 57014) og hele oppstarten feiler. Tabellen er likevel utilgjengelig via Data API-et:
+-- «revoke all on all tables» under fjerner rettighetene til anon/authenticated for alle tabeller, også denne.
 do $$
 declare
     t record;
 begin
-    for t in select tablename from pg_tables where schemaname = 'public' loop
+    for t in select tablename from pg_tables where schemaname = 'public' and tablename <> 'flyway_schema_history' loop
         execute format('alter table public.%I enable row level security', t.tablename);
     end loop;
 

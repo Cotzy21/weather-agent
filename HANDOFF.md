@@ -170,6 +170,10 @@ Dockerfile + PORT-config for backend-deploy finnes.
    med retry fungerte.
 3. **«Ingen værdata» for helg-søk** — Open-Meteo-fallback.
 4. **Vite proxy ECONNREFUSED** — ikke en bug: backend kjørte ikke.
+5. **Deploy stoppet på V16** (2026-09-30: `canceling statement due to statement timeout` på
+   `alter table flyway_schema_history …`): RLS-løkka tok med Flyways egen historikktabell, som Flyway selv har låst.
+   Rettet (V16 hopper over den) og sikret med `MigrationLockSafetyTest`; verifisert ved å starte appen mot ekte Postgres.
+   Se SECURITY.md. Lockdownen av Supabase Data API er først aktiv når en deploy med rettet V16 har gått gjennom.
 
 ## Oppsett på ny maskin (det som IKKE følger med git)
 
