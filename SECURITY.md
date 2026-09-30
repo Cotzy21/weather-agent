@@ -56,6 +56,9 @@ koden og testet lokalt (369 backend-tester, 34 frontend-tester, og en ekte Postg
 - **Deserialisering, fil-opplasting, path traversal:** ikke i bruk.
 - **CSRF:** ikke relevant (Bearer-token, ingen cookies, ingen sesjon).
 - **JWT:** algoritmene er låst (HS256/RS256/ES256), `none` avvises, utløp valideres.
+- **ReDoS:** regexene i backend har ingen nestede kvantifikatorer; uttrykket jeg la til for planvalidering er avgrenset (`.{0,50}`).
+- **CSP:** den ferdigbygde appen ble lastet i headless Chromium med akkurat denne policyen; ingen brudd i konsollen (skript, stiler,
+  fonter, manifest og service worker laster). Kartfliser og innlogging mot Supabase er ikke prøvd (ingen nett/nøkler i sandkassen).
 - **React:** ingen `dangerouslySetInnerHTML`, `eval` eller `innerHTML`; eneste HTML-sink var Leaflet-popupene (fikset).
 
 ## Kjente restrisikoer (akseptert eller utenfor kode)
