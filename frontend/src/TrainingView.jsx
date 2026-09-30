@@ -8,6 +8,8 @@ import LiveSession from './LiveSession.jsx'
 import ExercisePicker from './ExercisePicker.jsx'
 import TrainingMemoryCard from './TrainingMemoryCard.jsx'
 import { loadLive, clearLive, newLive, fromPlan } from './liveSession.js'
+import { dayIndex, strengthVolume, localIso } from './trainingStats.js'
+import WeekProgram from './WeekProgram.jsx'
 
 const TYPES = [
   { v: 'STYRKE', t: '🏋️ Styrke' },
@@ -21,7 +23,7 @@ const TYPES = [
 const CARDIO = ['LØPING', 'SVØMMING', 'SYKKEL']
 
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => localIso(new Date())
 const newSet = () => ({ reps: '', weightKg: '' })
 const newExercise = () => ({ kind: 'exercise', name: '', sets: [newSet()] })
 const newDropset = () => ({ kind: 'dropset', name: '', drops: [newSet()] })
@@ -594,7 +596,7 @@ export default function TrainingView({ session }) {
     if (p.content?.day) parts.push(p.content.day)
     if (p.type === 'STYRKE') {
       const n = (p.content?.blocks || []).reduce((sum, b) => sum + (b.kind === 'superset' ? (b.exercises || []).length : 1), 0)
-      parts.push(t('{n} øvelser', { n }))
+      parts.push(t(n === 1 ? '1 øvelse' : '{n} øvelser', { n }))
     } else {
       parts.push(t((TYPES.find((tp) => tp.v === p.type)?.t) || p.type))
     }
@@ -649,6 +651,11 @@ export default function TrainingView({ session }) {
               <span className="ta-icon" aria-hidden="true">📈</span>{t('Progresjon')}
             </button>
           </div>
+          <WeekProgram
+            plans={plans}
+            workouts={workouts}
+            onStart={(p) => (p.type === 'STYRKE' ? startLive(p.title, fromPlan(p.content, nextSets)) : applySuggestion(p))}
+          />
           {liveSaved && <p className="success">{t('✓ Økt lagret')}</p>}
           {importBusy && <p className="muted">{t('Importerer …')}</p>}
           {importMsg && (
@@ -817,7 +824,7 @@ export default function TrainingView({ session }) {
           <div className="ai-plan">
             <div className="ai-plan-head">
               <strong>{aiPlan.title}</strong>
-              <span className="ai-plan-count muted">{t('{n} økter', { n: aiPlan.workouts.length })}</span>
+              <span className="ai-plan-count muted">{t(aiPlan.workouts.length === 1 ? '1 økt' : '{n} økter', { n: aiPlan.workouts.length })}</span>
             </div>
             {aiPlan.summary && <p className="muted ai-plan-summary">{aiPlan.summary}</p>}
 
@@ -1074,41 +1081,9 @@ export default function TrainingView({ session }) {
   )
 }
 
-// dayIndex tåler både norske og engelske dagnavn (assistenten skriver på brukerens språk).
-const DAY_ALIASES = {
-  mandag: 0, monday: 0, tirsdag: 1, tuesday: 1, onsdag: 2, wednesday: 2,
-  torsdag: 3, thursday: 3, fredag: 4, friday: 4,
-  lørdag: 5, lordag: 5, saturday: 5, søndag: 6, sondag: 6, sunday: 6,
-}
-function dayIndex(day) {
-  if (!day) return -1
-  const k = day.trim().toLowerCase()
-  if (k in DAY_ALIASES) return DAY_ALIASES[k]
-  for (const [alias, idx] of Object.entries(DAY_ALIASES)) {
-    if (k.startsWith(alias)) return idx
-  }
-  return -1
-}
 
 const CARDIO_TYPES = ['LØPING', 'SYKKEL', 'SVØMMING', 'HIKING']
 
-// Samlet styrkevolum (Σ reps×kg) i en økt, inkl. supersett-runder.
-function strengthVolume(content) {
-  let vol = 0
-  for (const b of content?.blocks ?? []) {
-    if (b.kind === 'superset') {
-      let sv = 0
-      for (const ex of b.exercises ?? []) {
-        for (const s of ex.sets ?? []) sv += (Number(s.reps) || 0) * (Number(s.weightKg) || 0)
-      }
-      vol += sv * (Number(b.rounds) || 1)
-    } else {
-      const sets = b.kind === 'dropset' ? (b.drops ?? []) : (b.sets ?? [])
-      for (const s of sets) vol += (Number(s.reps) || 0) * (Number(s.weightKg) || 0)
-    }
-  }
-  return vol
-}
 
 // Per-sport-oppsummering: siste 7 dager mot de 7 før, med den relevante
 // metrikken (styrke = volum i kg, kondisjon = km, ellers antall økter).
@@ -1165,7 +1140,7 @@ function SummaryCard({ s }) {
       <span className="sc-label">{t(s.label)}</span>
       <span className="sc-value">{value}</span>
       <span className="sc-sub muted">
-        {s.kind !== 'sessions' && <>{t('{n} økter', { n: s.sessions })} · </>}{metricLabel}
+        {s.kind !== 'sessions' && <>{t(s.sessions === 1 ? '1 økt' : '{n} økter', { n: s.sessions })} · </>}{metricLabel}
       </span>
       {s.deltaPct != null && s.kind !== 'sessions' && (
         <span className={`sc-trend ${trendCls}`}>
