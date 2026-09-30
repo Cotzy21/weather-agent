@@ -35,6 +35,14 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ApiError(message));
     }
 
+    /** AI-kvoten per bruker er brukt opp -> 429 med Retry-After. */
+    @ExceptionHandler(no.weatheragent.training.AiRateLimiter.LimitExceededException.class)
+    public ResponseEntity<ApiError> handleAiLimit(no.weatheragent.training.AiRateLimiter.LimitExceededException e) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(e.retryAfterSeconds()))
+                .body(new ApiError(e.getMessage()));
+    }
+
     @ExceptionHandler(AiSuggestionException.class)
     public ResponseEntity<ApiError> handleAi(AiSuggestionException e) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ApiError(e.getMessage()));

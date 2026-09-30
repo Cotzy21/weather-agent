@@ -51,6 +51,9 @@ class TrainingControllerSecurityTest {
     private no.weatheragent.training.TrainingProfileService profiles;
 
     @MockitoBean
+    private no.weatheragent.training.AiRateLimiter aiLimit;
+
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     @Test
@@ -85,6 +88,17 @@ class TrainingControllerSecurityTest {
         mvc.perform(get("/api/trening/profil")
                         .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void aiEndpointReturns429WhenTheUserIsOverTheLimit() throws Exception {
+        org.mockito.Mockito.doThrow(new no.weatheragent.training.AiRateLimiter.LimitExceededException("For mange kall", 120))
+                .when(aiLimit).check(any());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trening/forslag")
+                        .contentType("application/json").content("{\"focus\":\"bein\"}")
+                        .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Retry-After", "120"));
     }
 
     @Test

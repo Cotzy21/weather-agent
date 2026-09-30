@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import no.weatheragent.training.ChatTurn;
 import no.weatheragent.training.ReadinessService;
 import no.weatheragent.training.Suggestion;
+import no.weatheragent.training.AiRateLimiter;
 import no.weatheragent.training.TrainingMemoryService;
 import no.weatheragent.training.TrainingProfileData;
 import no.weatheragent.training.TrainingProfileService;
@@ -66,11 +67,12 @@ public class TrainingController {
     private final ReadinessService readiness;
     private final TrainingMemoryService memory;
     private final TrainingProfileService profiles;
+    private final AiRateLimiter aiLimit;
 
     public TrainingController(WorkoutService workouts, WorkoutSuggester suggester,
                               TrainingPlanService plans, WorkoutImportService importer,
                               ReadinessService readiness, TrainingMemoryService memory,
-                              TrainingProfileService profiles) {
+                              TrainingProfileService profiles, AiRateLimiter aiLimit) {
         this.workouts = workouts;
         this.suggester = suggester;
         this.plans = plans;
@@ -78,6 +80,7 @@ public class TrainingController {
         this.readiness = readiness;
         this.memory = memory;
         this.profiles = profiles;
+        this.aiLimit = aiLimit;
     }
 
     /** Treningsminnet: liker / liker ikke / notater + vaner fra øktene. */
@@ -187,6 +190,7 @@ public class TrainingController {
     /** AI-forslag til en økt ut fra fokus + brukerens historikk. */
     @PostMapping("/api/trening/forslag")
     public SuggestionDto suggest(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SuggestionRequest request) {
+        aiLimit.check(UUID.fromString(jwt.getSubject()));
         Suggestion s = suggester.suggest(UUID.fromString(jwt.getSubject()), request.focus(), request.type(), request.lang());
         return SuggestionDto.from(s);
     }
@@ -198,6 +202,7 @@ public class TrainingController {
      */
     @PostMapping("/api/trening/plan-forslag")
     public PlanSuggestionDto suggestPlan(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SuggestionRequest request) {
+        aiLimit.check(UUID.fromString(jwt.getSubject()));
         return PlanSuggestionDto.from(
                 suggester.suggestPlan(UUID.fromString(jwt.getSubject()), request.focus(), request.lang()));
     }
@@ -208,6 +213,7 @@ public class TrainingController {
      */
     @PostMapping("/api/trening/assistent")
     public AssistantReplyDto assistant(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody AssistantRequest request) {
+        aiLimit.check(UUID.fromString(jwt.getSubject()));
         List<ChatTurn> turns = request.messages().stream()
                 .map(m -> new ChatTurn(m.role(), m.content()))
                 .toList();

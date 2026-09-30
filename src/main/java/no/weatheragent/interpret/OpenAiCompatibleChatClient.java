@@ -25,6 +25,8 @@ import java.util.Map;
 @Component
 public class OpenAiCompatibleChatClient {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(OpenAiCompatibleChatClient.class);
+
     private final RestClient http;
     private final String fastModel;
     private final String smartModel;
@@ -83,6 +85,7 @@ public class OpenAiCompatibleChatClient {
                 )
         );
 
+        long started = System.nanoTime();
         JsonNode root = http.post()
                 .uri("/chat/completions")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -90,6 +93,7 @@ public class OpenAiCompatibleChatClient {
                 .retrieve()
                 .body(JsonNode.class);
 
+        log.info("LLM {} svarte på {} ms", tier, (System.nanoTime() - started) / 1_000_000);
         return root.path("choices").path(0).path("message").path("content").asText("");
     }
 }
