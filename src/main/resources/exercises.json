@@ -1,0 +1,624 @@
+{
+ "exercises": [
+  {
+   "id": "bench-press",
+   "group": "Bryst",
+   "nb": "Benkpress",
+   "en": "Bench Press",
+   "requires": [
+    "barbell",
+    "bench"
+   ],
+   "aliases": [
+    "Bench",
+    "Flat bench press"
+   ]
+  },
+  {
+   "id": "incline-bench-press",
+   "group": "Bryst",
+   "nb": "Skråbenkpress",
+   "en": "Incline Bench Press",
+   "requires": [
+    "barbell",
+    "bench"
+   ],
+   "aliases": [
+    "Incline press",
+    "Skråpress"
+   ]
+  },
+  {
+   "id": "dumbbell-press",
+   "group": "Bryst",
+   "nb": "Hantelpress",
+   "en": "Dumbbell Press",
+   "requires": [
+    "dumbbell",
+    "bench"
+   ],
+   "aliases": [
+    "Manualpress",
+    "Dumbbell bench press",
+    "Dumbbell chest press"
+   ]
+  },
+  {
+   "id": "chest-fly",
+   "group": "Bryst",
+   "nb": "Flies",
+   "en": "Chest Fly",
+   "requires": [
+    "dumbbell",
+    "bench"
+   ],
+   "aliases": [
+    "Fly",
+    "Dumbbell fly",
+    "Flyes"
+   ]
+  },
+  {
+   "id": "dips",
+   "group": "Bryst",
+   "nb": "Dips",
+   "en": "Dips",
+   "requires": [
+    "dip-bars"
+   ],
+   "aliases": [
+    "Dip"
+   ]
+  },
+  {
+   "id": "push-ups",
+   "group": "Bryst",
+   "nb": "Push-ups",
+   "en": "Push-ups",
+   "requires": [],
+   "aliases": [
+    "Pushups",
+    "Push up",
+    "Armhevinger",
+    "Push-up"
+   ]
+  },
+  {
+   "id": "deadlift",
+   "group": "Rygg",
+   "nb": "Markløft",
+   "en": "Deadlift",
+   "requires": [
+    "barbell"
+   ],
+   "aliases": [
+    "Markløft med stang"
+   ],
+   "heavyLower": true
+  },
+  {
+   "id": "romanian-deadlift",
+   "group": "Rygg",
+   "nb": "Rumensk markløft",
+   "en": "Romanian Deadlift",
+   "requires": [
+    "barbell"
+   ],
+   "aliases": [
+    "RDL",
+    "Rumensk markløft"
+   ],
+   "heavyLower": true
+  },
+  {
+   "id": "lat-pulldown",
+   "group": "Rygg",
+   "nb": "Nedtrekk",
+   "en": "Lat Pull Downs",
+   "requires": [
+    "cable"
+   ],
+   "aliases": [
+    "Lat pulldown",
+    "Lat pull down",
+    "Nedtrekk til bryst",
+    "Lat pulldowns"
+   ]
+  },
+  {
+   "id": "bent-over-row",
+   "group": "Rygg",
+   "nb": "Stående roing",
+   "en": "Bent Over Rows",
+   "requires": [
+    "barbell"
+   ],
+   "aliases": [
+    "Bent over row",
+    "Stangroing",
+    "Barbell row"
+   ]
+  },
+  {
+   "id": "seated-cable-row",
+   "group": "Rygg",
+   "nb": "Sittende roing",
+   "en": "Seated Cable Row",
+   "requires": [
+    "cable"
+   ],
+   "aliases": [
+    "Seated row",
+    "Kabelroing"
+   ]
+  },
+  {
+   "id": "pull-ups",
+   "group": "Rygg",
+   "nb": "Pull-ups",
+   "en": "Pull-ups",
+   "requires": [
+    "pull-up-bar"
+   ],
+   "aliases": [
+    "Pullups",
+    "Pull up",
+    "Pull-up"
+   ]
+  },
+  {
+   "id": "chin-ups",
+   "group": "Rygg",
+   "nb": "Chins",
+   "en": "Chin-ups",
+   "requires": [
+    "pull-up-bar"
+   ],
+   "aliases": [
+    "Chinups",
+    "Chin up",
+    "Chin-up"
+   ]
+  },
+  {
+   "id": "t-bar-row",
+   "group": "Rygg",
+   "nb": "T-bar roing",
+   "en": "T-Bar Row",
+   "requires": [
+    "barbell"
+   ],
+   "aliases": [
+    "T-bar row",
+    "Tbar row"
+   ]
+  },
+  {
+   "id": "face-pulls",
+   "group": "Rygg",
+   "nb": "Face pulls",
+   "en": "Face Pulls",
+   "requires": [
+    "cable"
+   ],
+   "aliases": [
+    "Face pull"
+   ]
+  },
+  {
+   "id": "dumbbell-row",
+   "group": "Rygg",
+   "nb": "Manualroing",
+   "en": "Dumbbell Row",
+   "requires": [
+    "dumbbell"
+   ],
+   "aliases": [
+    "Enarmsroing",
+    "One-arm dumbbell row",
+    "Hantelroing"
+   ]
+  },
+  {
+   "id": "squat",
+   "group": "Bein",
+   "nb": "Knebøy",
+   "en": "Squat",
+   "requires": [
+    "barbell",
+    "rack"
+   ],
+   "aliases": [
+    "Back squat",
+    "Knebøy med stang"
+   ],
+   "heavyLower": true
+  },
+  {
+   "id": "front-squat",
+   "group": "Bein",
+   "nb": "Frontbøy",
+   "en": "Front Squat",
+   "requires": [
+    "barbell",
+    "rack"
+   ],
+   "aliases": [
+    "Front knebøy"
+   ],
+   "heavyLower": true
+  },
+  {
+   "id": "goblet-squat",
+   "group": "Bein",
+   "nb": "Goblet-knebøy",
+   "en": "Goblet Squat",
+   "requires": [
+    "dumbbell"
+   ],
+   "aliases": [
+    "Goblet knebøy"
+   ]
+  },
+  {
+   "id": "leg-press",
+   "group": "Bein",
+   "nb": "Leg press",
+   "en": "Leg Press",
+   "requires": [
+    "machine"
+   ],
+   "aliases": [
+    "Beinpress"
+   ],
+   "heavyLower": true
+  },
+  {
+   "id": "lunges",
+   "group": "Bein",
+   "nb": "Utfall",
+   "en": "Lunges",
+   "requires": [],
+   "aliases": [
+    "Lunge",
+    "Walking lunges"
+   ]
+  },
+  {
+   "id": "bulgarian-split-squat",
+   "group": "Bein",
+   "nb": "Bulgarske utfall",
+   "en": "Bulgarian Split Squat",
+   "requires": [],
+   "aliases": [
+    "Bulgarian split squats",
+    "Bulgarsk utfall"
+   ]
+  },
+  {
+   "id": "leg-extension",
+   "group": "Bein",
+   "nb": "Leg extension",
+   "en": "Leg Extension",
+   "requires": [
+    "machine"
+   ],
+   "aliases": [
+    "Kneekstensjon"
+   ]
+  },
+  {
+   "id": "leg-curl",
+   "group": "Bein",
+   "nb": "Leg curl",
+   "en": "Leg Curl",
+   "requires": [
+    "machine"
+   ],
+   "aliases": [
+    "Hamstring curl",
+    "Lying leg curl"
+   ]
+  },
+  {
+   "id": "calf-raises",
+   "group": "Bein",
+   "nb": "Tåhev",
+   "en": "Calf Raises",
+   "requires": [],
+   "aliases": [
+    "Calf raise",
+    "Tåhev stående"
+   ]
+  },
+  {
+   "id": "hip-thrust",
+   "group": "Bein",
+   "nb": "Hip thrust",
+   "en": "Hip Thrust",
+   "requires": [
+    "bench"
+   ],
+   "aliases": [
+    "Hip thrusts"
+   ],
+   "heavyLower": true
+  },
+  {
+   "id": "overhead-press",
+   "group": "Skuldre",
+   "nb": "Skulderpress",
+   "en": "Overhead Press",
+   "requires": [
+    "barbell"
+   ],
+   "aliases": [
+    "Militærpress",
+    "OHP",
+    "Shoulder press",
+    "Skulderpress med manualer"
+   ]
+  },
+  {
+   "id": "lateral-raises",
+   "group": "Skuldre",
+   "nb": "Sidehev",
+   "en": "Lateral Raises",
+   "requires": [
+    "dumbbell"
+   ],
+   "aliases": [
+    "Lateral raise",
+    "Side raises",
+    "Sidehev med manualer"
+   ]
+  },
+  {
+   "id": "front-raises",
+   "group": "Skuldre",
+   "nb": "Fronthev",
+   "en": "Front Raises",
+   "requires": [
+    "dumbbell"
+   ],
+   "aliases": [
+    "Front raise"
+   ]
+  },
+  {
+   "id": "rear-delt-fly",
+   "group": "Skuldre",
+   "nb": "Bakre flies",
+   "en": "Rear Delt Fly",
+   "requires": [
+    "dumbbell"
+   ],
+   "aliases": [
+    "Reverse fly",
+    "Bakre skulder flies"
+   ]
+  },
+  {
+   "id": "arnold-press",
+   "group": "Skuldre",
+   "nb": "Arnold press",
+   "en": "Arnold Press",
+   "requires": [
+    "dumbbell"
+   ],
+   "aliases": []
+  },
+  {
+   "id": "upright-row",
+   "group": "Skuldre",
+   "nb": "Opprekk",
+   "en": "Upright Row",
+   "requires": [
+    "barbell"
+   ],
+   "aliases": [
+    "Upright rows"
+   ]
+  },
+  {
+   "id": "bicep-curls",
+   "group": "Armer",
+   "nb": "Bicepscurl",
+   "en": "Bicep Curls",
+   "requires": [
+    "dumbbell"
+   ],
+   "aliases": [
+    "Bicep curl",
+    "Biceps curl",
+    "Biceps curls",
+    "Bicepscurls",
+    "Curl",
+    "Curls",
+    "Bicep Curls",
+    "Manualcurl",
+    "Dumbbell curl"
+   ]
+  },
+  {
+   "id": "hammer-curls",
+   "group": "Armer",
+   "nb": "Hammercurl",
+   "en": "Hammer Curls",
+   "requires": [
+    "dumbbell"
+   ],
+   "aliases": [
+    "Hammer curl",
+    "Hammercurls"
+   ]
+  },
+  {
+   "id": "concentration-curls",
+   "group": "Armer",
+   "nb": "Konsentrasjonscurl",
+   "en": "Concentration Curls",
+   "requires": [
+    "dumbbell"
+   ],
+   "aliases": [
+    "Concentration curl"
+   ]
+  },
+  {
+   "id": "tricep-pushdown",
+   "group": "Armer",
+   "nb": "Triceps pushdown",
+   "en": "Tricep Pushdown",
+   "requires": [
+    "cable"
+   ],
+   "aliases": [
+    "Triceps pushdowns",
+    "Tricep pushdowns",
+    "Pushdown"
+   ]
+  },
+  {
+   "id": "tricep-extension",
+   "group": "Armer",
+   "nb": "Triceps extension",
+   "en": "Tricep Extension",
+   "requires": [
+    "dumbbell"
+   ],
+   "aliases": [
+    "Triceps extensions",
+    "Tricep extensions",
+    "Overhead triceps extension"
+   ]
+  },
+  {
+   "id": "skullcrushers",
+   "group": "Armer",
+   "nb": "Skullcrushers",
+   "en": "Skullcrushers",
+   "requires": [
+    "barbell",
+    "bench"
+   ],
+   "aliases": [
+    "Skullcrusher",
+    "Skull crushers"
+   ]
+  },
+  {
+   "id": "plank",
+   "group": "Mage",
+   "nb": "Planke",
+   "en": "Plank",
+   "requires": [],
+   "aliases": [
+    "Planken"
+   ]
+  },
+  {
+   "id": "sit-ups",
+   "group": "Mage",
+   "nb": "Sit-ups",
+   "en": "Sit-ups",
+   "requires": [],
+   "aliases": [
+    "Situps",
+    "Sit up",
+    "Situp"
+   ]
+  },
+  {
+   "id": "russian-twists",
+   "group": "Mage",
+   "nb": "Russian twists",
+   "en": "Russian Twists",
+   "requires": [],
+   "aliases": [
+    "Russian twist"
+   ]
+  },
+  {
+   "id": "hanging-leg-raise",
+   "group": "Mage",
+   "nb": "Hanging leg raise",
+   "en": "Hanging Leg Raise",
+   "requires": [
+    "pull-up-bar"
+   ],
+   "aliases": [
+    "Hanging leg raises"
+   ]
+  },
+  {
+   "id": "cable-crunch",
+   "group": "Mage",
+   "nb": "Cable crunch",
+   "en": "Cable Crunch",
+   "requires": [
+    "cable"
+   ],
+   "aliases": [
+    "Cable crunches"
+   ]
+  },
+  {
+   "id": "kettlebell-swing",
+   "group": "Helkropp",
+   "nb": "Kettlebell swing",
+   "en": "Kettlebell Swing",
+   "requires": [
+    "dumbbell"
+   ],
+   "aliases": [
+    "Kettlebell swings",
+    "KB swing"
+   ]
+  },
+  {
+   "id": "clean-and-press",
+   "group": "Helkropp",
+   "nb": "Clean and press",
+   "en": "Clean and Press",
+   "requires": [
+    "barbell"
+   ],
+   "aliases": [
+    "Clean & press"
+   ]
+  },
+  {
+   "id": "thruster",
+   "group": "Helkropp",
+   "nb": "Thruster",
+   "en": "Thruster",
+   "requires": [
+    "dumbbell"
+   ],
+   "aliases": [
+    "Thrusters"
+   ]
+  },
+  {
+   "id": "burpees",
+   "group": "Helkropp",
+   "nb": "Burpees",
+   "en": "Burpees",
+   "requires": [],
+   "aliases": [
+    "Burpee"
+   ]
+  },
+  {
+   "id": "mountain-climbers",
+   "group": "Helkropp",
+   "nb": "Mountain climbers",
+   "en": "Mountain Climbers",
+   "requires": [],
+   "aliases": [
+    "Mountain climber"
+   ]
+  }
+ ]
+}

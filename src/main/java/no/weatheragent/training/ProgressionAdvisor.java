@@ -121,7 +121,7 @@ public final class ProgressionAdvisor {
         if (trimmed.isEmpty() || sets.isEmpty()) {
             return;
         }
-        map.computeIfAbsent(trimmed.toLowerCase(Locale.ROOT), k -> new ArrayList<>())
+        map.computeIfAbsent(ExerciseCatalog.groupKey(trimmed), k -> new ArrayList<>())
                 .add(new Session(date, trimmed, sets));
     }
 
@@ -215,7 +215,7 @@ public final class ProgressionAdvisor {
         if (top < LIGHT_WEIGHT_KG) {
             return 1;
         }
-        return BIG_LOWER_BODY.contains(exercise.toLowerCase(Locale.ROOT)) ? 5 : 2.5;
+        return ExerciseCatalog.isHeavyLower(exercise) || BIG_LOWER_BODY.contains(exercise.toLowerCase(Locale.ROOT)) ? 5 : 2.5;
     }
 
     /** Til nærmeste vekt man faktisk finner i et gym: 0,5 kg under 20 kg, ellers 2,5 kg. */

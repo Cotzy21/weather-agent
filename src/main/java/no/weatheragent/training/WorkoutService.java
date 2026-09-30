@@ -29,7 +29,7 @@ public class WorkoutService {
 
     @Transactional
     public Workout log(UUID userId, LocalDate date, String title, String type, JsonNode content, String notes) {
-        return repository.save(new Workout(userId, date, title, type, content, notes));
+        return repository.save(new Workout(userId, date, title, type, ExerciseCatalog.annotate(content), notes));
     }
 
     @Transactional(readOnly = true)
@@ -61,7 +61,7 @@ public class WorkoutService {
     /** Progresjon per dag for én øvelse på tvers av styrkeøkter: beste vekt + volum. */
     @Transactional(readOnly = true)
     public List<ProgressPoint> progression(UUID userId, String exercise) {
-        String target = exercise.trim().toLowerCase(Locale.ROOT);
+        String target = ExerciseCatalog.groupKey(exercise);
         Map<LocalDate, double[]> byDate = new LinkedHashMap<>(); // [maxWeight, volume]
 
         for (Workout w : repository.findByUserIdAndTypeOrderByDateAsc(userId, STRENGTH)) {
@@ -98,7 +98,7 @@ public class WorkoutService {
     }
 
     private static boolean nameMatches(JsonNode nameNode, String target) {
-        return nameNode.asText("").trim().toLowerCase(Locale.ROOT).equals(target);
+        return ExerciseCatalog.groupKey(nameNode.asText("")).equals(target);
     }
 
     private static void addAll(List<JsonNode> out, JsonNode array) {

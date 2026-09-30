@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import no.weatheragent.interpret.LlmTier;
 
 /**
  * Lager et AI-treningsforslag ut fra brukerens fokus og nylige økter. Gjenbruker
@@ -73,17 +74,15 @@ public class WorkoutSuggester {
      */
     public PlanSuggestion suggestPlan(UUID userId, String request, String lang) {
         String history = recentHistory(userId);
-        String raw = llm.complete(profiles.tierFor(userId), planSystemPrompt(), planUserPrompt(request, history) + languageLine(lang));
+        String system = planSystemPrompt();
+        String user = planUserPrompt(request, history) + languageLine(lang);
+        String raw = llm.complete(profiles.tierFor(userId), system, user);
         try {
-            JsonNode json = mapper.readTree(extractJson(raw));
-            List<Suggestion> workouts = parseWorkouts(json);
-            if (workouts.isEmpty()) {
+            PlanSuggestion plan = parsePlan(mapper.readTree(extractJson(raw)));
+            if (plan == null) {
                 throw new AiSuggestionException("Klarte ikke å lage en plan. Beskriv ønsket tydeligere.");
             }
-            return new PlanSuggestion(
-                    json.path("title").asText("Treningsplan"),
-                    json.path("summary").asText(""),
-                    workouts);
+            return enforce(userId, plan, request, lang, system, user, raw);
         } catch (AiSuggestionException e) {
             throw e;
         } catch (Exception e) {
@@ -98,8 +97,9 @@ public class WorkoutSuggester {
      */
     public AssistantReply chat(UUID userId, List<ChatTurn> messages, JsonNode currentPlan, String lang) {
         String history = recentHistory(userId);
-        String raw = llm.complete(profiles.tierFor(userId), assistantSystemPrompt(),
-                assistantUserPrompt(history, messages) + currentPlanContext(currentPlan) + languageLine(lang));
+        String system = assistantSystemPrompt();
+        String prompt = assistantUserPrompt(history, messages) + currentPlanContext(currentPlan) + languageLine(lang);
+        String raw = llm.complete(profiles.tierFor(userId), system, prompt);
         try {
             JsonNode json = mapper.readTree(extractJson(raw));
 
@@ -111,16 +111,9 @@ public class WorkoutSuggester {
                 }
             }
 
-            PlanSuggestion plan = null;
-            JsonNode planNode = json.path("plan");
-            if (planNode.path("workouts").isArray()) {
-                List<Suggestion> workouts = parseWorkouts(planNode);
-                if (!workouts.isEmpty()) {
-                    plan = new PlanSuggestion(
-                            planNode.path("title").asText("Treningsplan"),
-                            planNode.path("summary").asText(""),
-                            workouts);
-                }
+            PlanSuggestion plan = parsePlan(json.path("plan"));
+            if (plan != null) {
+                plan = enforce(userId, plan, conversationText(messages), lang, system, prompt, raw);
             }
 
             String reply = json.path("reply").asText("");
@@ -133,6 +126,60 @@ public class WorkoutSuggester {
         } catch (Exception e) {
             throw new AiSuggestionException("Klarte ikke å tolke assistentens svar. Prøv igjen.");
         }
+    }
+
+    /** Planen i en node med {@code title}/{@code summary}/{@code workouts}, eller null uten økter. */
+    private PlanSuggestion parsePlan(JsonNode node) {
+        if (!node.path("workouts").isArray()) return null;
+        List<Suggestion> workouts = parseWorkouts(node);
+        if (workouts.isEmpty()) return null;
+        return new PlanSuggestion(node.path("title").asText("Treningsplan"), node.path("summary").asText(""), workouts);
+    }
+
+    private static String conversationText(List<ChatTurn> messages) {
+        StringBuilder sb = new StringBuilder();
+        for (ChatTurn m : messages) {
+            if (!"assistant".equalsIgnoreCase(m.role()) && m.content() != null) sb.append(m.content()).append('\n');
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Sjekker planen mot brukerens utstyr, liker-ikke-liste og ønsker. Ved brudd: ETT retry med
+     * bruddene som konkrete rettelser (sterkeste modell), deretter fjernes øvelser som fortsatt bryter
+     * utstyr/liker-ikke deterministisk, og resten (dager) blir en advarsel i sammendraget.
+     */
+    private PlanSuggestion enforce(UUID userId, PlanSuggestion plan, String requestText, String lang,
+                                   String system, String user, String previousRaw) {
+        PlanValidator.Context ctx = new PlanValidator.Context(
+                profiles.find(userId).map(TrainingProfileData::equipment).orElse(null),
+                memory.profile(userId, LocalDate.now(ZoneId.of("Europe/Oslo"))).disliked(),
+                requestText);
+        List<PlanValidator.Violation> violations = PlanValidator.check(plan, ctx);
+        if (violations.isEmpty()) return plan;
+
+        StringBuilder fix = new StringBuilder("\n\nRETTELSER: planen du ga tidligere brøt disse reglene. Lag hele planen på nytt "
+                + "i samme JSON-format, fiks bruddene og behold resten uendret:\n");
+        violations.forEach(v -> fix.append("- ").append(v.message()).append('\n'));
+        String previous = previousRaw.length() > 8000 ? previousRaw.substring(0, 8000) : previousRaw;
+        fix.append("\nForrige svar:\n").append(previous);
+        try {
+            String retryRaw = llm.complete(LlmTier.PRO, system, user + fix);
+            PlanSuggestion retried = parsePlan(mapper.readTree(extractJson(retryRaw)));
+            // parsePlan gjelder planer med workouts-array; assistenten pakker planen i "plan".
+            if (retried == null) {
+                JsonNode wrapped = mapper.readTree(extractJson(retryRaw)).path("plan");
+                retried = parsePlan(wrapped);
+            }
+            if (retried != null) plan = retried;
+        } catch (Exception e) {
+            // Retry feilet: behold første plan og reparer den under.
+        }
+        plan = PlanValidator.repair(plan, ctx);
+        List<PlanValidator.Violation> left = PlanValidator.check(plan, ctx);
+        if (left.isEmpty()) return plan;
+        return new PlanSuggestion(plan.title(),
+                plan.summary() + PlanValidator.warning(left, "en".equalsIgnoreCase(lang)), plan.workouts());
     }
 
     /** Bygg øktene fra en node med et {@code workouts}-array. Foreslått ukedag ("day")

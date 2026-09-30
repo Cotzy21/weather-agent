@@ -152,7 +152,7 @@ public class TrainingMemoryService {
             }
             for (String name : seen) {
                 if (name.isEmpty()) continue;
-                String key = name.toLowerCase(Locale.ROOT);
+                String key = ExerciseCatalog.groupKey(name);
                 counts.merge(key, 1, Integer::sum);
                 display.putIfAbsent(key, name);
             }

@@ -33,6 +33,8 @@ class WorkoutSuggesterTest {
         when(memory.promptContext(any(), any())).thenReturn("");
         when(profiles.promptContext(any())).thenReturn("");
         when(profiles.tierFor(any())).thenReturn(LlmTier.SMART);
+        when(memory.profile(any(), any())).thenReturn(new TrainingMemoryProfile(
+                List.of(), List.of(), "", 0, 0, List.of(), List.of(), null));
     }
 
     @Test
@@ -257,5 +259,54 @@ class WorkoutSuggesterTest {
         org.mockito.ArgumentCaptor<String> prompt = org.mockito.ArgumentCaptor.forClass(String.class);
         org.mockito.Mockito.verify(llm).complete(eq(LlmTier.PRO), any(), prompt.capture());
         assertTrue(prompt.getValue().contains("Erfaringsnivå: nybegynner"));
+    }
+
+    private static final String PLAN_WITH_FACE_PULLS = """
+            {"title":"Plan","summary":"s","workouts":[
+              {"title":"Pull","day":"mandag","type":"STYRKE","content":{"blocks":[
+                {"kind":"exercise","name":"Face Pulls","sets":[{"reps":12,"weightKg":10},{"reps":12,"weightKg":10},{"reps":12,"weightKg":10}]},
+                {"kind":"exercise","name":"Bicep Curls","sets":[{"reps":10,"weightKg":10},{"reps":10,"weightKg":10},{"reps":10,"weightKg":10}]}]},"rationale":""}]}
+            """;
+
+    private static final String PLAN_WITHOUT_FACE_PULLS = PLAN_WITH_FACE_PULLS.replace("Face Pulls", "Rear Delt Fly");
+
+    @Test
+    void planThatBreaksEquipmentRulesIsRetriedWithTheViolations() {
+        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(profiles.find(user)).thenReturn(java.util.Optional.of(new TrainingProfileData(
+                "INTERMEDIATE", 24, 3, "MUSCLE", "HOME_WEIGHTS", 3, 45, "MEDIUM", "BRIEF", "", "", "", "")));
+        when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn(PLAN_WITH_FACE_PULLS);
+        org.mockito.ArgumentCaptor<String> retryPrompt = org.mockito.ArgumentCaptor.forClass(String.class);
+        when(llm.complete(eq(LlmTier.PRO), any(), retryPrompt.capture())).thenReturn(PLAN_WITHOUT_FACE_PULLS);
+
+        PlanSuggestion plan = suggester.suggestPlan(user, "pull-dag", null);
+
+        assertTrue(retryPrompt.getValue().contains("RETTELSER"));
+        assertTrue(retryPrompt.getValue().contains("Face Pulls"));
+        assertTrue(plan.workouts().get(0).content().toString().contains("Rear Delt Fly"));
+    }
+
+    @Test
+    void offendingExercisesAreRemovedWhenTheRetryFailsToFixThem() {
+        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(profiles.find(user)).thenReturn(java.util.Optional.of(new TrainingProfileData(
+                "INTERMEDIATE", 24, 3, "MUSCLE", "HOME_WEIGHTS", 3, 45, "MEDIUM", "BRIEF", "", "", "", "")));
+        when(llm.complete(any(), any(), any())).thenReturn(PLAN_WITH_FACE_PULLS);
+
+        PlanSuggestion plan = suggester.suggestPlan(user, "pull-dag", null);
+
+        String content = plan.workouts().get(0).content().toString();
+        assertTrue(!content.contains("Face Pulls"));
+        assertTrue(content.contains("Bicep Curls"));
+    }
+
+    @Test
+    void cleanPlanCostsNoExtraCall() {
+        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn(PLAN_WITH_FACE_PULLS);
+
+        suggester.suggestPlan(user, "pull-dag", null);
+
+        org.mockito.Mockito.verify(llm, org.mockito.Mockito.times(1)).complete(any(), any(), any());
     }
 }
