@@ -14,11 +14,13 @@ public record WorkoutDto(UUID id,
                          String type,
                          JsonNode content,
                          String notes,
-                         Instant createdAt) {
+                         Instant createdAt,
+                         UUID clientId,
+                         UUID plannedId) {
 
     public static WorkoutDto from(Workout w) {
         return new WorkoutDto(
                 w.getId(), w.getDate(), w.getTitle(), w.getType(),
-                w.getContent(), w.getNotes(), w.getCreatedAt());
+                w.getContent(), w.getNotes(), w.getCreatedAt(), w.getClientId(), w.getPlannedId());
     }
 }

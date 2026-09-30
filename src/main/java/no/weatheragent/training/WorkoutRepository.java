@@ -17,5 +17,7 @@ public interface WorkoutRepository extends JpaRepository<Workout, UUID> {
 
     List<Workout> findByUserIdAndTypeOrderByDateAsc(UUID userId, String type);
 
+    java.util.Optional<Workout> findByUserIdAndClientId(UUID userId, UUID clientId);
+
     long deleteByIdAndUserId(UUID id, UUID userId);
 }

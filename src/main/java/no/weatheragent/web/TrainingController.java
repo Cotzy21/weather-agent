@@ -142,7 +142,8 @@ public class TrainingController {
         UUID userId = UUID.fromString(jwt.getSubject());
         JsonNode content = request.content() == null ? JsonNodeFactory.instance.objectNode() : request.content();
         return WorkoutDto.from(
-                workouts.log(userId, request.date(), request.title(), request.type(), content, request.notes()));
+                workouts.log(userId, request.date(), request.title(), request.type(), content, request.notes(),
+                        request.clientId(), request.plannedId()));
     }
 
     /**

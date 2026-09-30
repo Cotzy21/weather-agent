@@ -86,4 +86,32 @@ class WorkoutServiceTest {
         assertEquals(1, prog.size());
         assertEquals(15.0, prog.get(0).maxWeight());
     }
+
+    @Test
+    void resendingTheSameClientIdReturnsTheStoredWorkoutInsteadOfADuplicate() {
+        UUID clientId = UUID.randomUUID();
+        Workout stored = new Workout(user, LocalDate.of(2026, 6, 30), "Push", "STYRKE", mapper.createObjectNode(), null)
+                .withOrigin(clientId, null);
+        when(repo.findByUserIdAndClientId(user, clientId)).thenReturn(java.util.Optional.of(stored));
+
+        Workout again = service.log(user, LocalDate.of(2026, 6, 30), "Push", "STYRKE", mapper.createObjectNode(), null,
+                clientId, null);
+
+        assertEquals(stored, again);
+        org.mockito.Mockito.verify(repo, org.mockito.Mockito.never()).save(any(Workout.class));
+    }
+
+    @Test
+    void newClientIdIsSavedWithPlannedId() {
+        UUID clientId = UUID.randomUUID();
+        UUID planned = UUID.randomUUID();
+        when(repo.findByUserIdAndClientId(user, clientId)).thenReturn(java.util.Optional.empty());
+        when(repo.save(any(Workout.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Workout w = service.log(user, LocalDate.of(2026, 6, 30), "Push", "STYRKE", mapper.createObjectNode(), null,
+                clientId, planned);
+
+        assertEquals(clientId, w.getClientId());
+        assertEquals(planned, w.getPlannedId());
+    }
 }

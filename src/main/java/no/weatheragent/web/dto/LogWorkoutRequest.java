@@ -17,5 +17,11 @@ public record LogWorkoutRequest(
         @NotBlank @Size(max = 120) String title,
         @NotBlank @Size(max = 40) String type,
         JsonNode content,
-        @Size(max = 4000) String notes) {
+        @Size(max = 4000) String notes,
+        java.util.UUID clientId,
+        java.util.UUID plannedId) {
+
+    public LogWorkoutRequest(LocalDate date, String title, String type, JsonNode content, String notes) {
+        this(date, title, type, content, notes, null, null);
+    }
 }

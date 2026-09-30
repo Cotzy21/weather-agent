@@ -29,7 +29,24 @@ public class WorkoutService {
 
     @Transactional
     public Workout log(UUID userId, LocalDate date, String title, String type, JsonNode content, String notes) {
-        return repository.save(new Workout(userId, date, title, type, ExerciseCatalog.annotate(content), notes));
+        return log(userId, date, title, type, content, notes, null, null);
+    }
+
+    /**
+     * Logger en økt. Med {@code clientId} er kallet idempotent: sendes samme økt på nytt (offline-kø
+     * som prøver igjen) returneres den som allerede er lagret i stedet for en duplikat.
+     */
+    @Transactional
+    public Workout log(UUID userId, LocalDate date, String title, String type, JsonNode content, String notes,
+                       UUID clientId, UUID plannedId) {
+        if (clientId != null) {
+            var existing = repository.findByUserIdAndClientId(userId, clientId);
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+        }
+        return repository.save(new Workout(userId, date, title, type, ExerciseCatalog.annotate(content), notes)
+                .withOrigin(clientId, plannedId));
     }
 
     @Transactional(readOnly = true)

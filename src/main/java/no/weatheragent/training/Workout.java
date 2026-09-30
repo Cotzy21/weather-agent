@@ -47,6 +47,12 @@ public class Workout {
     @Column(name = "notes", columnDefinition = "text")
     private String notes;
 
+    @Column(name = "client_id")
+    private UUID clientId;
+
+    @Column(name = "planned_id")
+    private UUID plannedId;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -64,6 +70,15 @@ public class Workout {
         this.createdAt = Instant.now();
     }
 
+    /** Klient-id (offline-kø) og planen økten kom fra; begge valgfrie. */
+    public Workout withOrigin(UUID clientId, UUID plannedId) {
+        this.clientId = clientId;
+        this.plannedId = plannedId;
+        return this;
+    }
+
+    public UUID getClientId() { return clientId; }
+    public UUID getPlannedId() { return plannedId; }
     public UUID getId() { return id; }
     public UUID getUserId() { return userId; }
     public LocalDate getDate() { return date; }
