@@ -65,6 +65,12 @@ public class OverpassClient {
      */
     static final long HEDGE_DELAY_MS = 6_000;
     static final long TOTAL_BUDGET_MS = 35_000;
+    /**
+     * Turruter rundt et sted er bare et tillegg til svaret (se {@code TurvaerService.optionalTrails}), så de får en
+     * kortere frist: er kartspeilene nede skal brukeren få værsvaret etter ca. 10 s, ikke etter 35 s.
+     */
+    static final long OPTIONAL_HEDGE_DELAY_MS = 3_000;
+    static final long OPTIONAL_BUDGET_MS = 10_000;
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(3);
     private static final Duration READ_TIMEOUT = Duration.ofSeconds(30);
 
@@ -87,6 +93,8 @@ public class OverpassClient {
     private final List<String> endpoints;
     private final long hedgeDelayMs;
     private final long totalBudgetMs;
+    private final long optionalHedgeDelayMs;
+    private final long optionalBudgetMs;
 
     /**
      * {@code overpass.endpoints} (kommaseparert URL-liste) overstyrer speilene, f.eks. for å bytte dem uten ny kode
@@ -101,7 +109,7 @@ public class OverpassClient {
                 endpointsOverride == null || endpointsOverride.isBlank()
                         ? ENDPOINTS
                         : List.of(endpointsOverride.trim().split("\\s*,\\s*")),
-                HEDGE_DELAY_MS, TOTAL_BUDGET_MS);
+                HEDGE_DELAY_MS, TOTAL_BUDGET_MS, OPTIONAL_HEDGE_DELAY_MS, OPTIONAL_BUDGET_MS);
     }
 
     /** Legger størrelsesgrensen på en klient-bygger (brukes også i tester, så de går gjennom samme løype). */
@@ -111,10 +119,18 @@ public class OverpassClient {
 
     /** For tester: ferdig bygd klient (f.eks. mot en mock-server) og egne tidsgrenser. */
     OverpassClient(RestClient http, List<String> endpoints, long hedgeDelayMs, long totalBudgetMs) {
+        this(http, endpoints, hedgeDelayMs, totalBudgetMs, hedgeDelayMs, totalBudgetMs);
+    }
+
+    /** Som over, men med egen (kortere) frist for de valgfrie turrute-oppslagene. */
+    OverpassClient(RestClient http, List<String> endpoints, long hedgeDelayMs, long totalBudgetMs,
+                   long optionalHedgeDelayMs, long optionalBudgetMs) {
         this.http = http;
         this.endpoints = endpoints;
         this.hedgeDelayMs = hedgeDelayMs;
         this.totalBudgetMs = totalBudgetMs;
+        this.optionalHedgeDelayMs = optionalHedgeDelayMs;
+        this.optionalBudgetMs = optionalBudgetMs;
     }
 
     /**
@@ -138,6 +154,15 @@ public class OverpassClient {
      * gang, siden verken speilbytte eller nytt forsøk hjelper da.
      */
     private JsonNode fetch(String query) {
+        return fetch(query, hedgeDelayMs, totalBudgetMs);
+    }
+
+    /** For oppslag som bare er et tillegg til svaret (turruter rundt et sted): kortere frist enn {@link #fetch}. */
+    private JsonNode fetchOptional(String query) {
+        return fetch(query, optionalHedgeDelayMs, optionalBudgetMs);
+    }
+
+    private JsonNode fetch(String query, long hedgeDelayMs, long totalBudgetMs) {
         return raceMirrors(endpoints, endpoint -> http.post()
                         .uri(endpoint)
                         .contentType(MediaType.TEXT_PLAIN)
@@ -279,7 +304,7 @@ public class OverpassClient {
 
         // Behold første forekomst av hvert navn, så samme rute ikke listes flere ganger.
         Map<String, Trail> byName = new LinkedHashMap<>();
-        for (Trail trail : OverpassTrailParser.parse(fetch(query))) {
+        for (Trail trail : OverpassTrailParser.parse(fetchOptional(query))) {
             byName.putIfAbsent(trail.name().toLowerCase(Locale.ROOT), trail);
         }
         return byName.values().stream().limit(MAX_TRAILS).toList();
@@ -292,7 +317,7 @@ public class OverpassClient {
      */
     @Cacheable(value = "trailGeometry", key = "#center.latitude() + ',' + #center.longitude() + ',' + #radiusMeters")
     public List<Trail> trailGeometriesNear(Location center, int radiusMeters) {
-        return OverpassTrailParser.parseWithGeometry(fetch(
+        return OverpassTrailParser.parseWithGeometry(fetchOptional(
                 OverpassQueries.trailGeometriesNear(center.latitude(), center.longitude(), radiusMeters)));
     }
 

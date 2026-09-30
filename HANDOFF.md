@@ -190,6 +190,10 @@ Dockerfile + PORT-config for backend-deploy finnes.
    (`ResponseSizeLimit`), og en 200 med HTML/ugyldig JSON regnes som et speil som ikke virker (neste speil prøves).
    Samme stresstest mot det nye bygget: 9 samtidige oppslag, alle 200 på 8-10 s, ingen OOM. `OVERPASS_ENDPOINTS`
    (kommaseparert) overstyrer speilene uten ny kode.
+   **Kortere frist for turruter** (samme dag): live-testen viste at stedssiden ventet hele 35 s for å vise en tom turliste når
+   kartspeilene var nede. Turruter rundt et sted (`trailsNear`, `trailGeometriesNear`) har nå egen frist: 10 s totalt, neste
+   speil etter 3 s (`OPTIONAL_BUDGET_MS`, `OPTIONAL_HEDGE_DELAY_MS`). Topper og ruter i området som rangeringen trenger beholder
+   de 35 s. Sikret med `OverpassOptionalBudgetTest` (mot en lokal server som aldri svarer).
 
 ## Oppsett på ny maskin (det som IKKE følger med git)
 
