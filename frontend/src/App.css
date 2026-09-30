@@ -2154,3 +2154,33 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .bw-input-row { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
 .bw-input { width: 140px; font-size: 36px; font-weight: 800; text-align: center; padding: 8px; }
 .bw-unit { font-size: 18px; color: var(--muted); font-weight: 600; }
+
+/* ---------- Tilpassbart dashboard ---------- */
+.dash-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dash-customize {
+  flex-shrink: 0; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border-strong);
+  background: var(--card-solid); color: var(--text); font-weight: 600; cursor: pointer;
+}
+.dash-widgets { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-bottom: 18px; }
+.dash-widget { min-width: 0; display: flex; flex-direction: column; }
+.dash-widget > .focus-card { flex: 1; }
+.dash-widget.wide { grid-column: 1 / -1; }
+.dash-widget .today-col { position: static; width: auto; }
+.custom-hint { margin: 0 4px 6px; font-size: var(--fs-sm); }
+.custom-list { list-style: none; }
+.custom-list li { display: flex; align-items: center; gap: 8px; padding: 10px 4px; border-bottom: 1px solid var(--border); }
+.custom-list li.off .custom-label, .custom-list li.off .custom-icon { opacity: 0.45; }
+.custom-icon { font-size: 20px; width: 28px; text-align: center; }
+.custom-label { flex: 1; font-size: 16px; font-weight: 500; }
+.switch {
+  width: 48px; height: 28px; flex-shrink: 0; border-radius: 999px; border: none; padding: 3px;
+  background: var(--border-strong); cursor: pointer; transition: background 0.2s;
+}
+.switch span { display: block; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
+.switch.on { background: var(--accent); }
+.switch.on span { transform: translateX(20px); }
+.custom-list .move {
+  width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--card-solid); color: var(--text); font-size: 12px; cursor: pointer;
+}
+.custom-list .move:disabled { opacity: 0.3; cursor: default; }

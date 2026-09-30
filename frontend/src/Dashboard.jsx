@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { BodyweightCard, BodyweightSheet } from './Bodyweight.jsx'
 import LifetimeStats from './LifetimeStats.jsx'
+import DashboardCustomizer from './DashboardCustomizer.jsx'
+import { WIDGET_BY_ID, loadLayout, storeLayout } from './dashboardLayout.js'
 import { localIso } from './trainingStats.js'
 import { authHeaders } from './supabase'
 import { cachedGet, getCached, apiUrl, readError } from './api'
@@ -8,7 +10,7 @@ import { useReveal, useCountUp } from './anim'
 import { useI18n } from './i18n.jsx'
 
 const ICONS = { STYRKE: '🏋️', LØPING: '🏃', SVØMMING: '🏊', SYKKEL: '🚴', BULDRING: '🧗', HIKING: '🥾', FRISTIL: '✨' }
-const DAY_LETTERS = ['M', 'T', 'O', 'T', 'F', 'L', 'S'] // mandag først
+const DAY_LETTERS = { nb: ['M', 'T', 'O', 'T', 'F', 'L', 'S'], en: ['M', 'T', 'W', 'T', 'F', 'S', 'S'] } // mandag først
 
 function startOfWeek() {
   const d = new Date()
@@ -26,7 +28,7 @@ const isoToday = () => localIso(new Date())
  * til høyre med dagens aktivitet og snarveier.
  */
 export default function Dashboard({ session, onNavigate }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const weekAgo = localIso(new Date(Date.now() - 7 * 86400000))
   // Hydrer fra cachen så fanen tegnes med forrige data straks (ingen tomt glimt).
   // Foretrekk full liste hvis den finnes, ellers siste-uke-slicen (forhåndshentet).
@@ -36,6 +38,13 @@ export default function Dashboard({ session, onNavigate }) {
   const [lows, setLows] = useState(() => (getCached(`/api/kosthold/uke?til=${isoToday()}`) ?? []).filter((n) => n.advice))
   const [weighIns, setWeighIns] = useState(() => getCached('/api/kropp/vekt') ?? [])
   const [showWeight, setShowWeight] = useState(false)
+  const [layout, setLayout] = useState(() => loadLayout(session?.user?.id ?? 'anon'))
+  const [customizing, setCustomizing] = useState(false)
+
+  function saveLayout(next) {
+    setLayout(next)
+    storeLayout(session?.user?.id ?? 'anon', next)
+  }
 
   useEffect(() => {
     if (!session) { setWorkouts([]); setDay(null); setLows([]); setWeighIns([]); return }
@@ -123,113 +132,108 @@ export default function Dashboard({ session, onNavigate }) {
     )
   }
 
-  return (
-    <div className="dash garmin" ref={revealRef}>
-      <h2 className="detail-title" data-reveal>{t('I fokus')}</h2>
-
-      <div className="dash-layout">
-        <div className="focus-grid">
-          <div className="focus-card" data-reveal>
-            <span className="focus-head">{t('🏋️ Trening denne uka')}</span>
-            <div className="focus-main">
-              <span className="focus-big" ref={weekRef}>{weekCount}</span>
-              <span className="focus-sub muted">{t('økter')} · {workouts.length} {t('totalt')}</span>
-            </div>
-            <div className="week-bars" aria-label="Økter per ukedag">
-              {dayCounts.map((n, i) => (
-                <span className={`week-day ${i === todayIdx ? 'today' : ''}`} key={i}>
-                  <span className="week-bar">
-                    <span style={{ height: `${(n / maxCount) * 100}%` }} />
-                  </span>
-                  <span className="week-letter">{DAY_LETTERS[i]}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <button className="focus-card clickable" data-reveal onClick={() => onNavigate('kosthold')}>
-            <span className="focus-head">{t('🥗 Kosthold i dag')}</span>
-            {day == null || (day.entries.length === 0 && lows.length === 0) ? (
-              <p className="muted">{t('Ingenting logget ennå – begynn kostholdsdagboka her →')}</p>
-            ) : (
-              <>
-                <div className="focus-main">
-                  <span className="focus-big">{day.kcal.toFixed(0)}</span>
-                  <span className="focus-sub muted">
-                    kcal
-                    {day.burnedKcal > 0 && <> · {t('trening')} −{day.burnedKcal}</>}
-                  </span>
-                </div>
-                {day.remainingKcal != null && (
-                  <p className={`focus-line ${day.remainingKcal < 0 ? 'over-budget' : ''}`}>
-                    {day.remainingKcal.toFixed(0)} {t('kcal igjen av målet')}
-                  </p>
-                )}
-                {lows.length > 0 && (
-                  <p className="focus-line muted">
-                    {t('🧪 Lavt denne uka:')} {lows.map((n) => n.name).slice(0, 3).join(', ')}
-                    {lows.length > 3 ? ` +${lows.length - 3}` : ''} →
-                  </p>
-                )}
-              </>
-            )}
-          </button>
-
-          <div className="focus-card" data-reveal>
-            <span className="focus-head">{t('⏱️ Siste økt')}</span>
-            {latest ? (
-              <>
-                <div className="focus-main">
-                  <span className="focus-big small">{ICONS[latest.type] || '•'}</span>
-                  <span>
-                    <strong className="focus-line">{latest.title}</strong>
-                    <span className="focus-line muted">{latest.date}</span>
-                  </span>
-                </div>
-              </>
-            ) : (
-              <p className="muted">{t('Ingen økter ennå – logg din første under «Trening».')}</p>
-            )}
-          </div>
-
-          <div className="focus-card" data-reveal>
-            <span className="focus-head">{t('🌤️ Turvær')}</span>
-            <p className="focus-line">{t('Hvor er det finest i helga?')}</p>
-            <p className="focus-line muted">{t('Spør værsøket – rangerer topper og turruter etter vær.')}</p>
-            <button className="mini" onClick={() => onNavigate('vaersok')}>{t('Finn turvær →')}</button>
-          </div>
+  const widgets = {
+    week: (
+      <div className="focus-card" data-reveal>
+        <span className="focus-head">{t('🏋️ Trening denne uka')}</span>
+        <div className="focus-main">
+          <span className="focus-big" ref={weekRef}>{weekCount}</span>
+          <span className="focus-sub muted">{t('økter')} · {workouts.length} {t('totalt')}</span>
         </div>
-
-        <aside className="today-col" data-reveal>
-          <h3 className="detail-h3">{t('I dag')}</h3>
-          {todays.length === 0 ? (
-            <div className="today-card muted">{t('Ingen aktivitet logget i dag ennå.')}</div>
-          ) : (
-            todays.map((w) => (
-              <div className="today-card" key={w.id}>
-                <span className="feed-icon">{ICONS[w.type] || '•'}</span>
-                <span>
-                  <strong className="focus-line">{w.title}</strong>
-                  <span className="focus-line muted">{w.type}</span>
-                </span>
-              </div>
-            ))
-          )}
-          <div className="dash-actions column">
-            <button className="primary" onClick={() => onNavigate('trening')}>{t('Logg økt')}</button>
-            <button onClick={() => onNavigate('rute')}>{t('Planlegg rute')}</button>
-            <button onClick={() => onNavigate('vaersok')}>{t('Finn turvær')}</button>
-          </div>
-        </aside>
+        <div className="week-bars" aria-label="Økter per ukedag">
+          {dayCounts.map((n, i) => (
+            <span className={`week-day ${i === todayIdx ? 'today' : ''}`} key={i}>
+              <span className="week-bar">
+                <span style={{ height: `${(n / maxCount) * 100}%` }} />
+              </span>
+              <span className="week-letter">{(DAY_LETTERS[lang] ?? DAY_LETTERS.en)[i]}</span>
+            </span>
+          ))}
+        </div>
       </div>
-
-      <BodyweightCard entries={weighIns} onOpen={() => setShowWeight(true)} onLog={logWeighIn} />
-      {showWeight && (
-        <BodyweightSheet entries={weighIns} onLog={logWeighIn} onDelete={deleteWeighIn} onClose={() => setShowWeight(false)} />
-      )}
-
-      <LifetimeStats workouts={workouts} />
-
+    ),
+    nutrition: (
+      <button className="focus-card clickable" data-reveal onClick={() => onNavigate('kosthold')}>
+        <span className="focus-head">{t('🥗 Kosthold i dag')}</span>
+        {day == null || (day.entries.length === 0 && lows.length === 0) ? (
+          <p className="muted">{t('Ingenting logget ennå – begynn kostholdsdagboka her →')}</p>
+        ) : (
+          <>
+            <div className="focus-main">
+              <span className="focus-big">{day.kcal.toFixed(0)}</span>
+              <span className="focus-sub muted">
+                kcal
+                {day.burnedKcal > 0 && <> · {t('trening')} −{day.burnedKcal}</>}
+              </span>
+            </div>
+            {day.remainingKcal != null && (
+              <p className={`focus-line ${day.remainingKcal < 0 ? 'over-budget' : ''}`}>
+                {day.remainingKcal.toFixed(0)} {t('kcal igjen av målet')}
+              </p>
+            )}
+            {lows.length > 0 && (
+              <p className="focus-line muted">
+                {t('🧪 Lavt denne uka:')} {lows.map((n) => n.name).slice(0, 3).join(', ')}
+                {lows.length > 3 ? ` +${lows.length - 3}` : ''} →
+              </p>
+            )}
+          </>
+        )}
+      </button>
+    ),
+    latest: (
+      <div className="focus-card" data-reveal>
+        <span className="focus-head">{t('⏱️ Siste økt')}</span>
+        {latest ? (
+          <>
+            <div className="focus-main">
+              <span className="focus-big small">{ICONS[latest.type] || '•'}</span>
+              <span>
+                <strong className="focus-line">{latest.title}</strong>
+                <span className="focus-line muted">{latest.date}</span>
+              </span>
+            </div>
+          </>
+        ) : (
+          <p className="muted">{t('Ingen økter ennå – logg din første under «Trening».')}</p>
+        )}
+      </div>
+    ),
+    weather: (
+      <div className="focus-card" data-reveal>
+        <span className="focus-head">{t('🌤️ Turvær')}</span>
+        <p className="focus-line">{t('Hvor er det finest i helga?')}</p>
+        <p className="focus-line muted">{t('Spør værsøket – rangerer topper og turruter etter vær.')}</p>
+        <button className="mini" onClick={() => onNavigate('vaersok')}>{t('Finn turvær →')}</button>
+      </div>
+    ),
+    today: (
+      <aside className="today-col">
+        <h3 className="detail-h3">{t('I dag')}</h3>
+        {todays.length === 0 ? (
+          <div className="today-card muted">{t('Ingen aktivitet logget i dag ennå.')}</div>
+        ) : (
+          todays.map((w) => (
+            <div className="today-card" key={w.id}>
+              <span className="feed-icon">{ICONS[w.type] || '•'}</span>
+              <span>
+                <strong className="focus-line">{w.title}</strong>
+                <span className="focus-line muted">{w.type}</span>
+              </span>
+            </div>
+          ))
+        )}
+        <div className="dash-actions column">
+          <button className="primary" onClick={() => onNavigate('trening')}>{t('Logg økt')}</button>
+          <button onClick={() => onNavigate('rute')}>{t('Planlegg rute')}</button>
+          <button onClick={() => onNavigate('vaersok')}>{t('Finn turvær')}</button>
+        </div>
+      </aside>
+    ),
+    bodyweight: <BodyweightCard entries={weighIns} onOpen={() => setShowWeight(true)} onLog={logWeighIn} />,
+    lifetime: <LifetimeStats workouts={workouts} />,
+    recent: (
+      <>
       <h3 className="detail-h3" data-reveal>{t('Nylig aktivitet')}</h3>
       {workouts.length === 0 ? (
         <p className="muted" data-reveal>{t('Ingen økter ennå – logg din første under «Trening».')}</p>
@@ -244,6 +248,31 @@ export default function Dashboard({ session, onNavigate }) {
           ))}
         </div>
       )}
+      </>
+    ),
+  }
+
+  return (
+    <div className="dash garmin" ref={revealRef}>
+      <div className="dash-head">
+        <h2 className="detail-title" data-reveal>{t('I fokus')}</h2>
+        <button className="dash-customize" onClick={() => setCustomizing(true)}>✎ {t('Tilpass')}</button>
+      </div>
+
+      {layout.every((w) => !w.on) && (
+        <button className="plan-empty" onClick={() => setCustomizing(true)}>{t('Dashboardet er tomt – velg hva du vil se')}</button>
+      )}
+
+      <div className="dash-widgets">
+        {layout.filter((w) => w.on).map((w) => (
+          <div key={w.id} className={`dash-widget ${WIDGET_BY_ID[w.id].wide ? 'wide' : ''}`}>{widgets[w.id]}</div>
+        ))}
+      </div>
+
+      {showWeight && (
+        <BodyweightSheet entries={weighIns} onLog={logWeighIn} onDelete={deleteWeighIn} onClose={() => setShowWeight(false)} />
+      )}
+      {customizing && <DashboardCustomizer layout={layout} onChange={saveLayout} onClose={() => setCustomizing(false)} />}
     </div>
   )
 }
