@@ -47,6 +47,12 @@ public class DailyBalanceService {
 
     @Transactional(readOnly = true)
     public DayBalance day(UUID userId, LocalDate date) {
+        return day(userId, date, false);
+    }
+
+    /** Som {@link #day(UUID, LocalDate)}, med rådet på norsk eller engelsk. */
+    @Transactional(readOnly = true)
+    public DayBalance day(UUID userId, LocalDate date, boolean english) {
         MealLogService.DaySummary day = meals.day(userId, date);
         CalorieGoal goal = goals.find(userId).orElse(null);
 
@@ -60,10 +66,12 @@ public class DailyBalanceService {
         Double target = goal != null ? goals.dailyTargetKcal(goal) : null;
         Double remaining = target != null ? target - day.kcal() + burned : null;
 
-        String tip = burned >= BIG_BURN_KCAL
-                ? "Stor treningsdag (~" + burned + " kcal): fyll på med karbohydrater og 20-30 g "
-                + "protein innen et par timer, og drikk godt utover kvelden."
-                : null;
+        String tip = burned < BIG_BURN_KCAL ? null
+                : english
+                ? "Big training day (~" + burned + " kcal): refuel with carbohydrates and 20-30 g "
+                + "protein within a couple of hours, and drink plenty through the evening."
+                : "Stor treningsdag (~" + burned + " kcal): fyll på med karbohydrater og 20-30 g "
+                + "protein innen et par timer, og drikk godt utover kvelden.";
 
         return new DayBalance(day, burned, target, remaining, tip);
     }

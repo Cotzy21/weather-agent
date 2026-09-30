@@ -75,7 +75,7 @@ const EMPTY_FOOD = {
 const today = () => localIso(new Date())
 
 export default function MealDiary({ session }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [date, setDate] = useState(today)
   const [meal, setMeal] = useState('FROKOST')
 
@@ -130,8 +130,9 @@ export default function MealDiary({ session }) {
     return () => clearTimeout(t)
   }, [query, prefsVersion])
 
-  useEffect(() => { loadDay() }, [date]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { loadWeek(); loadGoal(); loadPrefs() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadDay() }, [date, lang]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadWeek() }, [lang]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadGoal(); loadPrefs() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadPrefs() {
     try {
@@ -185,14 +186,14 @@ export default function MealDiary({ session }) {
 
   async function loadDay() {
     try {
-      const res = await fetch(apiUrl(`/api/kosthold/dag?dato=${date}`), { headers: await authHeaders() })
+      const res = await fetch(apiUrl(`/api/kosthold/dag?dato=${date}&lang=${lang}`), { headers: await authHeaders() })
       if (res.ok) setDay(await res.json())
     } catch { /* vis bare tom dag */ }
   }
 
   async function loadWeek() {
     try {
-      const res = await fetch(apiUrl(`/api/kosthold/uke?til=${today()}`), { headers: await authHeaders() })
+      const res = await fetch(apiUrl(`/api/kosthold/uke?til=${today()}&lang=${lang}`), { headers: await authHeaders() })
       if (res.ok) setWeek(await res.json())
     } catch { /* panelet er sekundært */ }
   }

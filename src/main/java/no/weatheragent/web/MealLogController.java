@@ -167,8 +167,9 @@ public class MealLogController {
      */
     @GetMapping("/api/kosthold/dag")
     public DaySummaryDto day(@AuthenticationPrincipal Jwt jwt,
-                             @RequestParam("dato") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return DaySummaryDto.from(balance.day(UUID.fromString(jwt.getSubject()), date));
+                             @RequestParam("dato") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                             @RequestParam(value = "lang", required = false) String lang) {
+        return DaySummaryDto.from(balance.day(UUID.fromString(jwt.getSubject()), date, "en".equalsIgnoreCase(lang)));
     }
 
     /** Kalorimålet, eller 404 til profilen er satt opp. */
@@ -189,13 +190,14 @@ public class MealLogController {
         return CalorieGoalDto.from(saved, goals.dailyTargetKcal(saved));
     }
 
-    /** Ukas næringsstatus (7 dager til og med dato), GET /api/kosthold/uke?til=2026-07-02 */
+    /** Ukas næringsstatus (7 dager til og med dato), GET /api/kosthold/uke?til=2026-07-02[&lang=en] */
     @GetMapping("/api/kosthold/uke")
     public List<NutrientStatusDto> week(@AuthenticationPrincipal Jwt jwt,
-                                        @RequestParam("til") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+                                        @RequestParam("til") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+                                        @RequestParam(value = "lang", required = false) String lang) {
         UUID userId = UUID.fromString(jwt.getSubject());
-        // Rådene («gode kilder: …») tilpasses allergier/diett/misliker.
-        return meals.week(userId, endDate, preferences.profileFor(userId)).stream()
+        // Rådene («gode kilder: …») tilpasses allergier/diett/misliker, og kommer på norsk eller engelsk (?lang=en).
+        return meals.week(userId, endDate, preferences.profileFor(userId), "en".equalsIgnoreCase(lang)).stream()
                 .map(NutrientStatusDto::from)
                 .toList();
     }

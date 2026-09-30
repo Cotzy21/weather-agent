@@ -19,7 +19,7 @@ public record NutrientStatusDto(
     public static NutrientStatusDto from(MealLogService.NutrientStatus status) {
         return new NutrientStatusDto(
                 status.reference().nutrientId(),
-                status.reference().displayName(),
+                status.name(),
                 status.reference().unit(),
                 status.avgPerDay(),
                 status.reference().dailyTarget(),

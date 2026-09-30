@@ -102,13 +102,35 @@ public record NutrientReference(
      * og fagfolk i stedet for å anbefale noe brukeren ikke kan spise.
      */
     public String lowAdvice(DietProfile profile) {
-        List<String> ok = sources.stream()
-                .filter(s -> FoodFlags.allowed(s, profile))
-                .limit(MAX_SOURCES)
-                .toList();
+        return lowAdvice(profile, false);
+    }
+
+    /**
+     * Som {@link #lowAdvice(DietProfile)}, på norsk eller engelsk. Filtreringen mot allergier/diett skjer alltid på de
+     * norske kildenavnene (det er dem {@link FoodFlags} kjenner); den engelske teksten hentes på samme plass i lista.
+     */
+    public String lowAdvice(DietProfile profile, boolean english) {
+        NutrientTranslations.En en = english ? NutrientTranslations.of(nutrientId) : null;
+        List<String> ok = new java.util.ArrayList<>();
+        for (int i = 0; i < sources.size() && ok.size() < MAX_SOURCES; i++) {
+            if (FoodFlags.allowed(sources.get(i), profile)) {
+                ok.add(en != null ? en.sources().get(i) : sources.get(i));
+            }
+        }
+        if (en != null) {
+            return ok.isEmpty()
+                    ? en.consequence() + " Talk to a doctor or dietitian about supplements."
+                    : en.consequence() + " Good sources: " + String.join(", ", ok) + ".";
+        }
         if (ok.isEmpty()) {
             return consequence + " Snakk gjerne med lege eller ernæringsfysiolog om tilskudd.";
         }
         return consequence + " Gode kilder: " + String.join(", ", ok) + ".";
+    }
+
+    /** Visningsnavnet på norsk eller engelsk (faller tilbake til norsk hvis oversettelse mangler). */
+    public String displayName(boolean english) {
+        NutrientTranslations.En en = english ? NutrientTranslations.of(nutrientId) : null;
+        return en != null ? en.name() : displayName;
     }
 }

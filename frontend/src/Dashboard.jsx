@@ -34,8 +34,8 @@ export default function Dashboard({ session, onNavigate }) {
   // Foretrekk full liste hvis den finnes, ellers siste-uke-slicen (forhåndshentet).
   const [workouts, setWorkouts] = useState(() =>
     getCached('/api/treningsokter') ?? getCached(`/api/treningsokter?siden=${weekAgo}`) ?? [])
-  const [day, setDay] = useState(() => getCached(`/api/kosthold/dag?dato=${isoToday()}`) ?? null)
-  const [lows, setLows] = useState(() => (getCached(`/api/kosthold/uke?til=${isoToday()}`) ?? []).filter((n) => n.advice))
+  const [day, setDay] = useState(() => getCached(`/api/kosthold/dag?dato=${isoToday()}&lang=${lang}`) ?? null)
+  const [lows, setLows] = useState(() => (getCached(`/api/kosthold/uke?til=${isoToday()}&lang=${lang}`) ?? []).filter((n) => n.advice))
   const [weighIns, setWeighIns] = useState(() => getCached('/api/kropp/vekt') ?? [])
   const [showWeight, setShowWeight] = useState(false)
   const [layout, setLayout] = useState(() => loadLayout(session?.user?.id ?? 'anon'))
@@ -80,7 +80,7 @@ export default function Dashboard({ session, onNavigate }) {
     loadWeighIns()
     syncLayout()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session])
+  }, [session, lang]) // lang: rådene fra backend kommer på valgt språk, så de hentes på nytt ved språkbytte
 
   async function loadWorkouts() {
     const headers = await authHeaders()
@@ -119,8 +119,8 @@ export default function Dashboard({ session, onNavigate }) {
     const headers = await authHeaders()
     try {
       const [dag, uke] = await Promise.all([
-        cachedGet(`/api/kosthold/dag?dato=${iso}`, headers),
-        cachedGet(`/api/kosthold/uke?til=${iso}`, headers),
+        cachedGet(`/api/kosthold/dag?dato=${iso}&lang=${lang}`, headers),
+        cachedGet(`/api/kosthold/uke?til=${iso}&lang=${lang}`, headers),
       ])
       setDay(dag)
       setLows(uke.filter((n) => n.advice))

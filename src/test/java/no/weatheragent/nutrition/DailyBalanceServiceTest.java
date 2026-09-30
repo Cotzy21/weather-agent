@@ -55,6 +55,19 @@ class DailyBalanceServiceTest {
     }
 
     @Test
+    void theRecoveryTipComesInEnglishOnRequest() {
+        when(meals.day(USER, DATE)).thenReturn(new MealLogService.DaySummary(List.of(), 1500, 100, 50, 150));
+        when(goals.find(USER)).thenReturn(Optional.empty());
+        when(workouts.findByUserIdAndDate(USER, DATE)).thenReturn(List.of(run("{\"distanceKm\":10,\"durationMin\":60}")));
+
+        String tip = service.day(USER, DATE, true).recoveryTip();
+
+        assertNotNull(tip);
+        assertEquals(true, tip.startsWith("Big training day"));
+        assertEquals(true, service.day(USER, DATE, false).recoveryTip().startsWith("Stor treningsdag"));
+    }
+
+    @Test
     void withoutGoalTargetAndRemainingAreNull() {
         when(meals.day(USER, DATE)).thenReturn(
                 new MealLogService.DaySummary(List.of(), 500, 30, 20, 60));

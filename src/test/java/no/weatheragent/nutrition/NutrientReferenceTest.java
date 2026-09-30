@@ -18,6 +18,45 @@ class NutrientReferenceTest {
     }
 
     @Test
+    void englishAdviceUsesTheEnglishTextAndSourcesAtTheSamePositions() {
+        String advice = ref("Ca").lowAdvice(DietProfile.NONE, true);
+
+        assertTrue(advice.startsWith("Low calcium weakens the skeleton"));
+        assertTrue(advice.contains("Good sources: milk, cheese, yogurt, kale, broccoli"));
+        assertFalse(advice.contains("melk")); // ingen norsk lekker gjennom
+    }
+
+    @Test
+    void englishAdviceStillRespectsAllergiesByFilteringOnTheNorwegianNames() {
+        String advice = ref("Ca").lowAdvice(new DietProfile(Diet.ALT, Set.of(Allergen.MELK), List.of()), true);
+
+        assertTrue(advice.contains("kale"));
+        assertFalse(advice.contains("milk"));
+        assertFalse(advice.contains("cheese"));
+        assertFalse(advice.contains("yogurt"));
+    }
+
+    @Test
+    void englishAdvicePointsToSupplementsWhenNothingIsLeft() {
+        List<String> dislikeEverything = ref("Vit C").sources();
+
+        String advice = ref("Vit C").lowAdvice(new DietProfile(Diet.ALT, Set.of(), dislikeEverything), true);
+
+        assertTrue(advice.endsWith("Talk to a doctor or dietitian about supplements."));
+    }
+
+    @Test
+    void displayNameFollowsTheLanguage() {
+        assertTrue(ref("Fe").displayName(false).equals("Jern"));
+        assertTrue(ref("Fe").displayName(true).equals("Iron"));
+    }
+
+    @Test
+    void norwegianAdviceIsUnchangedByTheEnglishSupport() {
+        assertTrue(ref("Ca").lowAdvice(DietProfile.NONE, false).equals(ref("Ca").lowAdvice()));
+    }
+
+    @Test
     void defaultAdviceListsTheUsualSources() {
         String advice = ref("Ca").lowAdvice();
 

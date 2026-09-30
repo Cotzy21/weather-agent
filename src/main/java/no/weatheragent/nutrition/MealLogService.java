@@ -53,15 +53,24 @@ public class MealLogService {
      * {@code profile} brukes til å tilpasse kildene i rådet (allergier/diett).
      */
     public record NutrientStatus(NutrientReference reference, double avgPerDay, double percent,
-                                 DietProfile profile) {
+                                 DietProfile profile, boolean english) {
+
+        public NutrientStatus(NutrientReference reference, double avgPerDay, double percent, DietProfile profile) {
+            this(reference, avgPerDay, percent, profile, false);
+        }
 
         public NutrientStatus(NutrientReference reference, double avgPerDay, double percent) {
-            this(reference, avgPerDay, percent, DietProfile.NONE);
+            this(reference, avgPerDay, percent, DietProfile.NONE, false);
+        }
+
+        /** Visningsnavnet på valgt språk. */
+        public String name() {
+            return reference.displayName(english);
         }
 
         /** Råd vises bare når inntaket er lavt - ellers er alt vel. */
         public String advice() {
-            return percent < LOW_THRESHOLD_PERCENT ? reference.lowAdvice(profile) : null;
+            return percent < LOW_THRESHOLD_PERCENT ? reference.lowAdvice(profile, english) : null;
         }
     }
 
@@ -110,6 +119,12 @@ public class MealLogService {
     /** Som {@link #week(UUID, LocalDate)}, men med råd tilpasset brukerens profil. */
     @Transactional(readOnly = true)
     public List<NutrientStatus> week(UUID userId, LocalDate endDate, DietProfile profile) {
+        return week(userId, endDate, profile, false);
+    }
+
+    /** Som {@link #week(UUID, LocalDate, DietProfile)}, med navn og råd på norsk eller engelsk. */
+    @Transactional(readOnly = true)
+    public List<NutrientStatus> week(UUID userId, LocalDate endDate, DietProfile profile, boolean english) {
         List<MealEntry> entries =
                 repository.findByUserIdAndDateBetween(userId, endDate.minusDays(WEEK_DAYS - 1), endDate);
         if (entries.isEmpty()) {
@@ -136,7 +151,7 @@ public class MealLogService {
         return NutrientReference.TRACKED.stream()
                 .map(ref -> {
                     double avg = totals.getOrDefault(ref.nutrientId(), 0.0) / daysLogged;
-                    return new NutrientStatus(ref, avg, ref.percentOfTarget(avg), profile);
+                    return new NutrientStatus(ref, avg, ref.percentOfTarget(avg), profile, english);
                 })
                 .toList();
     }

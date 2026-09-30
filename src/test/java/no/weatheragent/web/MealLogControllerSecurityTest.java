@@ -81,7 +81,7 @@ class MealLogControllerSecurityTest {
 
     @Test
     void dayIncludesTrainingBalance() throws Exception {
-        when(balance.day(eq(UUID.fromString(SUB)), eq(LocalDate.of(2026, 7, 2))))
+        when(balance.day(eq(UUID.fromString(SUB)), eq(LocalDate.of(2026, 7, 2)), eq(false)))
                 .thenReturn(new no.weatheragent.nutrition.DailyBalanceService.DayBalance(
                         new MealLogService.DaySummary(List.of(), 1500, 100, 50, 150),
                         800, 2800.0, 2100.0, "Stor treningsdag ..."));
@@ -154,13 +154,34 @@ class MealLogControllerSecurityTest {
                         .filter(r -> r.nutrientId().equals("Ca")).findFirst().orElseThrow(),
                 248, 26.1);
 
-        when(meals.week(eq(UUID.fromString(SUB)), any(), any())).thenReturn(List.of(lowCalcium));
+        when(meals.week(eq(UUID.fromString(SUB)), any(), any(), eq(false))).thenReturn(List.of(lowCalcium));
 
         mvc.perform(get("/api/kosthold/uke").param("til", "2026-07-02")
                         .with(jwt().jwt(j -> j.subject(SUB))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Kalsium"))
                 .andExpect(jsonPath("$[0].advice").isNotEmpty());
+    }
+
+    @Test
+    void weekAndDayAreAskedInEnglishOnlyWhenLangIsEn() throws Exception {
+        var lowCalcium = new MealLogService.NutrientStatus(
+                no.weatheragent.nutrition.NutrientReference.TRACKED.stream()
+                        .filter(r -> r.nutrientId().equals("Ca")).findFirst().orElseThrow(),
+                248, 26.1, no.weatheragent.nutrition.DietProfile.NONE, true);
+        when(meals.week(eq(UUID.fromString(SUB)), any(), any(), eq(true))).thenReturn(List.of(lowCalcium));
+        when(balance.day(eq(UUID.fromString(SUB)), eq(LocalDate.of(2026, 7, 2)), eq(true)))
+                .thenReturn(new no.weatheragent.nutrition.DailyBalanceService.DayBalance(
+                        new MealLogService.DaySummary(List.of(), 1500, 100, 50, 150), 800, 2800.0, 2100.0, "Big training day ..."));
+
+        mvc.perform(get("/api/kosthold/uke").param("til", "2026-07-02").param("lang", "en")
+                        .with(jwt().jwt(j -> j.subject(SUB))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Calcium"))
+                .andExpect(jsonPath("$[0].advice").value(org.hamcrest.Matchers.startsWith("Low calcium")));
+        mvc.perform(get("/api/kosthold/dag").param("dato", "2026-07-02").param("lang", "EN")
+                        .with(jwt().jwt(j -> j.subject(SUB))))
+                .andExpect(jsonPath("$.recoveryTip").value("Big training day ..."));
     }
 
     @Test

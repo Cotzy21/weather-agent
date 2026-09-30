@@ -335,8 +335,8 @@ export default function App() {
         // Så resten i bakgrunnen (rekkefølgen er ikke kritisk).
         const rest = [
           '/api/treningsokter',
-          `/api/kosthold/dag?dato=${iso}`,
-          `/api/kosthold/uke?til=${iso}`,
+          `/api/kosthold/dag?dato=${iso}&lang=${lang}`,
+          `/api/kosthold/uke?til=${iso}&lang=${lang}`,
           `/api/recovery?lang=${lang}`,
           '/api/trening/planer',
           '/api/kosthold/favoritter',
