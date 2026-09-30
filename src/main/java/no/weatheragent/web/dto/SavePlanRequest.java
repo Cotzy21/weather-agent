@@ -5,9 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 
 /** Lagre en treningsplan - feltene matcher et AI-forslag, så det kan sendes rett inn. */
 public record SavePlanRequest(
-        @NotBlank String title,
-        @NotBlank String type,
+        @NotBlank @jakarta.validation.constraints.Size(max = 120) String title,
+        @NotBlank @jakarta.validation.constraints.Size(max = 40) String type,
         JsonNode content,
-        String rationale
+        @jakarta.validation.constraints.Size(max = 4000) String rationale
 ) {
 }

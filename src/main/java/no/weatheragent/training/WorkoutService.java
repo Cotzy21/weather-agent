@@ -20,6 +20,7 @@ import java.util.UUID;
 public class WorkoutService {
 
     private static final String STRENGTH = "STYRKE";
+    static final int MAX_WORKOUTS_PER_DAY = 20;
 
     private final WorkoutRepository repository;
 
@@ -44,6 +45,10 @@ public class WorkoutService {
             if (existing.isPresent()) {
                 return existing.get();
             }
+        }
+        no.weatheragent.support.Limits.requireRecentDate(date, 30, "økta");
+        if (repository.findByUserIdAndDate(userId, date).size() >= MAX_WORKOUTS_PER_DAY) {
+            throw new IllegalArgumentException("Maks " + MAX_WORKOUTS_PER_DAY + " økter per dag.");
         }
         return repository.save(new Workout(userId, date, title, type, ExerciseCatalog.annotate(content), notes)
                 .withOrigin(clientId, plannedId));

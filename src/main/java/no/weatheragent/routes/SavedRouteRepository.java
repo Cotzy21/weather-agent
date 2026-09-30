@@ -9,6 +9,8 @@ public interface SavedRouteRepository extends JpaRepository<SavedRoute, UUID> {
 
     List<SavedRoute> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
+    long countByUserId(UUID userId);
+
     /** Sletter bare hvis ruta tilhører brukeren. Returnerer antall slettet (0 = ikke din/finnes ikke). */
     long deleteByIdAndUserId(UUID id, UUID userId);
 }

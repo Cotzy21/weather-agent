@@ -71,9 +71,13 @@ public class CustomFoodService {
     /** Egne + offentlige varer som matcher søket, egne først. */
     @Transactional(readOnly = true)
     public List<CustomFood> search(UUID userId, String query) {
-        String q = query == null ? "" : query.trim();
+        // %, _ og \ er jokertegn i LIKE: fjernes, ellers kan «%%%%» tvinge frem tunge søk over alle offentlige varer.
+        String q = query == null ? "" : query.replaceAll("[%_\\\\]", " ").trim();
         if (q.length() < 2) {
             return List.of();
+        }
+        if (q.length() > 60) {
+            q = q.substring(0, 60);
         }
         return repository.searchVisible(userId, q, PageRequest.of(0, SEARCH_LIMIT));
     }

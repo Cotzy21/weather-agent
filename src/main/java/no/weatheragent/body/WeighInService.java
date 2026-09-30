@@ -25,6 +25,9 @@ public class WeighInService {
         if (Double.isNaN(weightKg) || weightKg < MIN_KG || weightKg > MAX_KG) {
             throw new IllegalArgumentException("Vekten må være mellom " + (int) MIN_KG + " og " + (int) MAX_KG + " kg.");
         }
+        if (date.isBefore(today.minusYears(30))) {
+            throw new IllegalArgumentException("Datoen er for langt tilbake i tid.");
+        }
         if (date.isAfter(today)) {
             throw new IllegalArgumentException("Du kan ikke veie deg i fremtiden.");
         }

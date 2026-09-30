@@ -70,6 +70,8 @@ public class MealLogService {
         if (!MEALS.contains(meal)) {
             throw new IllegalArgumentException("Ukjent måltid: " + meal);
         }
+        no.weatheragent.support.Limits.requireRange(grams, 0.1, 20_000, "mengde (gram)");
+        no.weatheragent.support.Limits.requireRecentDate(date, 5, "måltidet");
         FoodItem food = foodById(userId, foodId);
 
         double factor = grams / 100.0;

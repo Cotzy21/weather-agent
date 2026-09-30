@@ -73,6 +73,9 @@ public class MealLogController {
      */
     @GetMapping("/api/kosthold/matvarer")
     public List<FoodDto> foods(@AuthenticationPrincipal Jwt jwt, @RequestParam("sok") String query) {
+        if (query != null && query.length() > 100) {
+            query = query.substring(0, 100);
+        }
         UUID userId = UUID.fromString(jwt.getSubject());
         List<FoodDto> out = new ArrayList<>();
         for (CustomFood f : customFoods.search(userId, query)) {

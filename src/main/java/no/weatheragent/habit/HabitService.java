@@ -63,6 +63,10 @@ public class HabitService {
     public void log(UUID habitId, UUID userId, LocalDate date, double value) {
         habits.findByIdAndUserId(habitId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Fant ikke vanen."));
+        no.weatheragent.support.Limits.requireRecentDate(date, 5, "vanen");
+        if (!Double.isFinite(value) || value > 1_000_000) {
+            throw new IllegalArgumentException("Ugyldig verdi.");
+        }
 
         HabitLog existing = logs.findByHabitIdAndDate(habitId, date).orElse(null);
         if (value <= 0) {
