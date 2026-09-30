@@ -7,6 +7,8 @@ WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ ./
+# Øvelseskatalogen deles med backend og importeres av frontend (../../src/main/resources/exercises.json).
+COPY src/main/resources/exercises.json /app/src/main/resources/exercises.json
 # Vite baker inn disse ved byggetid. Anon-nøkkelen er offentlig og trygg i
 # frontend; sett dem som "build args" hos hosten (se DEPLOY.md).
 ARG VITE_SUPABASE_URL
