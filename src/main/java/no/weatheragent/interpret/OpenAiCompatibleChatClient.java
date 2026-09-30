@@ -27,6 +27,8 @@ public class OpenAiCompatibleChatClient {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(OpenAiCompatibleChatClient.class);
 
+    static final int MAX_OUTPUT_TOKENS = 6000;
+
     private final RestClient http;
     private final String fastModel;
     private final String smartModel;
@@ -79,6 +81,9 @@ public class OpenAiCompatibleChatClient {
                 },
                 // 0 = mest mulig deterministisk; vi vil ha presis tolkning, ikke kreativitet.
                 "temperature", 0,
+                // Tak paa svaret: en manipulert prompt (eller en modell som spinner) kan ellers gi
+                // uendelig lange svar og ubegrenset kostnad. En full plan er ca. 3-4000 tokens.
+                "max_tokens", MAX_OUTPUT_TOKENS,
                 "messages", List.of(
                         Map.of("role", "system", "content", systemPrompt),
                         Map.of("role", "user", "content", userPrompt)

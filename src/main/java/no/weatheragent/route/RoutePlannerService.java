@@ -32,6 +32,7 @@ public class RoutePlannerService {
     }
 
     public RoutePlan plan(RouteRequest request) {
+        validate(request);
         List<RoutePoint> waypoints = limit(request.waypoints());
         double weightKg = request.weightKg();
 
@@ -52,6 +53,26 @@ public class RoutePlannerService {
         double ascent = profile == null ? 0 : RouteGeometry.ascentM(profile);
         RouteEstimate estimate = CalorieAdvisor.estimate(distance, ascent, weightKg);
         return new RoutePlan(estimate, waypoints, false, assess(distance, profile));
+    }
+
+    /** Åpent endepunkt som bruker en delt kartnøkkel: avvis ugyldige koordinater og vekt før noe kalles. */
+    static void validate(RouteRequest request) {
+        if (request == null || request.waypoints() == null || request.waypoints().isEmpty()) {
+            throw new IllegalArgumentException("Ruten må ha minst ett punkt.");
+        }
+        if (request.waypoints().size() > MAX_WAYPOINTS) {
+            throw new IllegalArgumentException("Ruten kan ha maks " + MAX_WAYPOINTS + " punkter.");
+        }
+        for (RoutePoint p : request.waypoints()) {
+            if (p == null || !Double.isFinite(p.lat()) || !Double.isFinite(p.lon())
+                    || Math.abs(p.lat()) > 90 || Math.abs(p.lon()) > 180) {
+                throw new IllegalArgumentException("Ugyldige koordinater i ruten.");
+            }
+        }
+        double kg = request.weightKg();
+        if (!Double.isFinite(kg) || kg < 20 || kg > 400) {
+            throw new IllegalArgumentException("Vekten må være mellom 20 og 400 kg.");
+        }
     }
 
     /** Begrens antall punkter fra klienten (unngå misbruk / for store kall). */

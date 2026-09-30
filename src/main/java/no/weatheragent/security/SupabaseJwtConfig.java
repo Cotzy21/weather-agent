@@ -8,7 +8,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.BadJwtException;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
@@ -43,18 +47,22 @@ public class SupabaseJwtConfig {
 
         if (secret != null && !secret.isBlank()) {
             SecretKeySpec key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-            hs256 = NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
+            NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
+            decoder.setJwtValidator(validators());
+            hs256 = decoder;
         }
         if (jwkSetUri != null && !jwkSetUri.isBlank()) {
             // VIKTIG: uten eksplisitte algoritmer godtar Nimbus KUN RS256, mens
             // nye Supabase-prosjekter signerer med ES256 (ECC). Uten denne lista
             // blir hvert eneste innloggede kall avvist med 401.
-            jwks = NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
+            NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
                     .jwsAlgorithms(algs -> {
                         algs.add(SignatureAlgorithm.RS256);
                         algs.add(SignatureAlgorithm.ES256);
                     })
                     .build();
+            decoder.setJwtValidator(validators());
+            jwks = decoder;
         }
 
         log.info("Supabase JWT-validering konfigurert: HS256={}, JWKS={}", hs256 != null, jwks != null);
@@ -85,6 +93,11 @@ public class SupabaseJwtConfig {
             throw new BadJwtException("Supabase JWT-validering er ikke konfigurert på serveren: "
                     + "sett SUPABASE_JWT_SECRET eller SUPABASE_JWKS_URI (se application.properties).");
         };
+    }
+
+    /** Standardvalidering (utløp osv.) pluss at tokenet tilhører en innlogget bruker. */
+    private static OAuth2TokenValidator<Jwt> validators() {
+        return new DelegatingOAuth2TokenValidator<>(JwtValidators.createDefault(), new SupabaseClaimsValidator());
     }
 
     /** Leser {@code alg} fra JWT-headeren (første segment) uten å validere. */

@@ -29,6 +29,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class TurvaerController {
 
+    /** Lengste værsøk-spørsmål (går rett inn i en LLM-prompt, så uten tak koster hvert kall ubegrenset). */
+    static final int MAX_QUERY_CHARS = 300;
+
     private final TurvaerService service;
     private final RoutePlannerService routePlanner;
 
@@ -44,6 +47,10 @@ public class TurvaerController {
             @RequestParam(value = "rain", defaultValue = "MIDDELS") String rain,
             @RequestParam(value = "wind", defaultValue = "MIDDELS") String wind,
             @RequestParam(value = "elevation", defaultValue = "MIDDELS") String elevation) {
+
+        if (query == null || query.isBlank() || query.length() > MAX_QUERY_CHARS) {
+            throw new IllegalArgumentException("Spørsmålet må være mellom 1 og " + MAX_QUERY_CHARS + " tegn.");
+        }
 
         ScoreWeights weights = ScoreWeights.of(
                 Impact.fromString(temp),
@@ -63,7 +70,14 @@ public class TurvaerController {
             @RequestParam("name") String name,
             @RequestParam("lat") double lat,
             @RequestParam("lon") double lon) {
-        return PlaceForecastDto.from(service.placeDetail(name, lat, lon));
+        if (name == null || name.isBlank() || name.length() > 120) {
+            throw new IllegalArgumentException("Stedsnavnet må være mellom 1 og 120 tegn.");
+        }
+        if (!Double.isFinite(lat) || !Double.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+            throw new IllegalArgumentException("Ugyldige koordinater.");
+        }
+        // ~110 m oppløsning: nok for varsel og stier, og gjør at cachen ikke kan fylles med nesten like punkter.
+        return PlaceForecastDto.from(service.placeDetail(name.trim(), roundCoordinate(lat), roundCoordinate(lon)));
     }
 
     /**
@@ -74,5 +88,9 @@ public class TurvaerController {
     @PostMapping("/api/rute")
     public RoutePlanDto rute(@RequestBody RouteRequest request) {
         return RoutePlanDto.from(routePlanner.plan(request));
+    }
+
+    static double roundCoordinate(double v) {
+        return Math.round(v * 1000.0) / 1000.0;
     }
 }
