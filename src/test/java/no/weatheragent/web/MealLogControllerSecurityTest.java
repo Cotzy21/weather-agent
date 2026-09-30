@@ -59,6 +59,9 @@ class MealLogControllerSecurityTest {
     @MockitoBean
     private no.weatheragent.nutrition.DietPreferenceService preferences;
 
+    @MockitoBean
+    private no.weatheragent.nutrition.BarcodeLookupService barcodes;
+
     @BeforeEach
     void noPreferencesByDefault() {
         when(preferences.profileFor(any())).thenReturn(no.weatheragent.nutrition.DietProfile.NONE);
@@ -181,10 +184,34 @@ class MealLogControllerSecurityTest {
 
     @Test
     void unknownBarcodeGives404() throws Exception {
-        when(customFoods.byBarcode(UUID.fromString(SUB), "7038010009457")).thenReturn(java.util.Optional.empty());
+        when(barcodes.lookup(UUID.fromString(SUB), "7038010009457")).thenReturn(java.util.Optional.empty());
 
         mvc.perform(get("/api/kosthold/strekkode/7038010009457").with(jwt().jwt(j -> j.subject(SUB))))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void barcodeLookupTellsWhereTheFoodCameFrom() throws Exception {
+        UUID me = UUID.fromString(SUB);
+        no.weatheragent.nutrition.CustomFood mine = new no.weatheragent.nutrition.CustomFood(
+                me, "Prince", "Mondelez", "7622210449283", 467, 6.3, 17, 69, "porsjon", 20.0, false);
+        no.weatheragent.nutrition.CustomFood theirs = new no.weatheragent.nutrition.CustomFood(
+                UUID.randomUUID(), "Delt bar", null, "7038010000001", 300, 10, 10, 40, null, null, true);
+        when(barcodes.lookup(me, "7622210449283")).thenReturn(java.util.Optional.of(
+                new no.weatheragent.nutrition.BarcodeLookupService.Result(mine, true)));
+        when(barcodes.lookup(me, "7038010000001")).thenReturn(java.util.Optional.of(
+                new no.weatheragent.nutrition.BarcodeLookupService.Result(theirs, false)));
+        when(barcodes.lookup(me, "7038010000002")).thenReturn(java.util.Optional.of(
+                new no.weatheragent.nutrition.BarcodeLookupService.Result(mine, false)));
+
+        mvc.perform(get("/api/kosthold/strekkode/7622210449283").with(jwt().jwt(j -> j.subject(SUB))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.source").value("OPEN_FOOD_FACTS"))
+                .andExpect(jsonPath("$.kcalPer100g").value(467.0));
+        mvc.perform(get("/api/kosthold/strekkode/7038010000001").with(jwt().jwt(j -> j.subject(SUB))))
+                .andExpect(jsonPath("$.source").value("OFFENTLIG"));
+        mvc.perform(get("/api/kosthold/strekkode/7038010000002").with(jwt().jwt(j -> j.subject(SUB))))
+                .andExpect(jsonPath("$.source").value("EGEN"));
     }
 
     @Test

@@ -16,7 +16,7 @@ export default function AppFooter({ onOpenPrivacy }) {
         {' · '}
         {t('Kartdata')} © <Ext href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</Ext>
         {' · '}
-        {t('Næringsdata')}: <Ext href="https://www.matvaretabellen.no/">Matvaretabellen</Ext>
+        {t('Næringsdata')}: <Ext href="https://www.matvaretabellen.no/">Matvaretabellen</Ext> · <Ext href="https://world.openfoodfacts.org/">Open Food Facts</Ext> (ODbL)
       </p>
       <p>
         <button className="link-btn" onClick={onOpenPrivacy}>{t('Personvern')}</button>

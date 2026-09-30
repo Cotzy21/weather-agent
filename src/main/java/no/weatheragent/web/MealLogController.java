@@ -2,6 +2,7 @@ package no.weatheragent.web;
 
 import jakarta.validation.Valid;
 import no.weatheragent.nutrition.CalorieGoal;
+import no.weatheragent.nutrition.BarcodeLookupService;
 import no.weatheragent.nutrition.CalorieGoalService;
 import no.weatheragent.nutrition.CustomFood;
 import no.weatheragent.nutrition.CustomFoodService;
@@ -53,17 +54,20 @@ public class MealLogController {
     private final DailyBalanceService balance;
     private final CalorieGoalService goals;
     private final CustomFoodService customFoods;
+    private final BarcodeLookupService barcodes;
     private final DietPreferenceService preferences;
 
     public MealLogController(FoodSearchService search, MealLogService meals,
                              DailyBalanceService balance, CalorieGoalService goals,
-                             CustomFoodService customFoods, DietPreferenceService preferences) {
+                             CustomFoodService customFoods, DietPreferenceService preferences,
+                             BarcodeLookupService barcodes) {
         this.search = search;
         this.meals = meals;
         this.balance = balance;
         this.goals = goals;
         this.customFoods = customFoods;
         this.preferences = preferences;
+        this.barcodes = barcodes;
     }
 
     /**
@@ -108,13 +112,17 @@ public class MealLogController {
                 request.diet(), request.allergies(), request.dislikes()));
     }
 
-    /** Slå opp en vare på strekkode (egne + offentlig delte), 404 hvis ukjent. */
+    /**
+     * Slå opp en vare på strekkode: egne + offentlig delte, ellers Open Food Facts (lagres da som en privat egen
+     * vare, {@code source} = OPEN_FOOD_FACTS første gang). 404 hvis ukjent.
+     */
     @GetMapping("/api/kosthold/strekkode/{kode}")
     public ResponseEntity<FoodDto> byBarcode(@AuthenticationPrincipal Jwt jwt, @PathVariable String kode) {
         UUID userId = UUID.fromString(jwt.getSubject());
-        return customFoods.byBarcode(userId, kode)
-                .map(f -> ResponseEntity.ok(FoodDto.from(f.toFoodItem(),
-                        f.getOwnerId().equals(userId) ? "EGEN" : "OFFENTLIG")))
+        return barcodes.lookup(userId, kode)
+                .map(r -> ResponseEntity.ok(FoodDto.from(r.food().toFoodItem(),
+                        r.importedFromOpenFoodFacts() ? "OPEN_FOOD_FACTS"
+                                : r.food().getOwnerId().equals(userId) ? "EGEN" : "OFFENTLIG")))
                 .orElse(ResponseEntity.notFound().build());
     }
 

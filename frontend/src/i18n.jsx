@@ -466,6 +466,17 @@ const EN = {
   '{n} rapporter': '{n} reports',
   'Slett matvaren': 'Delete this food',
   'Avvis rapportene': 'Dismiss the reports',
+
+  // Strekkodeskanner
+  'Skann strekkode': 'Scan barcode',
+  'Sikt kameraet mot strekkoden': 'Point the camera at the barcode',
+  'Kameraet er ikke tilgjengelig – skriv inn strekkoden i stedet.': 'The camera is not available – type the barcode instead.',
+  'Skanning med kamera støttes ikke i denne nettleseren – skriv inn strekkoden i stedet.': 'Camera scanning is not supported in this browser – type the barcode instead.',
+  'Strekkode (8–14 siffer)': 'Barcode (8–14 digits)',
+  'Slå opp': 'Look up',
+  'Hentet fra Open Food Facts – sjekk verdiene mot pakningen. Varen er lagret blant dine egne matvarer.': 'Fetched from Open Food Facts – check the values against the package. The food has been saved among your own foods.',
+  'Fant ikke strekkoden {code}. Legg inn varen selv – strekkoden er fylt ut.': 'Barcode {code} not found. Add the food yourself – the barcode is filled in.',
+
   'Kalorimål og næringsråd er generelle veiledninger, ikke medisinske råd.': 'Calorie goals and nutrition advice are general guidance, not medical advice.',
 
   'Navn (f.eks. Tøying)': 'Name (e.g. Stretching)',

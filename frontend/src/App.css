@@ -2274,3 +2274,10 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .moderation-list li { padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--card-solid); }
 .moderation-actions { display: flex; gap: 8px; margin-top: 8px; }
 .account:has(.moderation) { max-width: 560px; }
+
+/* ---------- Strekkodeskanner ---------- */
+.barcode-scanner { margin: 8px 0 12px; padding: 12px; border: 1px solid var(--border-strong); border-radius: 14px; background: var(--card-solid); }
+.barcode-video { width: 100%; max-width: 420px; border-radius: 12px; background: #000; display: block; }
+.barcode-manual { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.barcode-manual input { flex: 1 1 160px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-2); color: var(--text); font-size: 15px; }
+.scan-note { margin: 4px 0 8px; font-size: var(--fs-sm); }

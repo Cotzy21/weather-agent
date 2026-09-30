@@ -3,6 +3,8 @@ import { localIso } from './trainingStats.js'
 import { apiUrl, readError } from './api'
 import ChoiceChips from './ChoiceChips.jsx'
 import ReportFood from './ReportFood.jsx'
+import BarcodeScanner from './BarcodeScanner.jsx'
+import { lookupBarcode } from './barcode.js'
 import { authHeaders } from './supabase'
 import { useI18n } from './i18n.jsx'
 
@@ -84,6 +86,8 @@ export default function MealDiary({ session }) {
 
   // Egne matvarer (for varer Matvaretabellen ikke har, f.eks. en bestemt shake).
   const [showFoodForm, setShowFoodForm] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
+  const [scanNote, setScanNote] = useState(null)
   const [foodForm, setFoodForm] = useState(EMPTY_FOOD)
   const [myFoods, setMyFoods] = useState([])
   const [amount, setAmount] = useState(100)
@@ -234,6 +238,33 @@ export default function MealDiary({ session }) {
       const res = await fetch(apiUrl('/api/kosthold/egne-matvarer'), { headers: await authHeaders() })
       if (res.ok) setMyFoods(await res.json())
     } catch { /* sekundært */ }
+  }
+
+  // Skannet eller inntastet strekkode: finn varen (egne/delte, ellers Open Food Facts) og velg den, ellers hjelp med å legge den inn.
+  async function handleBarcode(code) {
+    setError(null)
+    setScanNote(null)
+    try {
+      const r = await lookupBarcode({ code, headers: await authHeaders() })
+      setShowScanner(false)
+      if (r.status === 'found') {
+        setQuery('')
+        setResults([])
+        pick(r.food)
+        if (r.food.source === 'OPEN_FOOD_FACTS') {
+          setScanNote(t('Hentet fra Open Food Facts – sjekk verdiene mot pakningen. Varen er lagret blant dine egne matvarer.'))
+          loadMyFoods()
+        }
+      } else {
+        setFoodForm({ ...EMPTY_FOOD, barcode: r.code })
+        setShowFoodForm(true)
+        loadMyFoods()
+        setScanNote(t('Fant ikke strekkoden {code}. Legg inn varen selv – strekkoden er fylt ut.', { code: r.code }))
+      }
+    } catch (e) {
+      setShowScanner(false)
+      setError(e.message)
+    }
   }
 
   function toggleFoodForm() {
@@ -434,10 +465,14 @@ export default function MealDiary({ session }) {
           value={query}
           onChange={(e) => { setQuery(e.target.value); setPicked(null) }}
         />
+        <button className="mini" onClick={() => setShowScanner(!showScanner)} aria-expanded={showScanner}
+                title={t('Skann strekkode')} aria-label={t('Skann strekkode')}>📷</button>
         <button className="mini" onClick={toggleFoodForm}>
           {showFoodForm ? t('Lukk') : t('+ Egen matvare')}
         </button>
       </div>
+      {showScanner && <BarcodeScanner onCode={handleBarcode} onClose={() => setShowScanner(false)} />}
+      {scanNote && <p className="muted scan-note" role="status">{scanNote}</p>}
 
       {showFoodForm && (
         <div className="food-form">
