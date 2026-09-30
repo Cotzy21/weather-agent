@@ -102,6 +102,32 @@ class TrainingControllerSecurityTest {
     }
 
     @Test
+    void fitImportRequiresAuthAndValidatesTheBody() throws Exception {
+        String valid = "{\"sessions\":[{\"clientId\":\"11111111-2222-3333-4444-555555555555\",\"date\":\"2026-06-30\","
+                + "\"blocks\":[{\"name\":\"Squat\",\"sets\":[{\"reps\":5,\"weightKg\":100}]}]}]}";
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trening/import/fit")
+                        .contentType("application/json").content(valid))
+                .andExpect(status().isUnauthorized());
+
+        when(importer.importFit(any(), any())).thenReturn(new no.weatheragent.training.WorkoutImportService.FitImportResult(1, 0, 0));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trening/import/fit")
+                        .contentType("application/json").content(valid)
+                        .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.imported").value(1));
+
+        String absurd = valid.replace("\"weightKg\":100", "\"weightKg\":100000");
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trening/import/fit")
+                        .contentType("application/json").content(absurd)
+                        .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
+                .andExpect(status().isBadRequest());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trening/import/fit")
+                        .contentType("application/json").content("{\"sessions\":[]}")
+                        .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void planerRequireAuthentication() throws Exception {
         mvc.perform(get("/api/trening/planer")).andExpect(status().isUnauthorized());
     }

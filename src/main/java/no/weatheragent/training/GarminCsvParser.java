@@ -36,6 +36,11 @@ public final class GarminCsvParser {
         int kcalCol = findExact(header, "kalorier", "calories");
         int timeCol = findExact(header, "tid", "time");
         int ascentCol = find(header, "stigning", "ascent");
+        // Styrkeøkter: totaler for hele økta (Garmin oppgir ikke øvelser/vekter i CSV-en).
+        int setsCol = find(header, "totalt antall sett", "total sets");
+        int repsCol = find(header, "totalt antall repetisjoner", "totalt antall reps", "total reps");
+        int avgHrCol = findExact(header, "gjennomsnittlig puls", "avg hr");
+        int maxHrCol = findExact(header, "maks puls", "max hr");
 
         if (typeCol < 0 || dateCol < 0 || titleCol < 0) {
             return List.of(); // ikke en aktivitets-CSV fra Garmin
@@ -59,7 +64,11 @@ public final class GarminCsvParser {
                     distance,
                     minutes(get(row, timeCol)),
                     number(get(row, ascentCol)),
-                    number(get(row, kcalCol))));
+                    number(get(row, kcalCol)),
+                    whole(get(row, setsCol)),
+                    whole(get(row, repsCol)),
+                    whole(get(row, avgHrCol)),
+                    whole(get(row, maxHrCol))));
         }
         return result;
     }
@@ -135,6 +144,12 @@ public final class GarminCsvParser {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    /** Heltall (avrundet), eller null når feltet mangler / er «--». */
+    private static Integer whole(String raw) {
+        Double d = number(raw);
+        return d == null ? null : (int) Math.round(d);
     }
 
     private static String get(List<String> row, int col) {

@@ -17,6 +17,22 @@ public interface WorkoutRepository extends JpaRepository<Workout, UUID> {
 
     List<Workout> findByUserIdAndTypeOrderByDateAsc(UUID userId, String type);
 
+    /** Bare nøklene som trengs for å oppdage duplikater ved import (unngår å laste all JSON-innhold). */
+    interface WorkoutKey {
+        LocalDate getDate();
+
+        String getTitle();
+
+        String getType();
+    }
+
+    @org.springframework.data.jpa.repository.Query(
+            "select w.date as date, w.title as title, w.type as type from Workout w "
+                    + "where w.userId = :userId and w.date between :from and :to")
+    List<WorkoutKey> findKeysBetween(@org.springframework.data.repository.query.Param("userId") UUID userId,
+                                     @org.springframework.data.repository.query.Param("from") LocalDate from,
+                                     @org.springframework.data.repository.query.Param("to") LocalDate to);
+
     java.util.Optional<Workout> findByUserIdAndClientId(UUID userId, UUID clientId);
 
     long deleteByIdAndUserId(UUID id, UUID userId);

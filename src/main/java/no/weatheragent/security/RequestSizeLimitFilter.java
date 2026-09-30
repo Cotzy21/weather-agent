@@ -24,7 +24,7 @@ import java.io.IOException;
 @Order(Ordered.HIGHEST_PRECEDENCE + 5)
 public class RequestSizeLimitFilter extends OncePerRequestFilter {
 
-    static final String IMPORT_PATH = "/api/trening/import/garmin";
+    static final java.util.Set<String> IMPORT_PATHS = java.util.Set.of("/api/trening/import/garmin", "/api/trening/import/fit");
 
     private final long maxBytes;
     private final long maxImportBytes;
@@ -45,7 +45,7 @@ public class RequestSizeLimitFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        long limit = IMPORT_PATH.equals(request.getRequestURI()) ? maxImportBytes : maxBytes;
+        long limit = IMPORT_PATHS.contains(request.getRequestURI()) ? maxImportBytes : maxBytes;
         if (request.getContentLengthLong() > limit) {
             tooLarge(response);
             return;

@@ -137,6 +137,17 @@ public class TrainingController {
                 importer.importGarmin(UUID.fromString(jwt.getSubject()), csv)));
     }
 
+    /**
+     * Styrkeøkter med øvelser og vekter lest fra Garmin FIT-filer i nettleseren (små grupper om gangen).
+     * Idempotent, og fyller inn øvelser på økter som fra før bare finnes som CSV-totaler.
+     */
+    @PostMapping("/api/trening/import/fit")
+    public no.weatheragent.web.dto.FitImportResultDto importFit(@AuthenticationPrincipal Jwt jwt,
+                                                                @Valid @RequestBody no.weatheragent.web.dto.FitImportRequest request) {
+        return no.weatheragent.web.dto.FitImportResultDto.from(
+                importer.importFit(UUID.fromString(jwt.getSubject()), request.sessions()));
+    }
+
     @PostMapping("/api/treningsokter")
     public WorkoutDto log(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody LogWorkoutRequest request) {
         UUID userId = UUID.fromString(jwt.getSubject());

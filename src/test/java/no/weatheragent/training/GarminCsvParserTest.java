@@ -92,4 +92,33 @@ class GarminCsvParserTest {
         assertTrue(GarminCsvParser.parse("a,b,c\n1,2,3\n").isEmpty());
         assertTrue(GarminCsvParser.parse("").isEmpty());
     }
+
+    @Test
+    void readsStrengthTotalsAndHeartRateFromNorwegianAndEnglishHeaders() {
+        String no = """
+                Aktivitetstype,Dato,Tittel,Tid,Gjennomsnittlig puls,Maks puls,Totalt antall sett,Totalt antall repetisjoner
+                Styrketrening,2026-06-30 17:00:00,"Push","00:52:10","118","151","18","176"
+                """;
+        GarminActivity a = GarminCsvParser.parse(no).getFirst();
+        assertEquals(18, a.totalSets());
+        assertEquals(176, a.totalReps());
+        assertEquals(118, a.avgHr());
+        assertEquals(151, a.maxHr());
+
+        String en = """
+                Activity Type,Date,Title,Time,Avg HR,Max HR,Total Reps,Total Sets
+                Strength Training,2026-06-30 17:00:00,"Pull","00:45:00","110","140","150","15"
+                """;
+        GarminActivity b = GarminCsvParser.parse(en).getFirst();
+        assertEquals(15, b.totalSets());
+        assertEquals(150, b.totalReps());
+        assertEquals(110, b.avgHr());
+    }
+
+    @Test
+    void missingStrengthColumnsGiveNull() {
+        GarminActivity a = GarminCsvParser.parse(NORWEGIAN).getFirst();
+        assertNull(a.totalSets());
+        assertNull(a.totalReps());
+    }
 }

@@ -59,4 +59,12 @@ class RequestSizeLimitFilterTest {
         boolean[] reached = {false};
         assertEquals(200, run(req, reached).getStatus());
     }
+
+    @Test
+    void fitImportAlsoGetsTheLargerImportLimit() throws Exception {
+        MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/trening/import/fit");
+        req.setContent(new byte[3000]);
+        boolean[] reached = {false};
+        assertEquals(200, run(req, reached).getStatus());
+    }
 }

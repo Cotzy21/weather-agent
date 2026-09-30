@@ -77,6 +77,12 @@ public class Workout {
         return this;
     }
 
+    /** Legger øvelser/sett fra en FIT-fil på en økt som fra før bare har totaler (fra CSV-import). */
+    public void mergeDetails(JsonNode detailedContent, UUID clientId) {
+        this.content = detailedContent;
+        this.clientId = clientId;
+    }
+
     public UUID getClientId() { return clientId; }
     public UUID getPlannedId() { return plannedId; }
     public UUID getId() { return id; }
