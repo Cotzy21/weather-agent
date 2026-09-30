@@ -6,7 +6,9 @@ const WEEKDAYS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag',
 const same = (a, b) => a.toLowerCase() === b.toLowerCase()
 
 // Det appen husker om treningen din, og som AI-forslagene bruker.
-export default function TrainingMemoryCard({ memory, mine, onSave }) {
+const LEVEL_LABELS = { BEGINNER: 'Helt ny', NOVICE: 'Litt erfaren', INTERMEDIATE: 'Middels erfaren', ADVANCED: 'Avansert' }
+
+export default function TrainingMemoryCard({ memory, mine, onSave, profile, onEditProfile }) {
   const { t, lang } = useI18n()
   const [notes, setNotes] = useState(memory.notes)
   const [adding, setAdding] = useState(null) // 'liked' | 'disliked'
@@ -36,6 +38,13 @@ export default function TrainingMemoryCard({ memory, mine, onSave }) {
         <strong>🧠 {t('Treningsminne')}</strong>
         <span className="muted">{t('Brukes til anbefalingene dine')}</span>
       </div>
+
+      {profile !== undefined && (
+        <p className="memory-habits">
+          🎯 {profile ? `${t('Nivå')}: ${t(LEVEL_LABELS[profile.experienceLevel])}` : t('Ikke fylt ut ennå')}
+          {' · '}<button className="mini" onClick={onEditProfile}>{t(profile ? 'Rediger treningsprofil' : 'Fyll ut treningsprofil')}</button>
+        </p>
+      )}
 
       {memory.workoutsLast28Days > 0 ? (
         <p className="memory-habits">

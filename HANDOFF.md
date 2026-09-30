@@ -48,6 +48,14 @@ Dockerfile + PORT-config for backend-deploy finnes.
 - **Dagsform fra søvn** (`ReadinessAdvisor`): søvn-vanen i habit trackeren →
   god/middels/lav (7 t / 6 t-grenser) med råd; sendes også til AI-assistenten.
   Byttes mot klokkens søvnscore/HRV når integrasjonene kommer.
+- **Onboarding / treningsprofil** (Flyway V14, `TrainingProfileService`): første gang
+  man åpner Trening spør en 4-stegs sheet om erfaringsnivå, hvor lenge/hvor jevnt man
+  har trent, mål, utstyr, dager/tid, teknikk-trygghet, skader, styrker/svakheter og
+  forklaringsstil (kan hoppes over, og redigeres fra Progresjon → treningsminnet).
+  Profilen legges i **hver** AI-prompt sammen med nivåspesifikke regler (nybegynner →
+  enkle øvelser, lavt volum, teknikktips). **Modellvalg:** nybegynner/«litt erfaren»,
+  usikker teknikk eller skader → `LlmTier.PRO` (`llm.model.pro`, faller tilbake til
+  smart); ellers SMART. `GET/PUT /api/trening/profil` (204 = ikke onboardet).
 - Gjenstår: real-time tracking (sen fase i planen), klokke-integrasjoner.
 
 ### Kosthold ✅

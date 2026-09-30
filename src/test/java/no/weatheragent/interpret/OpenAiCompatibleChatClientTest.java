@@ -62,4 +62,34 @@ class OpenAiCompatibleChatClientTest {
         assertFalse(same.hasDedicatedSmartModel());
         assertTrue(different.hasDedicatedSmartModel());
     }
+
+    @Test
+    void proTierSendsProModelName() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        OpenAiCompatibleChatClient client = new OpenAiCompatibleChatClient(
+                builder, "http://llm.test/v1", "mini-modell", "stor-modell", "aller-storst", "");
+
+        server.expect(requestTo("http://llm.test/v1/chat/completions"))
+                .andExpect(jsonPath("$.model").value("aller-storst"))
+                .andRespond(withSuccess(OK_RESPONSE, MediaType.APPLICATION_JSON));
+
+        assertEquals("ok", client.complete(LlmTier.PRO, "system", "bruker"));
+        server.verify();
+    }
+
+    @Test
+    void proTierFallsBackToSmartModelWithoutDedicatedPro() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        OpenAiCompatibleChatClient client = new OpenAiCompatibleChatClient(
+                builder, "http://llm.test/v1", "mini-modell", "stor-modell", "");
+
+        server.expect(requestTo("http://llm.test/v1/chat/completions"))
+                .andExpect(jsonPath("$.model").value("stor-modell"))
+                .andRespond(withSuccess(OK_RESPONSE, MediaType.APPLICATION_JSON));
+
+        assertEquals("ok", client.complete(LlmTier.PRO, "system", "bruker"));
+        server.verify();
+    }
 }

@@ -3,7 +3,6 @@ package no.weatheragent.training;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import no.weatheragent.interpret.LlmTier;
 import no.weatheragent.interpret.OpenAiCompatibleChatClient;
 import org.springframework.stereotype.Service;
 
@@ -31,20 +30,23 @@ public class WorkoutSuggester {
     private final ObjectMapper mapper;
     private final ReadinessService readiness;
     private final TrainingMemoryService memory;
+    private final TrainingProfileService profiles;
 
     public WorkoutSuggester(WorkoutRepository repository, OpenAiCompatibleChatClient llm, ObjectMapper mapper,
-                            ReadinessService readiness, TrainingMemoryService memory) {
+                            ReadinessService readiness, TrainingMemoryService memory,
+                            TrainingProfileService profiles) {
         this.repository = repository;
         this.llm = llm;
         this.mapper = mapper;
         this.readiness = readiness;
         this.memory = memory;
+        this.profiles = profiles;
     }
 
     public Suggestion suggest(UUID userId, String focus, String type, String lang) {
         String history = recentHistory(userId);
-        // Forslag krever resonnering over historikken (progressiv overload) -> smart modell.
-        String raw = llm.complete(LlmTier.SMART, systemPrompt(), userPrompt(focus, type, history) + languageLine(lang));
+        // Forslag krever resonnering over historikken (progressiv overload) -> smart modell, sterkest for nybegynnere.
+        String raw = llm.complete(profiles.tierFor(userId), systemPrompt(), userPrompt(focus, type, history) + languageLine(lang));
         try {
             JsonNode json = mapper.readTree(extractJson(raw));
             String resolvedType = json.path("type").asText("");
@@ -71,7 +73,7 @@ public class WorkoutSuggester {
      */
     public PlanSuggestion suggestPlan(UUID userId, String request, String lang) {
         String history = recentHistory(userId);
-        String raw = llm.complete(LlmTier.SMART, planSystemPrompt(), planUserPrompt(request, history) + languageLine(lang));
+        String raw = llm.complete(profiles.tierFor(userId), planSystemPrompt(), planUserPrompt(request, history) + languageLine(lang));
         try {
             JsonNode json = mapper.readTree(extractJson(raw));
             List<Suggestion> workouts = parseWorkouts(json);
@@ -96,7 +98,7 @@ public class WorkoutSuggester {
      */
     public AssistantReply chat(UUID userId, List<ChatTurn> messages, JsonNode currentPlan, String lang) {
         String history = recentHistory(userId);
-        String raw = llm.complete(LlmTier.SMART, assistantSystemPrompt(),
+        String raw = llm.complete(profiles.tierFor(userId), assistantSystemPrompt(),
                 assistantUserPrompt(history, messages) + currentPlanContext(currentPlan) + languageLine(lang));
         try {
             JsonNode json = mapper.readTree(extractJson(raw));
@@ -214,6 +216,7 @@ public class WorkoutSuggester {
      */
     private String recentHistory(UUID userId) {
         String sleep = readiness.promptContext(userId)
+                + profiles.promptContext(userId)
                 + memory.promptContext(userId, LocalDate.now(ZoneId.of("Europe/Oslo")));
         List<Workout> recent = repository.findByUserIdOrderByDateDescCreatedAtDesc(userId);
         if (recent.isEmpty()) {
@@ -259,6 +262,8 @@ public class WorkoutSuggester {
     /** Kvalitetsregler for alle tre AI-funksjonene (funnet ved testing: utstyr og vekter ble ignorert). */
     private static final String COMMON_RULES = """
             Kvalitetsregler:
+              - Følg «Treningsprofil» i konteksten (nivå, mål, utstyr, skader, tid per økt) og
+                tilpasningen som står der. Brukerens skader/begrensninger skal ALDRI ignoreres.
               - Respekter «Brukerminne» i konteksten: foreslå ALDRI øvelser under «Liker IKKE»,
                 bruk gjerne øvelser brukeren liker, ta hensyn til notatene, og tilpass antall
                 økter per uke til treningsvanene når brukeren ikke sier noe annet.
@@ -362,6 +367,8 @@ public class WorkoutSuggester {
                      utstyr, skader/begrensninger, erfaringsnivå)? STILL 1-3 korte
                      oppfølgingsspørsmål i stedet for å gjette. Ikke still mer enn nødvendig.
                   B) Har du nok? LAG en komplett plan med én eller flere økter.
+                Finnes «Treningsprofil» i konteksten, ikke spør om noe den allerede svarer på
+                (nivå, mål, utstyr, dager, skader) - bruk den.
                 Er forespørselen allerede tydelig (f.eks. "lag en push pull legs split"),
                 lag planen med en gang uten å spørre.
 

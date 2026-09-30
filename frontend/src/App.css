@@ -2185,3 +2185,17 @@ header .sub { margin-top: 6px; color: var(--muted); }
 }
 .custom-list .move:disabled { opacity: 0.3; cursor: default; }
 .week-dot.partial { background: var(--accent-soft); color: var(--accent-strong); font-size: 11px; box-shadow: inset 0 0 0 1.5px var(--accent); }
+
+/* ---------- Onboarding (treningsprofil) ---------- */
+.sheet.onboarding { max-height: 90svh; display: flex; flex-direction: column; }
+.onboarding-body { overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 4px 2px 8px; min-height: 0; }
+.onboarding-levels { display: grid; gap: 8px; }
+.level-card {
+  display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 12px 14px;
+  border-radius: 12px; border: 1px solid var(--border-strong); background: var(--card-solid); color: var(--text); cursor: pointer;
+}
+.level-card span { font-size: var(--fs-sm); color: var(--muted); }
+.level-card.on { border-color: var(--accent); background: var(--tint); }
+.onboarding-actions { display: flex; gap: 10px; padding-top: 8px; }
+.onboarding-actions button { flex: 1; padding: 14px; border-radius: 14px; font-size: 16px; font-weight: 600; }
+.onboarding-actions button:disabled { opacity: .5; }

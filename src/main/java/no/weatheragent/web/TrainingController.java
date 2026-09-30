@@ -7,6 +7,8 @@ import no.weatheragent.training.ChatTurn;
 import no.weatheragent.training.ReadinessService;
 import no.weatheragent.training.Suggestion;
 import no.weatheragent.training.TrainingMemoryService;
+import no.weatheragent.training.TrainingProfileData;
+import no.weatheragent.training.TrainingProfileService;
 import no.weatheragent.training.TrainingPlanService;
 import no.weatheragent.training.WorkoutImportService;
 import no.weatheragent.training.WorkoutService;
@@ -63,16 +65,19 @@ public class TrainingController {
     private final WorkoutImportService importer;
     private final ReadinessService readiness;
     private final TrainingMemoryService memory;
+    private final TrainingProfileService profiles;
 
     public TrainingController(WorkoutService workouts, WorkoutSuggester suggester,
                               TrainingPlanService plans, WorkoutImportService importer,
-                              ReadinessService readiness, TrainingMemoryService memory) {
+                              ReadinessService readiness, TrainingMemoryService memory,
+                              TrainingProfileService profiles) {
         this.workouts = workouts;
         this.suggester = suggester;
         this.plans = plans;
         this.importer = importer;
         this.readiness = readiness;
         this.memory = memory;
+        this.profiles = profiles;
     }
 
     /** Treningsminnet: liker / liker ikke / notater + vaner fra øktene. */
@@ -87,6 +92,20 @@ public class TrainingController {
         UUID user = UUID.fromString(jwt.getSubject());
         memory.save(user, request.liked(), request.disliked(), request.notes());
         return TrainingMemoryDto.from(memory.profile(user, LocalDate.now(OSLO)));
+    }
+
+    /** Onboarding-profilen. 204 = brukeren har ikke fylt den ut ennå (frontenden viser onboarding). */
+    @GetMapping("/api/trening/profil")
+    public ResponseEntity<TrainingProfileData> myProfile(@AuthenticationPrincipal Jwt jwt) {
+        return profiles.find(UUID.fromString(jwt.getSubject()))
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.noContent().build());
+    }
+
+    /** Lagre onboarding-svarene (erstatter alt, én rad per bruker). Ugyldige verdier gir 400. */
+    @PutMapping("/api/trening/profil")
+    public TrainingProfileData saveProfile(@AuthenticationPrincipal Jwt jwt, @RequestBody TrainingProfileData request) {
+        return profiles.save(UUID.fromString(jwt.getSubject()), request);
     }
 
     /**

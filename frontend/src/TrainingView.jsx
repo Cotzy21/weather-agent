@@ -7,6 +7,7 @@ import { useI18n } from './i18n.jsx'
 import LiveSession from './LiveSession.jsx'
 import ExercisePicker from './ExercisePicker.jsx'
 import TrainingMemoryCard from './TrainingMemoryCard.jsx'
+import TrainingOnboarding from './TrainingOnboarding.jsx'
 import { loadLive, clearLive, newLive, fromPlan } from './liveSession.js'
 import { dayIndex, strengthVolume, localIso } from './trainingStats.js'
 import WeekProgram from './WeekProgram.jsx'
@@ -122,12 +123,17 @@ export default function TrainingView({ session }) {
   const [memory, setMemory] = useState(() => getCached('/api/trening/minne') ?? null)
   const [memoryError, setMemoryError] = useState(null)
 
+  // Onboarding-profilen. undefined = ikke hentet ennå, null = ikke fylt ut (viser onboarding).
+  const [profile, setProfile] = useState(undefined)
+  const [onboarding, setOnboarding] = useState(false) // åpnet manuelt fra «Rediger»
+  const [onboardingSkipped, setOnboardingSkipped] = useState(() => sessionStorage.getItem('onboardingSkipped') === '1')
+
   // Dagsform fra søvnen i habit trackeren. null = ikke hentet/ingen søvndata.
   const [readiness, setReadiness] = useState(null)
 
   useEffect(() => {
-    if (session) { loadWorkouts(); loadPlans(); loadNextSets(); loadReadiness(); loadMemory() }
-    else { setWorkouts([]); setPlans([]); setNextSets([]); setReadiness(null); setMemory(null) }
+    if (session) { loadWorkouts(); loadPlans(); loadNextSets(); loadReadiness(); loadMemory(); loadProfile() }
+    else { setWorkouts([]); setPlans([]); setNextSets([]); setReadiness(null); setMemory(null); setProfile(undefined) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, lang])
 
@@ -137,6 +143,32 @@ export default function TrainingView({ session }) {
       const res = await fetch(apiUrl(`/api/trening/dagsform?lang=${lang}`), { headers: await authHeaders() })
       setReadiness(res.status === 200 ? await res.json() : { none: true })
     } catch { /* sekundært */ }
+  }
+
+  // 204 = ikke onboardet ennå.
+  async function loadProfile() {
+    try {
+      const res = await fetch(apiUrl('/api/trening/profil'), { headers: await authHeaders() })
+      if (res.status === 200) setProfile(await res.json())
+      else if (res.status === 204) setProfile(null)
+    } catch { /* sekundært */ }
+  }
+
+  async function saveProfile(next) {
+    const res = await fetch(apiUrl('/api/trening/profil'), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+      body: JSON.stringify(next),
+    })
+    if (!res.ok) throw new Error(await readError(res))
+    setProfile(await res.json())
+    setOnboarding(false)
+  }
+
+  function skipOnboarding() {
+    try { sessionStorage.setItem('onboardingSkipped', '1') } catch { /* privat modus */ }
+    setOnboardingSkipped(true)
+    setOnboarding(false)
   }
 
   async function loadMemory() {
@@ -569,6 +601,10 @@ export default function TrainingView({ session }) {
   if (!session) {
     return (
       <div className="training" ref={revealRef}>
+
+      {session && profile !== undefined && (onboarding || (profile === null && !onboardingSkipped)) && (
+        <TrainingOnboarding initial={profile} onSave={saveProfile} onSkip={skipOnboarding} />
+      )}
         <h2 className="detail-title" data-reveal>{t('Trening')}</h2>
         <p className="muted" data-reveal>
           {t('Logg inn for å lagre økter, se progresjon og få AI-forslag – men prøv gjerne kroppsmodellen:')}
@@ -1029,7 +1065,8 @@ export default function TrainingView({ session }) {
       {mode === 'progress' && (
         <div className="progress-page">
           <h2 className="detail-title">{t('Progresjon')}</h2>
-          {memory && <TrainingMemoryCard key={memory.notes} memory={memory} mine={myExercises} onSave={saveMemory} />}
+          {memory && <TrainingMemoryCard key={memory.notes} memory={memory} mine={myExercises} onSave={saveMemory}
+                                                profile={profile} onEditProfile={() => setOnboarding(true)} />}
           {memoryError && <p className="error">{memoryError}</p>}
           {nextSets.length === 0 && (
             <p className="muted">{t('Logg noen styrkeøkter, så ser du hva som forventes neste gang.')}</p>

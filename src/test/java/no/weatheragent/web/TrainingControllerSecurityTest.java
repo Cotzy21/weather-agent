@@ -48,6 +48,9 @@ class TrainingControllerSecurityTest {
     private no.weatheragent.training.TrainingMemoryService memory;
 
     @MockitoBean
+    private no.weatheragent.training.TrainingProfileService profiles;
+
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     @Test
@@ -72,6 +75,16 @@ class TrainingControllerSecurityTest {
     @Test
     void memoryRequiresAuthentication() throws Exception {
         mvc.perform(get("/api/trening/minne")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void profileRequiresAuthAndIsEmptyBeforeOnboarding() throws Exception {
+        mvc.perform(get("/api/trening/profil")).andExpect(status().isUnauthorized());
+
+        when(profiles.find(any())).thenReturn(java.util.Optional.empty());
+        mvc.perform(get("/api/trening/profil")
+                        .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
+                .andExpect(status().isNoContent());
     }
 
     @Test

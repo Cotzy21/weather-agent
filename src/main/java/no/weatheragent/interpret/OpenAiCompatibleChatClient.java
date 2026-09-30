@@ -1,6 +1,7 @@
 package no.weatheragent.interpret;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -18,7 +19,8 @@ import java.util.Map;
  *
  * Modell-ruting ({@link LlmTier}): hvert kall oppgir om det trenger den billige
  * ({@code llm.model.fast}) eller den smarte ({@code llm.model.smart}) modellen.
- * Begge faller tilbake til {@code llm.model}, så ett-modells-oppsett er uendret.
+ * PRO ({@code llm.model.pro}) er den sterkeste, for brukere som trenger mest veiledning, og faller
+ * tilbake til smart. Alt faller tilbake til {@code llm.model}, så ett-modells-oppsett er uendret.
  */
 @Component
 public class OpenAiCompatibleChatClient {
@@ -26,12 +28,24 @@ public class OpenAiCompatibleChatClient {
     private final RestClient http;
     private final String fastModel;
     private final String smartModel;
+    private final String proModel;
 
+    public OpenAiCompatibleChatClient(
+            RestClient.Builder builder,
+            String baseUrl,
+            String fastModel,
+            String smartModel,
+            String apiKey) {
+        this(builder, baseUrl, fastModel, smartModel, smartModel, apiKey);
+    }
+
+    @Autowired
     public OpenAiCompatibleChatClient(
             RestClient.Builder builder,
             @Value("${llm.base-url}") String baseUrl,
             @Value("${llm.model.fast:${llm.model}}") String fastModel,
             @Value("${llm.model.smart:${llm.model}}") String smartModel,
+            @Value("${llm.model.pro:${llm.model.smart:${llm.model}}}") String proModel,
             @Value("${llm.api-key:}") String apiKey) {
         RestClient.Builder configured = builder.baseUrl(baseUrl);
         // Sky-tjenester krever en API-nøkkel; lokal LM Studio/Ollama gjør ikke.
@@ -42,6 +56,7 @@ public class OpenAiCompatibleChatClient {
         this.http = configured.build();
         this.fastModel = fastModel;
         this.smartModel = smartModel;
+        this.proModel = proModel;
     }
 
     /**
@@ -55,7 +70,11 @@ public class OpenAiCompatibleChatClient {
     /** Send system- + bruker-melding til valgt modellnivå, og returner modellens råtekst-svar. */
     public String complete(LlmTier tier, String systemPrompt, String userPrompt) {
         Map<String, Object> body = Map.of(
-                "model", tier == LlmTier.SMART ? smartModel : fastModel,
+                "model", switch (tier) {
+                    case FAST -> fastModel;
+                    case SMART -> smartModel;
+                    case PRO -> proModel;
+                },
                 // 0 = mest mulig deterministisk; vi vil ha presis tolkning, ikke kreativitet.
                 "temperature", 0,
                 "messages", List.of(

@@ -24,12 +24,15 @@ class WorkoutSuggesterTest {
     private final ObjectMapper mapper = new ObjectMapper();
     private final ReadinessService readiness = mock(ReadinessService.class);
     private final TrainingMemoryService memory = mock(TrainingMemoryService.class);
-    private final WorkoutSuggester suggester = new WorkoutSuggester(repo, llm, mapper, readiness, memory);
+    private final TrainingProfileService profiles = mock(TrainingProfileService.class);
+    private final WorkoutSuggester suggester = new WorkoutSuggester(repo, llm, mapper, readiness, memory, profiles);
 
     @org.junit.jupiter.api.BeforeEach
     void noSleepLoggedByDefault() {
         when(readiness.promptContext(any())).thenReturn("");
         when(memory.promptContext(any(), any())).thenReturn("");
+        when(profiles.promptContext(any())).thenReturn("");
+        when(profiles.tierFor(any())).thenReturn(LlmTier.SMART);
     }
 
     @Test
@@ -239,5 +242,20 @@ class WorkoutSuggesterTest {
         assertTrue(prompt.getValue().contains("på ENGELSK"));
         assertTrue(system.getValue().contains("endre BARE"));
         assertTrue(system.getValue().contains("KAMPSPORT"));
+    }
+
+    @Test
+    void profileIsSentToTheModelAndPicksTheTier() {
+        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(profiles.promptContext(user)).thenReturn("\nTreningsprofil (fra onboarding):\n- Erfaringsnivå: nybegynner");
+        when(profiles.tierFor(user)).thenReturn(LlmTier.PRO);
+        when(llm.complete(eq(LlmTier.PRO), any(), any())).thenReturn(
+                "{\"title\":\"Økt\",\"type\":\"STYRKE\",\"content\":{\"blocks\":[]},\"rationale\":\"\"}");
+
+        suggester.suggest(user, "styrke", "STYRKE", null);
+
+        org.mockito.ArgumentCaptor<String> prompt = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(llm).complete(eq(LlmTier.PRO), any(), prompt.capture());
+        assertTrue(prompt.getValue().contains("Erfaringsnivå: nybegynner"));
     }
 }
