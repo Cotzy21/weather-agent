@@ -23,7 +23,7 @@ function beep(ctx) {
   } catch { /* lyd er bare en bonus */ }
 }
 
-export default function LiveSession({ userId, initial, nextSets, fmtKg, onFinish, onCancel }) {
+export default function LiveSession({ userId, initial, nextSets, memory, fmtKg, onFinish, onCancel }) {
   const { t, lang } = useI18n()
   const [s, setS] = useState(initial)
   const [now, setNow] = useState(() => Date.now())
@@ -243,6 +243,8 @@ export default function LiveSession({ userId, initial, nextSets, fmtKg, onFinish
         <ExercisePicker
           title={t('Legg til øvelse')}
           mine={(nextSets || []).map((x) => x.exercise).filter((n) => !inSession.has(n.toLowerCase()))}
+          liked={(memory?.liked || []).filter((n) => !inSession.has(n.toLowerCase()))}
+          disliked={memory?.disliked}
           onPick={(name) => { addExercise(name); setPicking(false) }}
           onClose={() => setPicking(false)}
         />

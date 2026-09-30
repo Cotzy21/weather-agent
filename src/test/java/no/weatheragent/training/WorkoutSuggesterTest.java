@@ -23,11 +23,13 @@ class WorkoutSuggesterTest {
     private final OpenAiCompatibleChatClient llm = mock(OpenAiCompatibleChatClient.class);
     private final ObjectMapper mapper = new ObjectMapper();
     private final ReadinessService readiness = mock(ReadinessService.class);
-    private final WorkoutSuggester suggester = new WorkoutSuggester(repo, llm, mapper, readiness);
+    private final TrainingMemoryService memory = mock(TrainingMemoryService.class);
+    private final WorkoutSuggester suggester = new WorkoutSuggester(repo, llm, mapper, readiness, memory);
 
     @org.junit.jupiter.api.BeforeEach
     void noSleepLoggedByDefault() {
         when(readiness.promptContext(any())).thenReturn("");
+        when(memory.promptContext(any(), any())).thenReturn("");
     }
 
     @Test
@@ -44,6 +46,22 @@ class WorkoutSuggesterTest {
         org.junit.jupiter.api.Assertions.assertTrue(prompt.getValue().contains("Dagsform i dag (fra søvn): LAV"));
     }
     private final UUID user = UUID.randomUUID();
+
+    @Test
+    void trainingMemoryIsSentToTheModel() {
+        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(memory.promptContext(eq(user), any())).thenReturn("\nBrukerminne:\n- Liker IKKE (ikke foreslå): Burpees");
+        when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn(
+                "{\"title\":\"Økt\",\"type\":\"STYRKE\",\"content\":{\"blocks\":[]},\"rationale\":\"\"}");
+
+        suggester.suggest(user, "styrke", "STYRKE");
+
+        org.mockito.ArgumentCaptor<String> system = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.ArgumentCaptor<String> prompt = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(llm).complete(eq(LlmTier.SMART), system.capture(), prompt.capture());
+        org.junit.jupiter.api.Assertions.assertTrue(prompt.getValue().contains("Liker IKKE (ikke foreslå): Burpees"));
+        org.junit.jupiter.api.Assertions.assertTrue(system.getValue().contains("ALDRI øvelser under «Liker IKKE»"));
+    }
 
     @Test
     void parsesModelJsonIntoSuggestion() {

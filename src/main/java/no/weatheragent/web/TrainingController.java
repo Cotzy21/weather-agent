@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import no.weatheragent.training.ChatTurn;
 import no.weatheragent.training.ReadinessService;
 import no.weatheragent.training.Suggestion;
+import no.weatheragent.training.TrainingMemoryService;
 import no.weatheragent.training.TrainingPlanService;
 import no.weatheragent.training.WorkoutImportService;
 import no.weatheragent.training.WorkoutService;
@@ -19,6 +20,8 @@ import no.weatheragent.web.dto.PlanSuggestionDto;
 import no.weatheragent.web.dto.ReadinessDto;
 import no.weatheragent.web.dto.ProgressPointDto;
 import no.weatheragent.web.dto.SavePlanRequest;
+import no.weatheragent.web.dto.SaveTrainingMemoryRequest;
+import no.weatheragent.web.dto.TrainingMemoryDto;
 import no.weatheragent.web.dto.SuggestionDto;
 import no.weatheragent.web.dto.SuggestionRequest;
 import no.weatheragent.web.dto.TrainingPlanDto;
@@ -59,15 +62,31 @@ public class TrainingController {
     private final TrainingPlanService plans;
     private final WorkoutImportService importer;
     private final ReadinessService readiness;
+    private final TrainingMemoryService memory;
 
     public TrainingController(WorkoutService workouts, WorkoutSuggester suggester,
                               TrainingPlanService plans, WorkoutImportService importer,
-                              ReadinessService readiness) {
+                              ReadinessService readiness, TrainingMemoryService memory) {
         this.workouts = workouts;
         this.suggester = suggester;
         this.plans = plans;
         this.importer = importer;
         this.readiness = readiness;
+        this.memory = memory;
+    }
+
+    /** Treningsminnet: liker / liker ikke / notater + vaner fra øktene. */
+    @GetMapping("/api/trening/minne")
+    public TrainingMemoryDto myMemory(@AuthenticationPrincipal Jwt jwt) {
+        return TrainingMemoryDto.from(memory.profile(UUID.fromString(jwt.getSubject()), LocalDate.now(OSLO)));
+    }
+
+    /** Lagre det brukeren selv styrer (erstatter alt, én rad per bruker). */
+    @PutMapping("/api/trening/minne")
+    public TrainingMemoryDto saveMemory(@AuthenticationPrincipal Jwt jwt, @RequestBody SaveTrainingMemoryRequest request) {
+        UUID user = UUID.fromString(jwt.getSubject());
+        memory.save(user, request.liked(), request.disliked(), request.notes());
+        return TrainingMemoryDto.from(memory.profile(user, LocalDate.now(OSLO)));
     }
 
     /**

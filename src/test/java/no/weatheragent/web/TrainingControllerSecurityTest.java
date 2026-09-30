@@ -45,6 +45,9 @@ class TrainingControllerSecurityTest {
     private no.weatheragent.training.ReadinessService readiness;
 
     @MockitoBean
+    private no.weatheragent.training.TrainingMemoryService memory;
+
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     @Test
@@ -64,6 +67,11 @@ class TrainingControllerSecurityTest {
         mvc.perform(get("/api/treningsokter")
                         .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void memoryRequiresAuthentication() throws Exception {
+        mvc.perform(get("/api/trening/minne")).andExpect(status().isUnauthorized());
     }
 
     @Test

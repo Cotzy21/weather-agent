@@ -7,6 +7,8 @@ import no.weatheragent.interpret.LlmTier;
 import no.weatheragent.interpret.OpenAiCompatibleChatClient;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -28,13 +30,15 @@ public class WorkoutSuggester {
     private final OpenAiCompatibleChatClient llm;
     private final ObjectMapper mapper;
     private final ReadinessService readiness;
+    private final TrainingMemoryService memory;
 
     public WorkoutSuggester(WorkoutRepository repository, OpenAiCompatibleChatClient llm, ObjectMapper mapper,
-                            ReadinessService readiness) {
+                            ReadinessService readiness, TrainingMemoryService memory) {
         this.repository = repository;
         this.llm = llm;
         this.mapper = mapper;
         this.readiness = readiness;
+        this.memory = memory;
     }
 
     public Suggestion suggest(UUID userId, String focus, String type) {
@@ -153,7 +157,8 @@ public class WorkoutSuggester {
      * tar hensyn til både progresjon og dagsform («sleep score» fra planen).
      */
     private String recentHistory(UUID userId) {
-        String sleep = readiness.promptContext(userId);
+        String sleep = readiness.promptContext(userId)
+                + memory.promptContext(userId, LocalDate.now(ZoneId.of("Europe/Oslo")));
         List<Workout> recent = repository.findByUserIdOrderByDateDescCreatedAtDesc(userId);
         if (recent.isEmpty()) {
             return "Ingen tidligere økter logget." + sleep;
@@ -201,6 +206,10 @@ public class WorkoutSuggester {
                 brukerens fokus og nylige økter. Bruk progressiv overload: foreslå litt mer
                 (vekt eller reps) enn forrige gang for øvelser brukeren allerede gjør.
 
+                Respekter «Brukerminne» i konteksten: foreslå ALDRI øvelser under «Liker IKKE»,
+                bruk gjerne øvelser brukeren liker, ta hensyn til notatene, og tilpass antall
+                økter per uke til treningsvanene når brukeren ikke sier noe annet.
+
                 Svar KUN med ett JSON-objekt, ingen tekst utenfor:
                 {
                   "title": "...",
@@ -234,6 +243,10 @@ public class WorkoutSuggester {
                   - Balanser muskelgrupper fornuftig innen og på tvers av øktene.
                   - Skriv "title", "summary" og alle "rationale" på SAMME SPRÅK som brukerens
                     forespørsel (engelsk forespørsel -> engelsk svar).
+
+                Respekter «Brukerminne» i konteksten: foreslå ALDRI øvelser under «Liker IKKE»,
+                bruk gjerne øvelser brukeren liker, ta hensyn til notatene, og tilpass antall
+                økter per uke til treningsvanene når brukeren ikke sier noe annet.
 
                 Svar KUN med ett JSON-objekt, ingen tekst utenfor:
                 {
@@ -284,6 +297,10 @@ public class WorkoutSuggester {
                   - Gi hver økt en foreslått ukedag ("day") og fordel dem fornuftig utover uka
                     (hvile mellom like muskelgrupper) når planen har flere økter.
                   - Skriv ALT (reply, spørsmål, titler, begrunnelser) på SAMME SPRÅK som brukeren.
+
+                Respekter «Brukerminne» i konteksten: foreslå ALDRI øvelser under «Liker IKKE»,
+                bruk gjerne øvelser brukeren liker, ta hensyn til notatene, og tilpass antall
+                økter per uke til treningsvanene når brukeren ikke sier noe annet.
 
                 Svar KUN med ett JSON-objekt, ingen tekst utenfor:
                 {

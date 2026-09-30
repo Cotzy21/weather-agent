@@ -6,6 +6,7 @@ import { useReveal } from './anim'
 import { useI18n } from './i18n.jsx'
 import LiveSession from './LiveSession.jsx'
 import ExercisePicker from './ExercisePicker.jsx'
+import TrainingMemoryCard from './TrainingMemoryCard.jsx'
 import { loadLive, clearLive, newLive, fromPlan } from './liveSession.js'
 
 const TYPES = [
@@ -114,12 +115,16 @@ export default function TrainingView({ session }) {
   const nextKey = `/api/ovelser/neste?lang=${lang}`
   const [nextSets, setNextSets] = useState(() => getCached(nextKey) ?? [])
 
+  // Treningsminnet (liker / liker ikke / notater + vaner). null = ikke hentet ennå.
+  const [memory, setMemory] = useState(() => getCached('/api/trening/minne') ?? null)
+  const [memoryError, setMemoryError] = useState(null)
+
   // Dagsform fra søvnen i habit trackeren. null = ikke hentet/ingen søvndata.
   const [readiness, setReadiness] = useState(null)
 
   useEffect(() => {
-    if (session) { loadWorkouts(); loadPlans(); loadNextSets(); loadReadiness() }
-    else { setWorkouts([]); setPlans([]); setNextSets([]); setReadiness(null) }
+    if (session) { loadWorkouts(); loadPlans(); loadNextSets(); loadReadiness(); loadMemory() }
+    else { setWorkouts([]); setPlans([]); setNextSets([]); setReadiness(null); setMemory(null) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, lang])
 
@@ -129,6 +134,36 @@ export default function TrainingView({ session }) {
       const res = await fetch(apiUrl(`/api/trening/dagsform?lang=${lang}`), { headers: await authHeaders() })
       setReadiness(res.status === 200 ? await res.json() : { none: true })
     } catch { /* sekundært */ }
+  }
+
+  async function loadMemory() {
+    try {
+      setMemory(await cachedGet('/api/trening/minne', await authHeaders()))
+    } catch { /* sekundært – behold cachet */ }
+  }
+
+  async function saveMemory(next) {
+    const res = await fetch(apiUrl('/api/trening/minne'), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+      body: JSON.stringify(next),
+    })
+    if (!res.ok) throw new Error(await readError(res))
+    setMemory(await res.json())
+  }
+
+  // ♥ / 👎 på en øvelse: legg den i listen (og ut av den motsatte), eller ta den ut igjen.
+  function toggleMemory(name, list) {
+    if (!memory) return
+    const same = (x) => x.toLowerCase() === name.toLowerCase()
+    const other = list === 'liked' ? 'disliked' : 'liked'
+    const has = memory[list].some(same)
+    setMemoryError(null)
+    saveMemory({
+      ...memory,
+      [list]: has ? memory[list].filter((x) => !same(x)) : [...memory[list], name],
+      [other]: memory[other].filter((x) => !same(x)),
+    }).catch((e) => setMemoryError(e.message))
   }
 
   async function loadNextSets() {
@@ -575,6 +610,7 @@ export default function TrainingView({ session }) {
           userId={session.user.id}
           initial={live}
           nextSets={nextSets}
+          memory={memory}
           fmtKg={fmtKg}
           onFinish={finishLive}
           onCancel={endLive}
@@ -585,6 +621,8 @@ export default function TrainingView({ session }) {
         <ExercisePicker
           title={t('Velg øvelse')}
           mine={myExercises}
+          liked={memory?.liked}
+          disliked={memory?.disliked}
           onClose={() => setPickFor(null)}
           onPick={(name) => {
             const target = pickFor
@@ -975,6 +1013,8 @@ export default function TrainingView({ session }) {
       {mode === 'progress' && (
         <div className="progress-page">
           <h2 className="detail-title">{t('Progresjon')}</h2>
+          {memory && <TrainingMemoryCard key={memory.notes} memory={memory} mine={myExercises} onSave={saveMemory} />}
+          {memoryError && <p className="error">{memoryError}</p>}
           {nextSets.length === 0 && (
             <p className="muted">{t('Logg noen styrkeøkter, så ser du hva som forventes neste gang.')}</p>
           )}
@@ -999,7 +1039,18 @@ export default function TrainingView({ session }) {
                       <p><strong>{t('Neste økt')}:</strong> {s.sets} × {s.nextReps} · {kg(s.nextWeightKg)}</p>
                       <p className="muted">{s.reason}</p>
                       {progressChart}
-                      <button className="mini" onClick={() => addNextToBuilder(s)}>{t('+ Legg i økt')}</button>
+                      <div className="prog-actions">
+                        <button className="mini" onClick={() => addNextToBuilder(s)}>{t('+ Legg i økt')}</button>
+                        {memory && ['liked', 'disliked'].map((list) => {
+                          const on = memory[list].some((x) => x.toLowerCase() === s.exercise.toLowerCase())
+                          return (
+                            <button key={list} className={`mini memory-toggle ${on ? 'on' : ''}`} aria-pressed={on}
+                                    onClick={() => toggleMemory(s.exercise, list)}>
+                              {list === 'liked' ? `♥ ${t('Liker')}` : `👎 ${t('Liker ikke')}`}
+                            </button>
+                          )
+                        })}
+                      </div>
                     </div>
                   )}
                 </li>
