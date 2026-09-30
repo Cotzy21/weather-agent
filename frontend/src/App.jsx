@@ -260,7 +260,9 @@ const NAV = [
 
 export default function App() {
   const { t, lang, setLang } = useI18n()
-  const [tab, setTab] = useState(supabase ? 'hjem' : 'vaersok')
+  // `/#personvern` åpner personvernerklæringen direkte: App Store Connect krever en offentlig URL til den.
+  const [tab, setTab] = useState(() => (
+    location.hash === '#personvern' ? 'personvern' : supabase ? 'hjem' : 'vaersok'))
   const [session, setSession] = useState(null)
   // Til getSession har svart vet vi ikke om brukeren er innlogget - unngår
   // at innloggingsveggen blinker forbi ved oppstart.

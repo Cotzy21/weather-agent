@@ -161,6 +161,16 @@ Dockerfile + PORT-config for backend-deploy finnes.
   «ikke medisinsk råd» i Kosthold.
 - **`GET /api/health`** (åpen, uten avhengigheter): bruk den til oppetidsovervåking. Ikke Actuator med vilje.
 
+### iPhone-app (Capacitor) 🚧 (påbegynt 2026-09-30)
+- `frontend/ios/` er et ferdig Xcode-prosjekt (Capacitor 8, Swift Package Manager): bundle-ID `no.weatheragent.turvaer`, «Turvær», kun iPhone og
+  stående, ikon og oppstartsbilde fra `app-icon.svg`. `npm run ios:sync` bygger web-appen i native modus (`--mode native` → `dist-native/`,
+  API-adressen fra `.env.native`) og kopierer den inn. Backend-CORS tillater `capacitor://localhost` (sjekket mot produksjon).
+- `.github/workflows/ios.yml`: `build` kompilerer for simulator på en macOS-maskin (uten signering); `testflight` bygger, signerer og laster
+  opp (manuelt, trenger Apple-hemmeligheter, **ikke prøvd**). Personvern-URL for App Store: `/#personvern`.
+- Alt om oppsett, Apple-trinn, App Store-sjekkliste og kjente begrensninger: `frontend/MOBILE.md`.
+- Gjenstår: Apple Developer-konto + App Store Connect-oppføring, kjøre på ekte iPhone, strekkodeskanner i WKWebView (polyfill/plugin),
+  demo-konto til App Review, «glemt passord», dyplenker for e-postbekreftelse, betalt Render, Android.
+
 ## Kjente feil — status
 
 1. **401 ved lagring** — fikset (ES256-tokens + tydelig logg når
@@ -220,7 +230,7 @@ Dockerfile + PORT-config for backend-deploy finnes.
 3. Velg hvilke ekstra språk (f.eks. svensk/tysk/spansk/fransk).
 4. Prøv strekkodeskanneren på en ekte telefon (Android/Chrome); vurder en zxing-polyfill for iPhone.
 5. Ikke bygget, venter på beslutning/maskinvare/eksterne kontoer: klokke-integrasjoner (Apple Health/Garmin/Strava/Whoop),
-   Capacitor-appene (krever Mac/Xcode/Android Studio), Kartverket Turrutebasen/Naturbase, lokal LLM på desktopen,
+   Android-appen (iPhone er påbegynt, se over), Kartverket Turrutebasen/Naturbase, lokal LLM på desktopen,
    prismodell, streaming av AI-svar (mål latens først), sanntidssporing, restitusjonsverktøy.
 
 ## Arbeidsstil (viktig)

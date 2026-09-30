@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:native": "vite build --mode native",
+    "ios:sync": "vite build --mode native && cap sync ios",
+    "ios:open": "cap open ios",
     "lint": "oxlint",
     "preview": "vite preview",
     "tunnel": "cloudflared tunnel --url http://localhost:5173",

@@ -10,12 +10,14 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dist-native
 *.local
 
 # Lokale miljovariabler (Supabase URL/anon key) - bruk .env.example som mal
 .env
 .env.*
 !.env.example
+!.env.native
 
 # Editor directories and files
 .vscode/*

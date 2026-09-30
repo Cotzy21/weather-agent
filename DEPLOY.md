@@ -17,8 +17,8 @@
       User-Agent med ekte kontaktinfo — sett appnavn + e-post/URL, ikke
       en placeholder.
 - [ ] `APP_CORS_ALLOWED_ORIGINS` — sett til prod-URL-en(e). IKKE la
-      localhost-listen stå alene i prod (mobil-appene trenger fortsatt
-      capacitor://localhost m.fl. når de kommer).
+      localhost-listen stå alene i prod (iPhone-appen trenger
+      `capacitor://localhost` (Android `https://localhost`), så behold dem i lista; se `frontend/MOBILE.md`).
 - [ ] `frontend/.env` ved bygging: `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`
       (anon key er offentlig og trygg i frontend). `VITE_API_BASE` bare hvis
       frontend serveres et annet sted enn backend.
