@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useI18n } from './i18n.jsx'
 import { saveLive, liveExercise, findSuggestion, toContent } from './liveSession.js'
+import ExercisePicker from './ExercisePicker.jsx'
 
 const fmtClock = (sec) => {
   const h = Math.floor(sec / 3600)
@@ -26,7 +27,9 @@ export default function LiveSession({ userId, initial, nextSets, fmtKg, onFinish
   const { t, lang } = useI18n()
   const [s, setS] = useState(initial)
   const [now, setNow] = useState(() => Date.now())
-  const [newName, setNewName] = useState('')
+  const [picking, setPicking] = useState(false)
+  // Egen bekreftelse i appen: window.confirm vises ikke alltid i hjemskjerm-apper på iPhone.
+  const [confirming, setConfirming] = useState(null) // null | 'discard' | 'end'
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [infoOpen, setInfoOpen] = useState(null)
@@ -102,7 +105,6 @@ export default function LiveSession({ userId, initial, nextSets, fmtKg, onFinish
     const n = name.trim()
     if (!n) return
     edit((c) => { c.exercises.push(liveExercise(n, null, nextSets)) })
-    setNewName('')
   }
 
   async function finish() {
@@ -118,14 +120,11 @@ export default function LiveSession({ userId, initial, nextSets, fmtKg, onFinish
     }
   }
 
-  function cancel() {
-    if (window.confirm(t('Avbryte økta? Avhukede sett blir ikke lagret.'))) onCancel()
-  }
+
 
   const allSets = s.exercises.flatMap((e) => e.sets)
   const doneCount = allSets.filter((x) => x.done).length
   const inSession = new Set(s.exercises.map((e) => e.name.trim().toLowerCase()))
-  const quickAdd = (nextSets || []).filter((x) => !inSession.has(x.exercise.toLowerCase()))
   // Første sett som ikke er huket av = «nå»-settet som utheves.
   let current = null
   s.exercises.some((ex, ei) => {
@@ -136,11 +135,10 @@ export default function LiveSession({ userId, initial, nextSets, fmtKg, onFinish
   const currentNo = Math.min(doneCount + 1, allSets.length)
 
   function endWorkout() {
-    const left = allSets.length - doneCount
-    if (doneCount > 0 && left > 0
-      && !window.confirm(t('Avslutte økta? {n} sett er ikke huket av og lagres ikke.', { n: left }))) return
-    finish()
+    if (doneCount > 0 && allSets.length - doneCount > 0) setConfirming('end')
+    else finish()
   }
+
 
   return (
     <div className="live">
@@ -237,26 +235,36 @@ export default function LiveSession({ userId, initial, nextSets, fmtKg, onFinish
         )
       })}
 
-      <div className="live-add">
-        <form onSubmit={(e) => { e.preventDefault(); addExercise(newName) }}>
-          <input
-            list="exercises"
-            placeholder={t('Legg til øvelse …')}
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-          />
-          <button type="submit" disabled={!newName.trim()}>{t('Legg til')}</button>
-        </form>
-        {quickAdd.length > 0 && (
-          <div className="live-chips">
-            {quickAdd.map((x) => (
-              <button key={x.exercise} className="type-chip" onClick={() => addExercise(x.exercise)}>+ {x.exercise}</button>
-            ))}
-          </div>
-        )}
-      </div>
+      <button className="live-add-btn" onClick={() => setPicking(true)}>＋ {t('Legg til øvelse')}</button>
 
-      <button className="live-cancel" onClick={cancel} disabled={busy}>{t('Avbryt økt uten å lagre')}</button>
+      <button className="live-cancel" onClick={() => setConfirming('discard')} disabled={busy}>{t('Avbryt økt uten å lagre')}</button>
+
+      {picking && (
+        <ExercisePicker
+          title={t('Legg til øvelse')}
+          mine={(nextSets || []).map((x) => x.exercise).filter((n) => !inSession.has(n.toLowerCase()))}
+          onPick={(name) => { addExercise(name); setPicking(false) }}
+          onClose={() => setPicking(false)}
+        />
+      )}
+
+      {confirming && (
+        <div className="sheet-backdrop" onClick={() => setConfirming(null)}>
+          <div className="sheet confirm-sheet" role="alertdialog" onClick={(e) => e.stopPropagation()}>
+            <span className="sheet-handle" aria-hidden="true" />
+            <p className="confirm-text">
+              {confirming === 'discard'
+                ? t('Avbryte økta? Avhukede sett blir ikke lagret.')
+                : t('Avslutte økta? {n} sett er ikke huket av og lagres ikke.', { n: allSets.length - doneCount })}
+            </p>
+            <button
+              className={confirming === 'discard' ? 'confirm-danger' : 'primary'}
+              onClick={() => { const c = confirming; setConfirming(null); if (c === 'discard') onCancel(); else finish() }}
+            >{confirming === 'discard' ? t('Avbryt økt') : t('Avslutt og lagre')}</button>
+            <button className="confirm-keep" onClick={() => setConfirming(null)}>{t('Fortsett økta')}</button>
+          </div>
+        </div>
+      )}
 
       <div className={`live-rest ${restLeft === 0 ? 'over' : ''} ${restLeft ? 'running' : ''}`}>
         {restLeft === null && <span>{t('Pause')}: {fmtClock(s.restSec)}</span>}

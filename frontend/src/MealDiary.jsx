@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiUrl, readError } from './api'
+import ChoiceChips from './ChoiceChips.jsx'
 import { authHeaders } from './supabase'
 import { useI18n } from './i18n.jsx'
 
@@ -344,11 +345,10 @@ export default function MealDiary({ session }) {
         <label>{t('Dag')}
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </label>
-        <label>{t('Måltid')}
-          <select value={meal} onChange={(e) => setMeal(e.target.value)}>
-            {MEALS.map((m) => <option key={m.v} value={m.v}>{t(m.t)}</option>)}
-          </select>
-        </label>
+        <div className="field">{t('Måltid')}
+          <ChoiceChips label={t('Måltid')} value={meal} onChange={setMeal}
+                       options={MEALS.map((m) => ({ v: m.v, t: t(m.t) }))} />
+        </div>
         <button className="linklike goal-toggle" onClick={() => setShowPrefs(!showPrefs)}>
           ⚙️ {t('Preferanser & allergier')}
           {(prefs.allergies.length > 0 || prefs.diet !== 'ALT') && (
@@ -362,11 +362,10 @@ export default function MealDiary({ session }) {
 
       {showPrefs && (
         <div className="prefs-form">
-          <label>{t('Diett')}
-            <select value={prefs.diet} onChange={(e) => setPrefs({ ...prefs, diet: e.target.value })}>
-              {DIETS.map((d) => <option key={d.v} value={d.v}>{t(d.t)}</option>)}
-            </select>
-          </label>
+          <div className="field">{t('Diett')}
+            <ChoiceChips label={t('Diett')} value={prefs.diet} onChange={(v) => setPrefs({ ...prefs, diet: v })}
+                         options={DIETS.map((d) => ({ v: d.v, t: t(d.t) }))} />
+          </div>
           <div className="prefs-allergens">
             <span className="prefs-label">{t('Allergier')}</span>
             <div className="pill-row">
@@ -405,24 +404,20 @@ export default function MealDiary({ session }) {
             <input type="number" min="15" value={goalForm.age}
                    onChange={(e) => setGoalForm({ ...goalForm, age: e.target.value })} />
           </label>
-          <label>{t('Kjønn')}
-            <select value={goalForm.sex} onChange={(e) => setGoalForm({ ...goalForm, sex: e.target.value })}>
-              <option value="M">{t('Mann')}</option>
-              <option value="K">{t('Kvinne')}</option>
-            </select>
-          </label>
-          <label>{t('Hverdagsaktivitet')}
-            <select value={goalForm.activityLevel}
-                    onChange={(e) => setGoalForm({ ...goalForm, activityLevel: e.target.value })}>
-              {ACTIVITY.map((a) => <option key={a.v} value={a.v}>{t(a.t)}</option>)}
-            </select>
-          </label>
-          <label>{t('Mål')}
-            <select value={goalForm.goalKgPerWeek}
-                    onChange={(e) => setGoalForm({ ...goalForm, goalKgPerWeek: e.target.value })}>
-              {PACE.map((p) => <option key={p.v} value={p.v}>{t(p.t)}</option>)}
-            </select>
-          </label>
+          <div className="field">{t('Kjønn')}
+            <ChoiceChips label={t('Kjønn')} value={goalForm.sex} onChange={(v) => setGoalForm({ ...goalForm, sex: v })}
+                         options={[{ v: 'M', t: t('Mann') }, { v: 'K', t: t('Kvinne') }]} />
+          </div>
+          <div className="field">{t('Hverdagsaktivitet')}
+            <ChoiceChips label={t('Hverdagsaktivitet')} value={goalForm.activityLevel}
+                         onChange={(v) => setGoalForm({ ...goalForm, activityLevel: v })}
+                         options={ACTIVITY.map((a) => ({ v: a.v, t: t(a.t) }))} />
+          </div>
+          <div className="field">{t('Mål')}
+            <ChoiceChips label={t('Mål')} value={goalForm.goalKgPerWeek}
+                         onChange={(v) => setGoalForm({ ...goalForm, goalKgPerWeek: v })}
+                         options={PACE.map((p) => ({ v: p.v, t: t(p.t) }))} />
+          </div>
           <button className="primary" onClick={saveGoal}
                   disabled={!goalForm.weightKg || !goalForm.heightCm || !goalForm.age}>
             {t('Lagre mål')}
@@ -531,19 +526,13 @@ export default function MealDiary({ session }) {
               <input type="number" min="0" step="any" value={amount}
                      onChange={(e) => setAmount(e.target.value)} />
             </label>
-            <label>{t('Enhet')}
-              <select value={portion}
-                      onChange={(e) => {
-                        const v = e.target.value
-                        setPortion(v === 'g' || unitByKey[v] ? v : Number(v))
-                      }}>
-                <option value="g">{t('gram')}</option>
-                {picked.portions.map((p, i) => (
-                  <option key={i} value={i}>{p.name} ({p.grams.toFixed(0)} g)</option>
-                ))}
-                {GENERIC_UNITS.map((u) => <option key={u.v} value={u.v}>{t(u.t)}</option>)}
-              </select>
-            </label>
+            <div className="field">{t('Enhet')}
+              <ChoiceChips label={t('Enhet')} value={portion} onChange={setPortion} options={[
+                { v: 'g', t: t('gram') },
+                ...picked.portions.map((p, i) => ({ v: i, t: `${p.name} (${p.grams.toFixed(0)} g)` })),
+                ...GENERIC_UNITS.map((u) => ({ v: u.v, t: t(u.t) })),
+              ]} />
+            </div>
             <span className="muted">= {grams.toFixed(0)} g · ~{previewKcal.toFixed(0)} kcal</span>
             {unitByKey[portion]?.volume && (
               <span className="muted unit-hint">{t('(1 ml ≈ 1 g – stemmer for drikke, omtrentlig for pulver)')}</span>

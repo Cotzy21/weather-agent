@@ -5,6 +5,7 @@ import MusclePicker from './MusclePicker'
 import { useReveal } from './anim'
 import { useI18n } from './i18n.jsx'
 import LiveSession from './LiveSession.jsx'
+import ExercisePicker from './ExercisePicker.jsx'
 import { loadLive, clearLive, newLive, fromPlan } from './liveSession.js'
 
 const TYPES = [
@@ -18,25 +19,6 @@ const TYPES = [
 ]
 const CARDIO = ['LØPING', 'SVØMMING', 'SYKKEL']
 
-const EXERCISES = [
-  // Bryst
-  'Benkpress', 'Skråbenkpress', 'Hantelpress', 'Flies', 'Dips', 'Push-ups',
-  // Rygg
-  'Markløft', 'Rumensk markløft', 'Nedtrekk', 'Stående roing', 'Sittende roing',
-  'Pull-ups', 'Chins', 'T-bar roing', 'Face pulls',
-  // Bein
-  'Knebøy', 'Frontbøy', 'Leg press', 'Utfall', 'Bulgarske utfall', 'Leg extension',
-  'Leg curl', 'Tåhev', 'Hip thrust',
-  // Skuldre
-  'Skulderpress', 'Sidehev', 'Fronthev', 'Bakre flies', 'Arnold press', 'Opprekk',
-  // Armer
-  'Bicepscurl', 'Hammercurl', 'Konsentrasjonscurl', 'Triceps pushdown',
-  'Triceps extension', 'Skullcrushers',
-  // Mage
-  'Planke', 'Sit-ups', 'Russian twists', 'Hanging leg raise', 'Cable crunch',
-  // Helkropp
-  'Kettlebell swing', 'Clean and press', 'Thruster', 'Burpees', 'Mountain climbers',
-]
 
 const today = () => new Date().toISOString().slice(0, 10)
 const newSet = () => ({ reps: '', weightKg: '' })
@@ -112,6 +94,8 @@ export default function TrainingView({ session }) {
   // «Ny»-arket (økt vs. plan) og om muskelvelgeren skal vises i byggeren.
   const [sheetOpen, setSheetOpen] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
+  // Hvilket øvelsesfelt velgeren fyller: { bi, ei? } i byggeren, eller 'progress'.
+  const [pickFor, setPickFor] = useState(null)
 
   // AI-økt: én økt til i dag (forskjellig fra AI-treningsplan, som lager flere).
   const [aiwFocus, setAiwFocus] = useState('')
@@ -517,6 +501,7 @@ export default function TrainingView({ session }) {
 
   const dayKey = (p) => { const i = dayIndex(p.content?.day); return i < 0 ? 7 : i }
   const sortedPlans = [...plans].sort((a, b) => dayKey(a) - dayKey(b))
+  const myExercises = nextSets.map((x) => x.exercise)
 
   function planSubtitle(p) {
     const parts = []
@@ -532,7 +517,6 @@ export default function TrainingView({ session }) {
 
   return (
     <div className="training" ref={revealRef}>
-      <datalist id="exercises">{EXERCISES.map((e) => <option key={e} value={e} />)}</datalist>
 
       {mode === 'live' && live && (
         <LiveSession
@@ -543,6 +527,21 @@ export default function TrainingView({ session }) {
           fmtKg={fmtKg}
           onFinish={finishLive}
           onCancel={endLive}
+        />
+      )}
+
+      {pickFor && (
+        <ExercisePicker
+          title={t('Velg øvelse')}
+          mine={myExercises}
+          onClose={() => setPickFor(null)}
+          onPick={(name) => {
+            const target = pickFor
+            setPickFor(null)
+            if (target === 'progress') loadProgress(name)
+            else if (target.ei != null) editBlocks((c) => { c[target.bi].exercises[target.ei].name = name })
+            else editBlocks((c) => { c[target.bi].name = name })
+          }}
         />
       )}
 
@@ -814,8 +813,9 @@ export default function TrainingView({ session }) {
                 <>
                   {b.exercises.map((ex, ei) => (
                     <div className="ss-exercise" key={ei}>
-                      <input list="exercises" placeholder={t('Øvelse')} value={ex.name}
-                             onChange={(e) => editBlocks((c) => { c[bi].exercises[ei].name = e.target.value })} />
+                      <button className={`exercise-pick ${ex.name ? '' : 'empty'}`} onClick={() => setPickFor({ bi, ei })}>
+                        {ex.name || t('Velg øvelse')}
+                      </button>
                       {ex.sets.map((s, si) => (
                         <div className="set-row" key={si}>
                           <input type="number" min="1" placeholder="reps" value={s.reps}
@@ -832,8 +832,9 @@ export default function TrainingView({ session }) {
                 </>
               ) : (
                 <>
-                  <input list="exercises" placeholder={t('Øvelse')} value={b.name}
-                         onChange={(e) => editBlocks((c) => { c[bi].name = e.target.value })} />
+                  <button className={`exercise-pick ${b.name ? '' : 'empty'}`} onClick={() => setPickFor({ bi })}>
+                    {b.name || t('Velg øvelse')}
+                  </button>
                   {(b.kind === 'dropset' ? b.drops : b.sets).map((s, si) => {
                     const key = b.kind === 'dropset' ? 'drops' : 'sets'
                     return (
@@ -948,11 +949,9 @@ export default function TrainingView({ session }) {
           </ul>
 
           <h3 className="detail-h3">{t('Søk etter øvelse')}</h3>
-          <form className="progress-search" onSubmit={(e) => { e.preventDefault(); loadProgress(progressName) }}>
-            <input list="exercises" placeholder={t('Øvelse, f.eks. Benkpress')} value={progressName}
-                   onChange={(e) => { setProgressName(e.target.value); setProgress(null) }} />
-            <button type="submit">{t('Vis')}</button>
-          </form>
+          <button className="exercise-pick" onClick={() => setPickFor('progress')}>
+            🔎 {progressName && !nextSets.some((x) => x.exercise === progressName) ? progressName : t('Søk etter øvelse')}
+          </button>
           {progressName && !nextSets.some((s) => s.exercise === progressName) && progressChart}
 
           <p className="muted source-note">

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, lazy, Suspense } from 'react'
 import { supabase, authHeaders } from './supabase'
+import ChoiceChips from './ChoiceChips.jsx'
 import { apiUrl, readError, clearCache, cachedGet } from './api'
 import { useI18n } from './i18n.jsx'
 import { useTabTransition } from './anim'
@@ -180,14 +181,11 @@ function VaersokView({ onPlan }) {
         <span className="weights-title">{t('Hva betyr mest for deg?')}</span>
         <div className="weights-grid">
           {FACTORS.map((f) => (
-            <label key={f.key} className="weight">
+            <div key={f.key} className="weight">
               <span className="weight-label">{f.icon} {t(f.label)}</span>
-              <select value={weights[f.key]} onChange={(e) => setWeight(f.key, e.target.value)}>
-                {LEVELS.map((l) => (
-                  <option key={l.v} value={l.v}>{t(l.t)}</option>
-                ))}
-              </select>
-            </label>
+              <ChoiceChips label={t(f.label)} value={weights[f.key]} onChange={(v) => setWeight(f.key, v)}
+                           options={LEVELS.map((l) => ({ v: l.v, t: t(l.t) }))} />
+            </div>
           ))}
         </div>
       </section>
