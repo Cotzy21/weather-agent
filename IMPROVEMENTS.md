@@ -178,6 +178,7 @@ Se `DEPLOY.md`.
 - **Render:** kan ikke løses i kode. Se DEPLOY.md (betalt instans er den eneste garanterte løsningen).
 - **Øvelses-migrering (2):** ingen engangsjobb, fordi gruppering slår opp navn ved lesing; gamle økter får
   `exerciseId` bare hvis de skrives på nytt.
-- **Utstyrssjekken** kjenner bare utstyr fra profilen (treningssenter / manualer hjemme / kroppsvekt), ikke
-  fritekstnotater som «har bare kettlebells».
+- **Utstyrssjekken** leser nå utstyr fra fritekst i forespørselen («har bare kettlebells», «ingen kabelmaskin», «kun
+  manualer»; `EquipmentNotes`, 2026-09-30). Fortsatt ikke dekket: fritekst i selve profilen (skader o.l.) og notater i
+  treningsminnet.
 - **Offline** er testet som logikk (kø, idempotens, cache) men ikke prøvd på ekte telefon med flymodus.

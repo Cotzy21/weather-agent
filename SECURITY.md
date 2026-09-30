@@ -72,6 +72,26 @@ koden og testet lokalt (369 backend-tester, 34 frontend-tester, og en ekte Postg
   Zip i zip er begrenset til tre nivåer, og bare `.fit`-filer pakkes ut.
 - `@garmin/fitsdk` har en egen lisens (se `THIRD_PARTY.md`).
 
+## Tillegg: kontosletting, moderering, strekkoder og «Fortell om turen» (2026-09-30)
+
+- `DELETE /api/konto` krever innlogging og sletter bare JWT-brukerens egne rader (`UserDataEraser`, faste tabell- og
+  kolonnenavn, aldri brukerinput). `UserDataEraserTableCoverageTest` feiler hvis en ny entitet ikke er med, så vi ikke lagrer data vi
+  ikke kan slette. Slettingen av selve innloggingen (`delete from auth.users`) kjører utenfor transaksjonen og er best effort.
+  Et JWT er gyldig til det utløper, så en slettet bruker kan i opptil en time sende kall med gammelt token; frontend logger ut og
+  tømmer lokal data, og `discardMine()` kaster økter som venter på nett så de ikke gjenoppretter data.
+- `/api/admin/**` styres av `AdminGuard`: bare Supabase-bruker-id-er i `APP_ADMIN_USER_IDS`, hentet fra den validerte JWT-en.
+  Tom liste = ingen administrator. Rapporter skjuler ikke varer av seg selv (ellers kunne hvem som helst fjerne andres varer), maks 100
+  rapporter per bruker, og man kan ikke rapportere egne, private eller ukjente varer (så id-er ikke kan «sondes»). Notatene fra
+  brukere vises som ren tekst.
+- Strekkodeoppslag hos Open Food Facts: kun strekkoden (8–14 siffer, validert) sendes ut; korte tidsavbrudd (3 s/6 s), global grense på
+  60 oppslag i minuttet, begrenset cache, og svaret valideres som egne matvarer. Et OFF-treff lagres som PRIVAT egen vare.
+- `POST /api/ruter/fortelling` (LLM): krever innlogging, teller mot AI-kvoten per bruker og AI-grensen per IP, input er avgrenset,
+  og ruteinformasjonen sendes som JSON-data (ikke limt inn i prompten). Prompt-injeksjon via rutenavnet kan bare påvirke
+  brukerens egen omtale.
+- Nye tabeller (`food_reports`, V18) har RLS på og ingen rettigheter for `anon`/`authenticated`, som V17.
+- Verifisert mot en ekte PostgreSQL 16 med alle migreringer og en etterlignet `auth.users` (2026-09-30): kontoslettingens SQL, V18
+  (unik rapport, fremmednøkkel, cascade, RLS). Ikke prøvd mot ekte Supabase.
+
 ## Kjente restrisikoer (akseptert eller utenfor kode)
 
 - **Rate limit bak proxy:** klient-IP leses fra første `X-Forwarded-For`-verdi, som en angriper kan forfalske for å

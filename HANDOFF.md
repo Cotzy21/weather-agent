@@ -4,7 +4,8 @@
 > som er gitignored, og fulgte derfor ikke med til nye maskiner).
 > Oppdater den når en modul er ferdig eller en beslutning tas.
 
-Sist oppdatert: 2026-09-29 (avsjekk mot originalplanen + 5 nye moduler).
+Sist oppdatert: 2026-09-30 (kontosletting, personvern, rapportering av matvarer, strekkodeskanning, «Fortell om turen»,
+engelske kostholdsråd, utstyr fra fritekst).
 Se også **DEPLOY.md** for alt som må gjøres før første deploy.
 
 ## Hva appen er
@@ -12,7 +13,7 @@ Se også **DEPLOY.md** for alt som må gjøres før første deploy.
 Turvær-/helseapp: finn hvor det blir finest turvær («hvor på Sunnmøre blir det
 best vær i helgen?»), planlegg ruta, og følg trening/kosthold/restitusjon.
 Java 25 / Spring Boot 3.5 (Maven) + React (Vite) i `frontend/`.
-Auth: Supabase JWT (HS256 + ES256/JWKS). DB: Postgres via Flyway (V1–V11).
+Auth: Supabase JWT (HS256 + ES256/JWKS). DB: Postgres via Flyway (V1–V18).
 Dockerfile + PORT-config for backend-deploy finnes.
 
 ## Status mot originalplanen
@@ -35,7 +36,9 @@ Dockerfile + PORT-config for backend-deploy finnes.
 - **Turstier highlightet**: detaljsiden henter ekte stigeometri
   (`out geom`, klippet til boks rundt stedet, uttynnet — Preikestolen:
   280 KB → 28 KB), tegner linjene og fremhever en sti når man trykker på den.
-- Gjenstår: «fortell om turen»-tekst (LLM — koster per kall, se prismodell).
+- **Fortell om turen** (`RouteStoryService`, `POST /api/ruter/fortelling`, krever innlogging): 3–5 setninger om ruta fra
+  språkmodellen (FAST-tier). Modellen får BARE ruteplanleggerens egne tall som JSON og er bedt om ikke å finne på
+  stedsnavn/vær. Teller mot AI-kvoten per bruker og AI-grensen per IP; knapp under estimatet i ruteplanleggeren.
 
 ### Trening ✅
 - Logging (styrke/cardio/hiking, supersett m/runder, dra-og-slipp), progresjon,
@@ -61,6 +64,10 @@ Dockerfile + PORT-config for backend-deploy finnes.
   dag/dagen før kampsport og styrke på kampsportdager når brukeren ba om det. Ved brudd: ETT retry
   (PRO-modell) med konkrete rettelser, deretter fjernes øvelser som fortsatt bryter utstyr/liker-ikke,
   og resten blir en ⚠-advarsel i sammendraget. Koster ett ekstra AI-kall kun ved brudd.
+  **Utstyr leses også fra fritekst** (`EquipmentNotes`): «jeg har bare kettlebells», «kun manualer», «no cable machine»,
+  «ingen stang», «ingen utstyr». «Bare/kun/only + utstyr» = alt hun har (manualer regnes med benk, kettlebells som manualer),
+  «ingen/uten/no + utstyr» fjerner akkurat det, og teksten går foran profilen. Ikke dekket: fritekst i profilen (skader
+  o.l.) og notater i treningsminnet.
 - **Øvelseskatalog** (`src/main/resources/exercises.json`, delt med frontend): faste id-er med nb/en-navn
   og aliaser. Progresjon, historikk, minne og «neste sett» grupperer på id (`ExerciseCatalog.groupKey`),
   så «Bicep Curls» og «Bicepscurl» er samme øvelse. Nye økter får `exerciseId` på blokkene; gamle økter
@@ -112,8 +119,18 @@ Dockerfile + PORT-config for backend-deploy finnes.
   varer bakerst; **næringsrådene filtrerer kildene** (melkeallergiker får
   grønnkål/plantedrikk for kalsium, veganer beriket drikk/tilskudd for B12).
   UI sier alltid «basert på navnet – sjekk pakningen».
-- Gjenstår: kamera-strekkodeskanning (+ ev. Open Food Facts som kilde, ODbL),
-  «rapporter»-knapp for offentlige matvarer (se DEPLOY.md).
+- **Strekkodeskanning** (`BarcodeScanner.jsx`, `barcode.js`; 📷 ved matsøket): kameraet leser koden med `BarcodeDetector`
+  (Chrome/Android). iPhone/Safari har ikke `BarcodeDetector`, så der skriver man koden inn (feltet finnes alltid).
+  `GET /api/kosthold/strekkode/{kode}` (`BarcodeLookupService`) leter i egne + delte varer, så hos **Open Food Facts**
+  (`OpenFoodFactsClient`, ODbL, kreditert i bunnteksten). Et OFF-treff lagres som en PRIVAT egen matvare med strekkoden, så
+  dagboka logger den som alle andre egne varer og neste skanning ikke trenger eksternt kall. OFF-data er dugnadsdata og
+  valideres med samme grenser som egne varer; utfall/feil hos OFF betyr bare «ikke funnet». `OPENFOODFACTS_ENABLED=false`
+  skrur det av. Ukjent strekkode åpner «egen matvare» med strekkoden utfylt. Ikke prøvd med ekte kamera (bare logikk og
+  typet inntasting er testet).
+- **Rapportering og moderering av delte matvarer** (Flyway V18 `food_reports`): ⚑ ved varer andre har delt (grunn +
+  kommentar), én rapport per bruker og vare, aldri egne/private varer, maks 100 per bruker. En rapport skjuler ingenting av
+  seg selv. Administratorer (Supabase-bruker-id-er i `APP_ADMIN_USER_IDS`, tom = ingen) ser «Moderering» på kontosiden og kan
+  slette varen eller avvise rapportene (`/api/admin/**`, 403 for alle andre).
 
 ### Restitusjon ✅
 - ACWR-skadevarsler per aktivitet, restitusjonssteg per økttype, hviledag-
@@ -123,12 +140,26 @@ Dockerfile + PORT-config for backend-deploy finnes.
 
 ### Generelt
 - i18n: nb/en i hele frontenden, engelsk standard, 🌐-knapp. Restitusjon og
-  progresjonsråd kommer også på engelsk fra backend (`?lang=en`); kostholds-
-  rådene er fortsatt bare norske.
+  progresjonsråd kommer også på engelsk fra backend (`?lang=en`), og nå også kostholdsrådene (navn, «lavt inntak»-tekst, kildeliste
+  og treningsdag-tipset via `NutrientTranslations`; allergifilteret kjører fortsatt på de norske matnavnene).
 - Gjenstår: **flere språk** («alle de mest populære») — bestem hvilke;
   klokke-integrasjoner (Apple Health/Garmin/Strava/Whoop); prismodell.
   Sikkerhetsprinsipp: minst mulig sensitivt lagret, per-bruker kryptering
   når integrasjonene kommer.
+
+### Konto, personvern og drift ✅ (nytt 2026-09-30)
+- **Kontosletting** (`DELETE /api/konto`, «Slett kontoen min» på kontosiden, bekreftes ved å skrive SLETT/DELETE):
+  `UserDataEraser` sletter alt brukeren eier i alle 17 tabeller i én transaksjon; `UserDataEraserTableCoverageTest` feiler hvis
+  en ny JPA-entitet ikke står i lista (legg nye brukertabeller i `OWNED_TABLES`). Deretter forsøker `AuthUserRemover` å slette
+  innloggingen i Supabase (`auth.users`, backend kobler til som databaseeier). Best effort: feiler det, får brukeren beskjed
+  om at e-posten må fjernes på annen måte. Frontend rydder også cache, live-økt, dashboard-oppsett og økter som venter på nett.
+- **Personvernerklæring** (`PrivacyView.jsx`, nb/en) og **samtykke** (avkrysning kreves for å registrere seg, helsedata =
+  GDPR art. 9). Teksten er skrevet ut fra hva appen faktisk lagrer og kaller, men er et **UTKAST**: les den gjennom, sett
+  `REVIEWED = true` i `PrivacyView.jsx` og `VITE_CONTACT_EMAIL` i `frontend/.env` (kontaktadresse vises bare hvis satt).
+  Bekreft også hvilken Supabase-region dataene ligger i (teksten nevner ingen region).
+- **Kildehenvisninger** i bunnteksten (MET og Open-Meteo CC BY 4.0, OpenStreetMap, Matvaretabellen, Open Food Facts) og
+  «ikke medisinsk råd» i Kosthold.
+- **`GET /api/health`** (åpen, uten avhengigheter): bruk den til oppetidsovervåking. Ikke Actuator med vilje.
 
 ## Kjente feil — status
 
@@ -148,16 +179,25 @@ Dockerfile + PORT-config for backend-deploy finnes.
    `SPRING_DATASOURCE_URL/USERNAME/PASSWORD`, LLM-nøkler (se
    `application.properties`).
 3. Kjør: `mvn spring-boot:run` (8080) + `npm run dev` i `frontend/`.
-4. Tester: `mvn test` (280 stk, alle grønne 2026-09-29). Repository-testen
-   for egne matvarer kjører mot in-memory H2 (kun test-scope).
+4. Tester: `mvn test` (496 stk, alle grønne 2026-09-30) og `npm test` i `frontend/` (129 stk). Repository-testene
+   kjører mot in-memory H2 (kun test-scope). **Claude Code i skyen** har JDK 21 mens `pom.xml` sier `java.version` 23: kjør
+   `mvn -B test -Djava.version=21` der (CI bruker riktig JDK og ga samme resultat). En ekte PostgreSQL 16 finnes i skymiljøet
+   og bør brukes til å prøve nye Flyway-migreringer og native SQL (H2 klarer ikke jsonb m.m.).
+5. Nye miljøvariabler: `APP_ADMIN_USER_IDS` (moderatorer, kommaseparert Supabase-UUID-er), `OPENFOODFACTS_ENABLED`
+   (standard true), `VITE_CONTACT_EMAIL` (frontend, kontaktadresse i personvernerklæringen).
 
 ## Foreslåtte neste steg
 
-1. **Verifiser ende-til-ende mot ekte DB** — Flyway kjører V10 (egne matvarer
-   + utvidet `meal_entries.food_id`) og V11 (preferanser) ved oppstart.
-2. **DEPLOY.md** — rate limiting, Supabase RLS, lisenser, personvern.
+1. **Importer Garmins fulle dataeksport** (Kontoinnstillinger → Datahåndtering → Eksporter data, kommer på e-post) via
+   «Last opp FIT / ZIP» — FIT-/ZIP-importen er aldri prøvd på en ekte eksport. Sjekk med én aktivitet først («Eksporter
+   original») og sammenlign med «Eksporter splits til CSV» for samme økt.
+2. Les gjennom **personvernerklæringen** (sett `REVIEWED`, `VITE_CONTACT_EMAIL`), sett `APP_ADMIN_USER_IDS`, og gå gjennom
+   **DEPLOY.md** («Må gjøres» + SECURITY.md «Det du må gjøre»).
 3. Velg hvilke ekstra språk (f.eks. svensk/tysk/spansk/fransk).
-4. Strekkode: kamera-skanning i nettleseren (BarcodeDetector) + oppslag.
+4. Prøv strekkodeskanneren på en ekte telefon (Android/Chrome); vurder en zxing-polyfill for iPhone.
+5. Ikke bygget, venter på beslutning/maskinvare/eksterne kontoer: klokke-integrasjoner (Apple Health/Garmin/Strava/Whoop),
+   Capacitor-appene (krever Mac/Xcode/Android Studio), Kartverket Turrutebasen/Naturbase, lokal LLM på desktopen,
+   prismodell, streaming av AI-svar (mål latens først), sanntidssporing, restitusjonsverktøy.
 
 ## Arbeidsstil (viktig)
 

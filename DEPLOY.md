@@ -22,6 +22,10 @@
 - [ ] `frontend/.env` ved bygging: `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`
       (anon key er offentlig og trygg i frontend). `VITE_API_BASE` bare hvis
       frontend serveres et annet sted enn backend.
+- [ ] `APP_ADMIN_USER_IDS` — Supabase-bruker-id-er (UUID, kommaseparert) som kan moderere rapporterte matvarer. Tom =
+      ingen administrator (alle `/api/admin/**` svarer 403). Finn id-en din under Authentication → Users.
+- [ ] `VITE_CONTACT_EMAIL` (frontend/.env ved bygging) — kontaktadressen i personvernerklæringen. Uten den vises ingen adresse.
+- [ ] `OPENFOODFACTS_ENABLED` (valgfri, standard `true`) — sett `false` for å skru av strekkodeoppslag hos Open Food Facts.
 - [ ] Dobbeltsjekk at ingen hemmeligheter ligger i git
       (`git log -p | grep -i secret` e.l. — `.env`/`application-local.properties`
       er gitignored, men verifiser).
@@ -31,7 +35,7 @@
       (`src/main/resources/static/`) → `mvn package` → ÉN kjørbar jar.
 - [ ] Velg host (Railway/Render/Fly.io er enkle for én jar + de har
       Postgres-nærhet til Supabase). Krav: Java 21+-runtime, HTTPS følger med.
-- [ ] Flyway kjører V1–V9 automatisk mot prod-DB ved første oppstart —
+- [ ] Flyway kjører V1–V18 automatisk mot prod-DB ved første oppstart —
       verifiser i loggen at alle migrasjonene gikk.
 - [ ] Kjør HELE appen lokalt med prod-lignende env først (kjent hull:
       mye er verifisert med mocks, ikke ende-til-ende mot ekte DB/auth).
@@ -41,8 +45,11 @@
       Gratis-nivået er KUN ikke-kommersielt. Før betalende brukere: kjøp
       API-plan (rimelig) eller bytt kilde. For gratis lansering: OK, men
       legg synlig attribusjon («Weather data by Open-Meteo.com», CC-BY 4.0).
-- [ ] **MET**: CC-BY 4.0 — legg synlig attribusjon i UI («Værdata fra
-      Meteorologisk institutt») i tillegg til User-Agent-kravet.
+- [x] **MET**: CC-BY 4.0 — synlig attribusjon («Værdata fra Meteorologisk
+      institutt») ligger i bunnteksten (`AppFooter.jsx`, 2026-09-30), i tillegg til User-Agent-kravet.
+      Open-Meteo krediteres på samme sted; kravet om betalt plan før betalende brukere gjelder fortsatt.
+- [ ] **Open Food Facts** (strekkodeoppslag): ODbL, kreditert i bunnteksten. Ikke kommersielt begrenset, men databasen
+      er dugnadsbasert: appen validerer tallene og ber brukeren sjekke pakningen. Se `OpenFoodFactsClient`.
 - [ ] **OpenStreetMap/Overpass**: kart-attribusjon finnes allerede i
       Leaflet-hjørnet ✓. De OFFENTLIGE Overpass-instansene er for moderat
       bruk — ved vekst: egen Overpass-instans eller betalt tilbyder.
@@ -64,19 +71,18 @@
 
 ### Juridisk (helsedata = ekstra ansvar)
 - [ ] **Personvernerklæring**: appen lagrer helseopplysninger (vekt, alder,
-      kjønn, kalorimål, treningsdata) → GDPR art. 9. Minimum: hva lagres,
-      hvor (Supabase, region?), hvordan slettes det, behandlingsgrunnlag
-      (samtykke). Velg EU-region i Supabase hvis ikke alt gjort.
-- [ ] Slette-min-konto-funksjon (GDPR retten til sletting) — finnes ikke
-      ennå; minimum en e-postadresse for slettehenvendelser ved lansering.
-- [ ] «Ikke medisinske råd»-disclaimere finnes i Restitusjon ✓ — vurder
-      samme i kosthold (kalorimål).
+      kjønn, kalorimål, treningsdata) → GDPR art. 9. Et UTKAST ligger i appen (`PrivacyView.jsx`, nb/en, med samtykke-
+      avkrysning ved registrering). Du må lese det gjennom, bekrefte hvilken Supabase-region dataene ligger i (velg
+      EU-region hvis ikke alt gjort), sette `REVIEWED = true` og `VITE_CONTACT_EMAIL`. Teksten er ikke juridisk rådgivning.
+- [x] Slette-min-konto-funksjon (GDPR retten til sletting) — `DELETE /api/konto` + «Slett kontoen min» på kontosiden
+      (2026-09-30). Fjerner alle dataene og forsøker å fjerne Supabase-innloggingen. Test den en gang mot ekte Supabase
+      med en testkonto: sletting av innloggingen er «best effort» og er bare prøvd mot en etterlignet `auth.users`.
+- [x] «Ikke medisinske råd»-disclaimere finnes i Restitusjon og nå også i Kosthold (kalorimål og næringsråd).
 
 ## 2. Bør gjøres like etter
 
-- [ ] Enkel overvåkning: uptime-sjekk (UptimeRobot o.l.) + le av loggene
-      første dagene. Vurder `spring-boot-starter-actuator` med kun
-      `/actuator/health` åpen for hosten sin helsesjekk.
+- [ ] Enkel overvåkning: uptime-sjekk (UptimeRobot o.l.) mot `/api/health` (finnes, åpen og uten avhengigheter) + le av
+      loggene første dagene. Actuator er bevisst ikke lagt til.
 - [ ] Backup: Supabase har PITR/backups på betalte planer — sjekk hva
       gratisplanen gir og om det holder.
 - [ ] Cache er in-memory og tømmes ved restart/deploy (peaks/trails/foods) —
@@ -85,9 +91,9 @@
 - [ ] LLM-kost per værsøk: mål faktisk forbruk første uka og sett budsjett/
       alarm hos leverandøren.
 - [ ] Overpass-speilene: følg med på 429-rater i loggen; vurder egen instans.
-- [ ] **Offentlig delte matvarer er brukerinnhold**: validering stopper
-      fysisk umulige tall, men ikke feil/spam. Legg til «rapporter»-knapp +
-      en enkel admin-sletting før det blir mange brukere.
+- [x] **Offentlig delte matvarer er brukerinnhold**: validering stopper
+      fysisk umulige tall, men ikke feil/spam. «Rapporter»-knapp (⚑) og enkel moderering finnes (2026-09-30); husk å sette
+      `APP_ADMIN_USER_IDS`, ellers er det ingen som ser rapportene.
 
 ## 3. Kan vente (fra planen)
 
@@ -95,8 +101,9 @@
   sikkerhetsprinsippet: minst mulig lagring, per-bruker kryptering.
 - Prismodell (abonnement vs bruksbasert) — regnestykket bør bruke målt
   LLM-/API-kost fra punktet over.
-- Backend-i18n (Accept-Language) for råd/feilmeldinger.
-- Strekkodeskanning, offentlig deling av egne matvarer.
+- Backend-i18n (Accept-Language): råd finnes på engelsk via `?lang=en` (restitusjon, progresjon, kosthold); feilmeldinger fra
+  backend er fortsatt norske.
+- ~~Strekkodeskanning, offentlig deling av egne matvarer~~ — bygget 2026-09-30 (skanning med Open Food Facts som kilde).
 
 ## Kaldstart på gratis-hosting (Render)
 
