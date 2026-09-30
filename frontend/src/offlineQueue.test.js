@@ -102,4 +102,26 @@ describe('offline queue', () => {
     expect(calls).toEqual([])
     expect(await store.all()).toEqual([])
   })
+
+  it("discards the logged-in user's queued workouts on account deletion, and only theirs", async () => {
+    const { queue, store, owner, counts } = setup(['offline', 'offline'])
+    await queue.submit(item('a')) // u1
+    await queue.submit(item('b')) // u1
+    owner.id = 'u2'
+    await queue.submit(item('c')) // u2
+    owner.id = 'u1'
+
+    expect(await queue.discardMine()).toBe(2)
+    expect((await store.all()).map((i) => i.clientId)).toEqual(['c'])
+    expect(await queue.count()).toBe(0)
+    expect(counts.at(-1)).toBe(0) // banneret «økter venter» oppdateres
+  })
+
+  it('discards nothing when nobody is logged in', async () => {
+    const { queue, store } = setup(['offline'])
+    await queue.submit(item('a'))
+    const loggedOut = createQueue({ store, send: async () => ({ ok: true, status: 200 }), owner: () => null })
+    expect(await loggedOut.discardMine()).toBe(0)
+    expect((await store.all()).length).toBe(1)
+  })
 })

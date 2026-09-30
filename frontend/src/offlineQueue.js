@@ -122,7 +122,20 @@ export function createQueue({ store, send, owner = () => null, onChange = () => 
     return flushing
   }
 
-  return { submit, flush, pending, count: async () => (await pending()).length }
+  /**
+   * Kontosletting: kast alle økter som venter for innlogget bruker, så de ikke sendes inn igjen og gjenoppretter
+   * dataene som nettopp ble slettet. Andre brukeres køede økter røres ikke. Returnerer antall kastede.
+   */
+  async function discardMine() {
+    const me = owner()
+    if (!me) return 0
+    const mine = (await store.all()).filter((i) => i.owner === me)
+    for (const i of mine) await store.remove(i.clientId)
+    await notify()
+    return mine.length
+  }
+
+  return { submit, flush, pending, discardMine, count: async () => (await pending()).length }
 }
 
 // --- Bruk i appen ---

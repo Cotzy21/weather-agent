@@ -362,6 +362,7 @@ export default function NutritionView({ session }) {
   return (
     <div className="nutrition" ref={rootRef}>
       <h2 className="detail-title" data-reveal>{t('🥗 Kosthold')}</h2>
+      <p className="muted disclaimer">{t('Kalorimål og næringsråd er generelle veiledninger, ikke medisinske råd.')}</p>
 
       <MealDiary session={session} />
 

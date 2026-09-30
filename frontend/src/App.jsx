@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, lazy, Suspense } from 'react'
 import { localIso } from './trainingStats.js'
 import { supabase, authHeaders } from './supabase'
 import ChoiceChips from './ChoiceChips.jsx'
+import AppFooter from './AppFooter.jsx'
 import { apiUrl, readError, cachedGet, switchCacheOwner, onSlowRequest } from './api'
 import { useI18n } from './i18n.jsx'
 import { useTabTransition } from './anim'
@@ -17,6 +18,7 @@ const NutritionView = lazy(() => import('./NutritionView'))
 const RecoveryView = lazy(() => import('./RecoveryView'))
 const Dashboard = lazy(() => import('./Dashboard'))
 const AuthView = lazy(() => import('./AuthView'))
+const PrivacyView = lazy(() => import('./PrivacyView'))
 
 // De fire faktorene brukeren kan vekte, og nivåene.
 const FACTORS = [
@@ -266,6 +268,8 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   // Gratis hosting sover; første kall kan ta ~1 minutt. Si fra i stedet for å la appen se ødelagt ut.
   const [slow, setSlow] = useState(false)
+  // Engangsmelding etter kontosletting (brukeren logges ut samtidig, så meldingen må leve i App).
+  const [notice, setNotice] = useState(null)
   useEffect(() => onSlowRequest(setSlow), [])
 
   function go(id) {
@@ -355,6 +359,11 @@ export default function App() {
 
   return (
     <div className="app">
+      {notice && (
+        <div className="wake-banner" role="status">
+          {notice} <button className="link-btn" onClick={() => setNotice(null)}>{t('Lukk')}</button>
+        </div>
+      )}
       {slow && <div className="wake-banner" role="status">⏳ {t('Vekker serveren … første innlasting kan ta opptil ett minutt.')}</div>}
       {menuOpen && <div className="menu-backdrop" onClick={() => setMenuOpen(false)} />}
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${menuOpen ? 'menu-open' : ''}`}>
@@ -420,7 +429,8 @@ export default function App() {
           {!authReady ? (
             <p className="lazy-fallback muted">{t('Laster …')}</p>
           ) : locked ? (
-            <AuthView session={null} reason={t('Logg inn for å bruke {feature}. Værsøket er åpent for alle.', { feature: t(current.label) })} />
+            <AuthView session={null} onOpenPrivacy={() => go('personvern')}
+                      reason={t('Logg inn for å bruke {feature}. Værsøket er åpent for alle.', { feature: t(current.label) })} />
           ) : (<>
           {tab === 'hjem' && <Dashboard session={session} onNavigate={setTab} />}
           {tab === 'vaersok' && <VaersokView onPlan={planTrip} />}
@@ -434,9 +444,16 @@ export default function App() {
           {tab === 'trening' && <TrainingView session={session} />}
           {tab === 'kosthold' && <NutritionView session={session} />}
           {tab === 'restitusjon' && <RecoveryView session={session} />}
-          {tab === 'konto' && <AuthView session={session} />}
+          {tab === 'konto' && (
+            <AuthView session={session} onOpenPrivacy={() => go('personvern')}
+                      onDeleted={(r) => setNotice(r.loginRemoved
+                        ? t('Kontoen din er slettet.')
+                        : t('Dataene dine er slettet, men innloggingen (e-postadressen) ble ikke fjernet automatisk. Kontakt oss for å få den fjernet.'))} />
+          )}
+          {tab === 'personvern' && <PrivacyView onBack={() => go(session ? 'konto' : 'vaersok')} />}
           </>)}
         </Suspense>
+        <AppFooter onOpenPrivacy={() => go('personvern')} />
       </main>
     </div>
   )

@@ -2240,3 +2240,26 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .sparkline { flex: none; stroke: var(--muted); fill: var(--muted); }
 .sparkline.up { stroke: var(--accent-strong); fill: var(--accent-strong); }
 .sparkline.down { stroke: var(--danger); fill: var(--danger); }
+
+/* ---------- Bunntekst (kildehenvisninger), personvern og kontosletting ---------- */
+.app-footer { margin-top: 40px; padding: 16px 0 24px; border-top: 1px solid var(--border); font-size: var(--fs-sm); color: var(--muted); }
+.app-footer p { margin: 4px 0; line-height: 1.5; }
+.app-footer a { color: var(--accent-strong); }
+.link-btn, .account .link-btn, .wake-banner .link-btn {
+  background: none; border: none; padding: 0; color: var(--accent-strong); cursor: pointer; font: inherit;
+  text-decoration: underline; border-radius: 0;
+}
+.privacy { max-width: 720px; padding: 16px 0 28px; }
+.privacy h3 { margin: 22px 0 6px; }
+.privacy p { line-height: 1.55; margin: 6px 0; }
+.privacy-draft { padding: 8px 12px; border-radius: 10px; border: 1px dashed var(--border-strong); font-size: var(--fs-sm); }
+.auth-form .consent { display: flex; gap: 8px; align-items: flex-start; font-size: var(--fs-sm); line-height: 1.4; }
+.auth-form .consent input { width: auto; padding: 0; margin-top: 2px; border-radius: 4px; flex: none; }
+.danger-zone { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border); }
+.danger-zone h3 { margin: 0 0 6px; }
+.danger-zone summary { cursor: pointer; color: var(--danger); font-weight: 600; }
+.danger-zone details p { font-size: var(--fs-sm); line-height: 1.5; }
+.confirm-delete { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; font-size: var(--fs-sm); }
+.confirm-delete input { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-2); color: var(--text); font-size: 15px; }
+.account button.danger { border-color: var(--danger); color: var(--danger); }
+.account button.danger:disabled { opacity: 0.5; cursor: not-allowed; }
