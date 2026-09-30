@@ -2263,3 +2263,14 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .confirm-delete input { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-2); color: var(--text); font-size: 15px; }
 .account button.danger { border-color: var(--danger); color: var(--danger); }
 .account button.danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---------- Rapportering og moderering av delte matvarer ---------- */
+.report-food { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: 6px; vertical-align: middle; }
+.report-toggle { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 14px; padding: 2px 4px; }
+.report-toggle:hover { color: var(--danger); }
+.report-form { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: var(--fs-sm); }
+.report-form select, .report-form input { padding: 5px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-2); color: var(--text); font-size: var(--fs-sm); }
+.moderation-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 10px; }
+.moderation-list li { padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--card-solid); }
+.moderation-actions { display: flex; gap: 8px; margin-top: 8px; }
+.account:has(.moderation) { max-width: 560px; }

@@ -449,6 +449,23 @@ const EN = {
   'Kryss av samtykket for å registrere deg': 'Tick the consent box to register',
   'Kontoen din er slettet.': 'Your account has been deleted.',
   'Dataene dine er slettet, men innloggingen (e-postadressen) ble ikke fjernet automatisk. Kontakt oss for å få den fjernet.': 'Your data has been deleted, but the login (email address) was not removed automatically. Contact us to have it removed.',
+
+  // Rapportering og moderering av delte matvarer
+  'Rapporter matvaren': 'Report this food',
+  'Feil verdier': 'Wrong values',
+  'Spam': 'Spam',
+  'Upassende': 'Inappropriate',
+  'Annet': 'Other',
+  'Grunn': 'Reason',
+  'Kommentar (valgfritt)': 'Comment (optional)',
+  'Send rapport': 'Send report',
+  'Takk – rapporten er sendt.': 'Thanks – the report has been sent.',
+  'Moderering': 'Moderation',
+  'Ingen rapporterte matvarer.': 'No reported foods.',
+  'per 100 g': 'per 100 g',
+  '{n} rapporter': '{n} reports',
+  'Slett matvaren': 'Delete this food',
+  'Avvis rapportene': 'Dismiss the reports',
   'Kalorimål og næringsråd er generelle veiledninger, ikke medisinske råd.': 'Calorie goals and nutrition advice are general guidance, not medical advice.',
 
   'Navn (f.eks. Tøying)': 'Name (e.g. Stretching)',

@@ -3,6 +3,7 @@ import { supabase, authHeaders } from './supabase'
 import { useI18n } from './i18n.jsx'
 import { deleteAccount, eraseLocalUserData, isDeleteConfirmation } from './accountDeletion.js'
 import { workoutQueue } from './offlineQueue.js'
+import FoodModeration from './FoodModeration.jsx'
 
 // Enkel konto-side: e-post/passord registrering + innlogging via Supabase,
 // eller utlogging hvis man allerede er innlogget. Innlogget bruker kan også slette kontoen sin (GDPR).
@@ -51,6 +52,8 @@ export default function AuthView({ session, reason, onOpenPrivacy, onDeleted }) 
         <h2 className="detail-title">{t('Konto')}</h2>
         <p>{t('Innlogget som')} <strong>{session.user.email}</strong></p>
         <button className="primary" onClick={() => supabase.auth.signOut()}>{t('Logg ut')}</button>
+
+        <FoodModeration />
 
         <section className="danger-zone">
           <h3>{t('Personvern og data')}</h3>

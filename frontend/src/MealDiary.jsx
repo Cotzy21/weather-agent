@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { localIso } from './trainingStats.js'
 import { apiUrl, readError } from './api'
 import ChoiceChips from './ChoiceChips.jsx'
+import ReportFood from './ReportFood.jsx'
 import { authHeaders } from './supabase'
 import { useI18n } from './i18n.jsx'
 
@@ -508,6 +509,7 @@ export default function MealDiary({ session }) {
                   </span>
                 ))}
               </button>
+              {f.source === 'OFFENTLIG' && <ReportFood foodId={f.foodId} />}
             </li>
           ))}
         </ul>
