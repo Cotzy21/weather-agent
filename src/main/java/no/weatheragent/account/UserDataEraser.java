@@ -39,6 +39,7 @@ public class UserDataEraser {
             new OwnedTable("meal_entries", "user_id"),
             new OwnedTable("diet_preferences", "user_id"),
             new OwnedTable("calorie_goals", "user_id"),
+            new OwnedTable("food_reports", "reporter_id"),
             new OwnedTable("custom_foods", "owner_id"),
             new OwnedTable("custom_meals", "user_id"),
             new OwnedTable("saved_routes", "user_id"));
