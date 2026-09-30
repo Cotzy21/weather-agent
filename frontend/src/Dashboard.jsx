@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
+import { BodyweightCard, BodyweightSheet } from './Bodyweight.jsx'
 import LifetimeStats from './LifetimeStats.jsx'
 import { localIso } from './trainingStats.js'
 import { authHeaders } from './supabase'
-import { cachedGet, getCached } from './api'
+import { cachedGet, getCached, apiUrl, readError } from './api'
 import { useReveal, useCountUp } from './anim'
 import { useI18n } from './i18n.jsx'
 
@@ -33,11 +34,14 @@ export default function Dashboard({ session, onNavigate }) {
     getCached('/api/treningsokter') ?? getCached(`/api/treningsokter?siden=${weekAgo}`) ?? [])
   const [day, setDay] = useState(() => getCached(`/api/kosthold/dag?dato=${isoToday()}`) ?? null)
   const [lows, setLows] = useState(() => (getCached(`/api/kosthold/uke?til=${isoToday()}`) ?? []).filter((n) => n.advice))
+  const [weighIns, setWeighIns] = useState(() => getCached('/api/kropp/vekt') ?? [])
+  const [showWeight, setShowWeight] = useState(false)
 
   useEffect(() => {
-    if (!session) { setWorkouts([]); setDay(null); setLows([]); return }
+    if (!session) { setWorkouts([]); setDay(null); setLows([]); setWeighIns([]); return }
     loadWorkouts()
     loadNutrition()
+    loadWeighIns()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
@@ -50,6 +54,27 @@ export default function Dashboard({ session, onNavigate }) {
     }
     // Så hele historikken (fyller feed + totalen).
     try { setWorkouts(await cachedGet('/api/treningsokter', headers)) } catch { /* behold cachet */ }
+  }
+
+  async function loadWeighIns() {
+    try { setWeighIns(await cachedGet('/api/kropp/vekt', await authHeaders())) } catch { /* behold cachet */ }
+  }
+
+  async function logWeighIn(entry) {
+    const res = await fetch(apiUrl('/api/kropp/vekt'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+      body: JSON.stringify(entry),
+    })
+    if (!res.ok) throw new Error(await readError(res))
+    await loadWeighIns()
+  }
+
+  async function deleteWeighIn(id) {
+    try {
+      await fetch(apiUrl(`/api/kropp/vekt/${id}`), { method: 'DELETE', headers: await authHeaders() })
+      await loadWeighIns()
+    } catch { /* ignorer */ }
   }
 
   async function loadNutrition() {
@@ -197,6 +222,11 @@ export default function Dashboard({ session, onNavigate }) {
           </div>
         </aside>
       </div>
+
+      <BodyweightCard entries={weighIns} onOpen={() => setShowWeight(true)} onLog={logWeighIn} />
+      {showWeight && (
+        <BodyweightSheet entries={weighIns} onLog={logWeighIn} onDelete={deleteWeighIn} onClose={() => setShowWeight(false)} />
+      )}
 
       <LifetimeStats workouts={workouts} />
 

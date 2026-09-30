@@ -2094,3 +2094,63 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .medal-text .muted { font-size: 12px; }
 .medal-progress { height: 5px; border-radius: 3px; background: var(--tint); overflow: hidden; }
 .medal-progress span { display: block; height: 100%; background: var(--accent); }
+
+/* ---------- Kroppsvekt ---------- */
+.bw-card {
+  display: flex; flex-direction: column; gap: 10px; margin: 8px 0 4px;
+  padding: 14px; border-radius: 16px; border: 1px solid var(--border); background: var(--card-solid);
+}
+.bw-head { display: flex; align-items: center; justify-content: space-between; }
+.bw-head .detail-h3 { margin: 0; }
+.bw-main { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.bw-main > div { display: flex; flex-direction: column; gap: 2px; }
+.bw-big { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.bw-big small { font-size: 14px; color: var(--muted); font-weight: 600; }
+.bw-sub { font-size: 13px; }
+.bw-weigh {
+  flex-shrink: 0; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--border-strong);
+  background: var(--card-solid); color: var(--text); font-weight: 600; cursor: pointer;
+}
+.bw-weigh.wide { width: 100%; margin: 12px 0 4px; }
+.bw-delta strong { font-variant-numeric: tabular-nums; }
+.bw-minis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bw-mini {
+  display: flex; flex-direction: column; gap: 8px; padding: 10px; text-align: left;
+  border-radius: 12px; border: 1px solid var(--border); background: var(--tint); color: var(--text); cursor: pointer;
+}
+.bw-mini-title { display: flex; flex-direction: column; font-weight: 600; font-size: 14px; }
+.bw-mini-title small { font-weight: 400; font-size: 11px; }
+.bw-mini-foot { font-size: 13px; font-variant-numeric: tabular-nums; }
+.bw-dots { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
+.bw-dots span { aspect-ratio: 1; border-radius: 2px; background: var(--border); }
+.bw-dots span.on { background: var(--accent); }
+.bw-spark { width: 100%; height: 36px; }
+.bw-sheet { max-height: 92svh; }
+.bw-scroll { display: flex; flex-direction: column; gap: 10px; padding-top: 4px; padding-bottom: 12px; }
+.bw-range-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; }
+.bw-chart { position: relative; touch-action: pan-y; }
+.bw-chart svg { width: 100%; height: auto; display: block; }
+.bw-label { font-size: 12px; font-weight: 700; fill: var(--text); }
+.bw-axis { font-size: 11px; fill: var(--muted); }
+.bw-tooltip {
+  position: absolute; top: 0; transform: translateX(-50%); pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; padding: 4px 8px; border-radius: 8px;
+  background: var(--card-solid); border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  font-size: 12px; white-space: nowrap;
+}
+.bw-year { display: flex; flex-direction: column; gap: 4px; }
+.bw-year-grid { display: grid; grid-template-rows: repeat(7, 1fr); gap: 1.5px; }
+.bw-year-grid span { aspect-ratio: 1; border-radius: 1px; background: var(--border); }
+.bw-year-grid span.on { background: var(--accent); }
+.bw-months { position: relative; height: 14px; font-size: 10px; color: var(--muted); }
+.bw-months span { position: absolute; top: 0; }
+.bw-entries { list-style: none; padding: 0; margin: 0; }
+.bw-entries li {
+  display: flex; align-items: center; gap: 10px; padding: 10px 2px;
+  border-bottom: 1px solid var(--border); font-size: 15px;
+}
+.bw-entries li > span:first-child { flex: 1; }
+.bw-entry-kg { font-weight: 700; font-variant-numeric: tabular-nums; }
+.bw-input-row { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+.bw-input { width: 140px; font-size: 36px; font-weight: 800; text-align: center; padding: 8px; }
+.bw-unit { font-size: 18px; color: var(--muted); font-weight: 600; }

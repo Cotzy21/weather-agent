@@ -335,6 +335,7 @@ export default function App() {
           '/api/kosthold/favoritter',
           '/api/kosthold/maaltider',
           '/api/trening/minne',
+          '/api/kropp/vekt',
         ]
         for (const path of rest) {
           if (!alive) return
