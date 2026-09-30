@@ -82,7 +82,7 @@ export default function TrainingView({ session }) {
   const [dragOver, setDragOver] = useState(null)
 
   // Garmin-import: CSV (alle økter) og FIT/ZIP (øvelser og vekter), lest på enheten.
-  const imp = useGarminImport({ onDone: () => Promise.all([loadWorkouts(), loadNextSets()]) })
+  const imp = useGarminImport({ onDone: () => Promise.all([loadWorkouts(), loadNextSets()]), lang })
 
   const [progressName, setProgressName] = useState('')
   const [progress, setProgress] = useState(null)

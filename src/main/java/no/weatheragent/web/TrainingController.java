@@ -68,11 +68,13 @@ public class TrainingController {
     private final TrainingMemoryService memory;
     private final TrainingProfileService profiles;
     private final AiRateLimiter aiLimit;
+    private final no.weatheragent.training.ExerciseMatchService exerciseMatch;
 
     public TrainingController(WorkoutService workouts, WorkoutSuggester suggester,
                               TrainingPlanService plans, WorkoutImportService importer,
                               ReadinessService readiness, TrainingMemoryService memory,
-                              TrainingProfileService profiles, AiRateLimiter aiLimit) {
+                              TrainingProfileService profiles, AiRateLimiter aiLimit,
+                              no.weatheragent.training.ExerciseMatchService exerciseMatch) {
         this.workouts = workouts;
         this.suggester = suggester;
         this.plans = plans;
@@ -81,6 +83,7 @@ public class TrainingController {
         this.memory = memory;
         this.profiles = profiles;
         this.aiLimit = aiLimit;
+        this.exerciseMatch = exerciseMatch;
     }
 
     /** Treningsminnet: liker / liker ikke / notater + vaner fra øktene. */
@@ -146,6 +149,17 @@ public class TrainingController {
                                                                 @Valid @RequestBody no.weatheragent.web.dto.FitImportRequest request) {
         return no.weatheragent.web.dto.FitImportResultDto.from(
                 importer.importFit(UUID.fromString(jwt.getSubject()), request.sessions()));
+    }
+
+    /**
+     * Kobler øvelsesnavn fra en import til appens øvelser (katalog først, så én LLM-spørring for resten), så en
+     * importert «Barbell Bench Press» havner under riktig øvelse i historikken. Feiler den, beholdes filens egne navn.
+     */
+    @PostMapping("/api/trening/ovelser/koble")
+    public no.weatheragent.web.dto.MatchExercisesResponse matchExercises(
+            @AuthenticationPrincipal Jwt jwt, @Valid @RequestBody no.weatheragent.web.dto.MatchExercisesRequest request) {
+        return no.weatheragent.web.dto.MatchExercisesResponse.from(
+                exerciseMatch.match(UUID.fromString(jwt.getSubject()), request.names()));
     }
 
     @PostMapping("/api/treningsokter")

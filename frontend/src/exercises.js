@@ -38,6 +38,14 @@ export function resolveExercise(name) {
   return BY_KEY.get(normalizeName(name))
 }
 
+const BY_ID = new Map(ENTRIES.map((e) => [e.id, e]))
+
+/** Navnet appen bruker for en katalogøvelse på valgt språk (eller undefined om id-en ikke finnes). */
+export function exerciseDisplayName(id, lang) {
+  const e = BY_ID.get(id)
+  return e ? (lang === 'en' ? e.en : e.nb) : undefined
+}
+
 /** Nøkkel å sammenligne øvelser på: katalog-id, ellers navnet normalisert (som backend). */
 export function exerciseKey(name) {
   return resolveExercise(name)?.id ?? normalizeName(name)

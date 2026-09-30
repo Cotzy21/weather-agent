@@ -54,6 +54,9 @@ class TrainingControllerSecurityTest {
     private no.weatheragent.training.AiRateLimiter aiLimit;
 
     @MockitoBean
+    private no.weatheragent.training.ExerciseMatchService exerciseMatch;
+
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     @Test
@@ -125,6 +128,31 @@ class TrainingControllerSecurityTest {
                         .contentType("application/json").content("{\"sessions\":[]}")
                         .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void exerciseMatchRequiresAuthAndValidatesTheNames() throws Exception {
+        String body = "{\"names\":[\"Barbell Bench Press\"]}";
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trening/ovelser/koble")
+                        .contentType("application/json").content(body))
+                .andExpect(status().isUnauthorized());
+
+        when(exerciseMatch.match(any(), any())).thenReturn(
+                List.of(new no.weatheragent.training.ExerciseMatchService.Match("Barbell Bench Press", "bench-press")));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trening/ovelser/koble")
+                        .contentType("application/json").content(body)
+                        .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.matches[0].id").value("bench-press"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.matches[0].nb").value("Benkpress"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.matches[0].en").value("Bench Press"));
+
+        for (String bad : new String[]{"{\"names\":[]}", "{\"names\":[\"\"]}", "{\"names\":[\"" + "x".repeat(81) + "\"]}"}) {
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trening/ovelser/koble")
+                            .contentType("application/json").content(bad)
+                            .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
+                    .andExpect(status().isBadRequest());
+        }
     }
 
     @Test

@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { authHeaders } from './supabase'
 import { apiUrl, readError } from './api'
 import { importCsv, importFit } from './garminImport.js'
+import { matchExerciseNames } from './exerciseMatch.js'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -41,7 +42,7 @@ export async function postWithRetry(path, body, contentType, { fetchImpl = fetch
 }
 
 /** Tilstanden til en Garmin-import (CSV eller FIT/ZIP), og funksjonene som starter dem. */
-export function useGarminImport({ onDone }) {
+export function useGarminImport({ onDone, lang = 'en' }) {
   const [state, setState] = useState({ busy: false, kind: null, progress: null, result: null, error: null })
   const running = useRef(false)
 
@@ -64,8 +65,12 @@ export function useGarminImport({ onDone }) {
   const runCsv = useCallback((file) => file && run('csv', (onProgress) => importCsv(file, { post: postWithRetry, onProgress })), [run])
   const runFit = useCallback((files) => {
     const list = Array.from(files ?? [])
-    return list.length && run('fit', (onProgress) => importFit(list, { post: postWithRetry, onProgress }))
-  }, [run])
+    return list.length && run('fit', (onProgress) => importFit(list, {
+      post: postWithRetry,
+      onProgress,
+      matchNames: (names) => matchExerciseNames(names, { lang, post: postWithRetry }),
+    }))
+  }, [run, lang])
 
   return { ...state, runCsv, runFit }
 }

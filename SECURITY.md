@@ -65,6 +65,9 @@ koden og testet lokalt (369 backend-tester, 34 frontend-tester, og en ekte Postg
 
 - `POST /api/trening/import/fit` krever innlogging, validerer alt (maks 50 økter, 60 øvelser, 100 sett, reps 1–1000, vekt 0–1000 kg,
   maks 5000 sett per forespørsel, dato siste 30 år) og er idempotent. Størrelsesgrensen er 8 MB som for CSV-importen.
+- `POST /api/trening/ovelser/koble` (AI-kobling av øvelsesnavn) krever innlogging, teller mot AI-kvoten og IP-grensen for AI-endepunkter,
+  og maks 200 navn à 80 tegn. Navnene sendes til modellen som data i en JSON-liste med beskjed om å ignorere instrukser i dem; svaret
+  godtas bare som id-er fra katalogen for navn vi faktisk spurte om, så en manipulert fil (eller modell) ikke kan skrive annet enn kjente øvelser.
 - FIT-/zip-filene pakkes ut og tolkes i nettleseren (aldri på serveren), så en ondsinnet fil kan ikke belaste serveren.
   Zip i zip er begrenset til tre nivåer, og bare `.fit`-filer pakkes ut.
 - `@garmin/fitsdk` har en egen lisens (se `THIRD_PARTY.md`).

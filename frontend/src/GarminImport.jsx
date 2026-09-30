@@ -9,9 +9,10 @@ export default function GarminImport({ imp }) {
 
   let progress = null
   if (imp.busy) {
-    progress = imp.kind === 'csv'
-      ? t('Importerer … {done}/{total}', { done: p?.done ?? 0, total: p?.total ?? '…' })
-      : t('Leser filer … {files} FIT-filer, {n} styrkeøkter funnet', { files: p?.fitFiles ?? 0, n: p?.strength ?? 0 })
+    if (imp.kind === 'csv') progress = t('Importerer … {done}/{total}', { done: p?.done ?? 0, total: p?.total ?? '…' })
+    else if (p?.phase === 'match') progress = t('Kobler øvelsene til appens øvelser …')
+    else if (p?.phase === 'send') progress = t('Lagrer økter … {sent}/{of}', { sent: p.sent, of: p.of })
+    else progress = t('Leser filer … {files} FIT-filer, {n} styrkeøkter funnet', { files: p?.fitFiles ?? 0, n: p?.strength ?? 0 })
   }
 
   let summary = null
@@ -27,6 +28,7 @@ export default function GarminImport({ imp }) {
       : `✓ ${t('{n} økter fikk øvelser og vekter', { n: r.merged + r.imported })}`
         + (r.merged ? ` (${t('{n} fylt inn på økter fra CSV', { n: r.merged })})` : '')
         + (r.skipped ? ` · ${t('{n} fantes fra før', { n: r.skipped })}` : '')
+        + (r.names?.total ? ` · ${t('{matched} av {total} øvelsesnavn koblet til appens øvelser', { matched: r.names.matched, total: r.names.total })}` : '')
         + (r.notStrength ? ` · ${t('{n} andre aktiviteter hoppet over', { n: r.notStrength })}` : '')
         + (r.unreadable ? ` · ${t('{n} filer kunne ikke leses', { n: r.unreadable })}` : '')
   }

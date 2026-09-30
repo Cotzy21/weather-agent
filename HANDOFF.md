@@ -89,6 +89,11 @@ Dockerfile + PORT-config for backend-deploy finnes.
   - **Progresjon**: «Progresjon»-fanen har «Utvikling per øvelse» (første → siste, % endring, trendlinje; regnet ut i nettleseren over hele
     historikken) og «Økter over tid» per økttype (Push/Pull/Legs) fra CSV-totaler. Garmin-øvelsesnavn er lagt som aliaser i `exercises.json`,
     så de samles med øvelsene du logger selv. Manual- og stangvarianter holdes bevisst adskilt.
+  - **Øvelseskobling med AI** (`ExerciseMatchService`, `POST /api/trening/ovelser/koble`, Flyway V17): etter at FIT-filene er lest samles de
+    UNIKE øvelsesnavnene. Katalogen (navn + aliaser) kobler det den kjenner, uten nett og uten kostnad; resten går til ÉN LLM-spørring
+    (`FAST`-modellen, f.eks. `LLM_MODEL_FAST=gpt-4o-mini` mot OpenAI) som bare kan velge blant katalogens id-er. Svaret lagres per bruker
+    (`exercise_name_map`, også «ingen treff»), så samme navn aldri spørres om to ganger. Øktene skrives så under appens navn på valgt språk.
+    Feiler LLM-en (ingen nøkkel, kvote, nett) beholdes Garmins navn og importen fortsetter. Krever `LLM_BASE_URL`/`LLM_API_KEY` i Render.
   - Ikke verifisert mot en ekte Garmin-eksport (bare FIT-filer laget med Garmins egen koder i tester). Lisens for `@garmin/fitsdk`: se `THIRD_PARTY.md`.
 - Gjenstår: real-time tracking (sen fase i planen), klokke-integrasjoner.
 
