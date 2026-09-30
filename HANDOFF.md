@@ -161,6 +161,17 @@ Dockerfile + PORT-config for backend-deploy finnes.
   «ikke medisinsk råd» i Kosthold.
 - **`GET /api/health`** (åpen, uten avhengigheter): bruk den til oppetidsovervåking. Ikke Actuator med vilje.
 
+### Engasjement og vaner 🚧 (påbegynt 2026-09-30)
+- Planen ligger i `ENGAGEMENT.md` (bygget på forskningsrapporten som ligger i Hindsight som `research/engasjement/*`, start med `00-indeks.md`).
+  Prinsipper: tilgivende ukebasert serie, feir bare ekte tall, comeback framfor skyld, få varsler, aldri mørke mønstre.
+- **Ukeserie** (0.1, `weeklyStreak.js`, `StreakCard.jsx`, kort «Ukeserie» på Hjem): mål 1–7 treningsdager/uke, hvilekort (1 per 4 gode uker, maks 2),
+  pause for sykdom/ferie, reparasjon med mål+1 uka etter en glipp, comeback. Regnes i nettleseren fra øktene; mål og pauser lagres som
+  innstillingen `streak` (`/api/innstillinger/streak`, validert i `UserSettingsService`).
+- **Rekorder** (0.2, `prDetection.js`, `PrCelebration.jsx`): estimert 1RM- og rep-rekord mot egen historikk, 🏆 på rekordsett i live-økta og
+  feiring etter lagring. Første gang en øvelse logges er aldri en rekord.
+- Neste i planen: 0.4 daglig restitusjonsinnsjekk, 0.5 volumvarsel koblet til serien, 0.6 vane-tracker «aldri to på rad», 0.7 kostloggingsserie
+  (trenger et endepunkt for loggede dager), 0.3 heatmap, 0.12 varsler (trenger native varsler i iPhone-appen).
+
 ### iPhone-app (Capacitor) 🚧 (påbegynt 2026-09-30)
 - `frontend/ios/` er et ferdig Xcode-prosjekt (Capacitor 8, Swift Package Manager): bundle-ID `no.weatheragent.turvaer`, «Turvær», kun iPhone og
   stående, ikon og oppstartsbilde fra `app-icon.svg`. `npm run ios:sync` bygger web-appen i native modus (`--mode native` → `dist-native/`,
