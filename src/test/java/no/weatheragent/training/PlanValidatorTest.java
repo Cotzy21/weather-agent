@@ -51,6 +51,45 @@ class PlanValidatorTest {
     }
 
     @Test
+    void equipmentMentionedInTheRequestBeatsTheProfile() {
+        // Profilen sier treningssenter, men brukeren skriver at hun bare har kettlebells: kabel og stang er ute.
+        var v = PlanValidator.check(plan(strength("Pull", "mandag", "Face Pulls", "Stangcurl", "Kettlebell swing", "Push-ups")),
+                ctx("GYM", "Jeg trener hjemme og har bare kettlebells"));
+
+        assertEquals(2, v.size());
+        assertTrue(v.stream().anyMatch(x -> x.message().contains("Face Pulls")));
+        assertTrue(v.stream().anyMatch(x -> x.message().contains("Stangcurl")));
+        assertTrue(v.stream().allMatch(x -> x.repairable() && x.message().contains("ut fra det brukeren skrev om utstyr")));
+    }
+
+    @Test
+    void anExcludedMachineIsFlaggedEvenForAGymUser() {
+        var v = PlanValidator.check(plan(strength("Pull", "mandag", "Face Pulls", "Stangcurl")),
+                ctx("GYM", "ingen kabelmaskin på det nye treningssenteret"));
+
+        assertEquals(1, v.size());
+        assertTrue(v.get(0).message().contains("Face Pulls"));
+    }
+
+    @Test
+    void textWithoutEquipmentStatementsLeavesTheProfileRuleUntouched() {
+        var v = PlanValidator.check(plan(strength("Pull", "mandag", "Face Pulls")), ctx("HOME_WEIGHTS", "lag en push pull legs"));
+
+        assertEquals(1, v.size());
+        assertTrue(v.get(0).message().contains("HOME_WEIGHTS")); // fortsatt profilens navn i meldingen
+    }
+
+    @Test
+    void repairRemovesTheExercisesTheTextRulesOut() {
+        PlanSuggestion fixed = PlanValidator.repair(plan(strength("Pull", "mandag", "Face Pulls", "Bicepscurl", "Push-ups")),
+                ctx("GYM", "I only have dumbbells"));
+
+        String names = fixed.workouts().get(0).content().path("blocks").toString();
+        assertTrue(names.contains("Bicepscurl") && names.contains("Push-ups"));
+        assertTrue(!names.contains("Face Pulls"));
+    }
+
+    @Test
     void gymUsersAndUnknownExercisesAreNotFlagged() {
         assertTrue(PlanValidator.check(plan(strength("Pull", "mandag", "Face Pulls")), ctx("GYM", "")).isEmpty());
         assertTrue(PlanValidator.check(plan(strength("X", "mandag", "Helt egen øvelse")), ctx("BODYWEIGHT", "")).isEmpty());

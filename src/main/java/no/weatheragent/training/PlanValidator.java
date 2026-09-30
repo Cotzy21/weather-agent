@@ -51,7 +51,9 @@ public final class PlanValidator {
         List<Violation> out = new ArrayList<>();
         if (plan == null) return out;
 
-        Set<String> have = ctx.equipment() == null ? null : ExerciseCatalog.equipmentFor(ctx.equipment());
+        EquipmentNotes.Result equipment = effectiveEquipment(ctx);
+        Set<String> have = equipment.have();
+        String haveSource = equipment.fromText() ? "ut fra det brukeren skrev om utstyr" : ctx.equipment();
         Set<String> dislikedKeys = new HashSet<>();
         ctx.disliked().forEach(d -> dislikedKeys.add(ExerciseCatalog.groupKey(d)));
 
@@ -62,7 +64,7 @@ public final class PlanValidator {
                 String key = ExerciseCatalog.groupKey(name);
                 if (have != null && ExerciseCatalog.missingEquipment(name, have) && reportedEquipment.add(key)) {
                     out.add(new Violation(
-                            "«" + name + "» krever utstyr brukeren ikke har (" + ctx.equipment() + "). Fjern eller bytt den.",
+                            "«" + name + "» krever utstyr brukeren ikke har (" + haveSource + "). Fjern eller bytt den.",
                             "\"" + name + "\" needs equipment you don't have.", true));
                 }
                 if (dislikedKeys.contains(key) && reportedDisliked.add(key)) {
@@ -103,9 +105,18 @@ public final class PlanValidator {
         return out;
     }
 
+    /**
+     * Utstyret planen sjekkes mot: profilens sett, men fritekst i forespørselen («har bare kettlebells», «ingen stang»)
+     * går foran, siden det er det brukeren ber om akkurat nå. Null = ingen begrensning (ikke onboardet, ingen begrensende tekst).
+     */
+    static EquipmentNotes.Result effectiveEquipment(Context ctx) {
+        Set<String> profile = ctx.equipment() == null ? null : ExerciseCatalog.equipmentFor(ctx.equipment());
+        return EquipmentNotes.apply(ctx.requestText(), profile);
+    }
+
     /** Fjerner øvelser som bryter utstyr/liker-ikke fra styrkeøktene. Øktene beholdes selv om de blir tomme. */
     public static PlanSuggestion repair(PlanSuggestion plan, Context ctx) {
-        Set<String> have = ctx.equipment() == null ? null : ExerciseCatalog.equipmentFor(ctx.equipment());
+        Set<String> have = effectiveEquipment(ctx).have();
         Set<String> dislikedKeys = new HashSet<>();
         ctx.disliked().forEach(d -> dislikedKeys.add(ExerciseCatalog.groupKey(d)));
         List<Suggestion> fixed = new ArrayList<>();
