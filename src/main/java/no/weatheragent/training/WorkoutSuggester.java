@@ -41,20 +41,22 @@ public class WorkoutSuggester {
         this.memory = memory;
     }
 
-    public Suggestion suggest(UUID userId, String focus, String type) {
+    public Suggestion suggest(UUID userId, String focus, String type, String lang) {
         String history = recentHistory(userId);
         // Forslag krever resonnering over historikken (progressiv overload) -> smart modell.
-        String raw = llm.complete(LlmTier.SMART, systemPrompt(), userPrompt(focus, type, history));
+        String raw = llm.complete(LlmTier.SMART, systemPrompt(), userPrompt(focus, type, history) + languageLine(lang));
         try {
             JsonNode json = mapper.readTree(extractJson(raw));
             String resolvedType = json.path("type").asText("");
             if (resolvedType.isBlank()) {
                 resolvedType = (type == null || type.isBlank()) ? "STYRKE" : type;
             }
+            String upperType = resolvedType.toUpperCase(Locale.ROOT);
+            JsonNode content = json.path("content").isObject() ? json.get("content") : mapper.createObjectNode();
             return new Suggestion(
                     json.path("title").asText("Forslag"),
-                    resolvedType.toUpperCase(Locale.ROOT),
-                    json.has("content") ? json.get("content") : mapper.createObjectNode(),
+                    upperType,
+                    normalizeSets(upperType, content),
                     json.path("rationale").asText(""));
         } catch (Exception e) {
             throw new AiSuggestionException("Klarte ikke å tolke AI-forslaget. Prøv igjen.");
@@ -67,9 +69,9 @@ public class WorkoutSuggester {
      * for progressiv overload. Titler/begrunnelser kommer på samme språk som
      * forespørselen (modellen speiler språket - backend-i18n kommer senere).
      */
-    public PlanSuggestion suggestPlan(UUID userId, String request) {
+    public PlanSuggestion suggestPlan(UUID userId, String request, String lang) {
         String history = recentHistory(userId);
-        String raw = llm.complete(LlmTier.SMART, planSystemPrompt(), planUserPrompt(request, history));
+        String raw = llm.complete(LlmTier.SMART, planSystemPrompt(), planUserPrompt(request, history) + languageLine(lang));
         try {
             JsonNode json = mapper.readTree(extractJson(raw));
             List<Suggestion> workouts = parseWorkouts(json);
@@ -92,9 +94,10 @@ public class WorkoutSuggester {
      * svarer modellen med ENTEN oppfølgingsspørsmål ELLER en komplett plan.
      * Progressiv overload fra historikken, og hver plan-økt får en foreslått ukedag.
      */
-    public AssistantReply chat(UUID userId, List<ChatTurn> messages) {
+    public AssistantReply chat(UUID userId, List<ChatTurn> messages, JsonNode currentPlan, String lang) {
         String history = recentHistory(userId);
-        String raw = llm.complete(LlmTier.SMART, assistantSystemPrompt(), assistantUserPrompt(history, messages));
+        String raw = llm.complete(LlmTier.SMART, assistantSystemPrompt(),
+                assistantUserPrompt(history, messages) + currentPlanContext(currentPlan) + languageLine(lang));
         try {
             JsonNode json = mapper.readTree(extractJson(raw));
 
@@ -140,16 +143,69 @@ public class WorkoutSuggester {
             }
             JsonNode content = w.path("content").isObject() ? w.get("content") : mapper.createObjectNode();
             String day = w.path("day").asText("").trim();
-            if (!day.isBlank() && content instanceof ObjectNode obj) {
-                obj.put("day", day);
+            String time = w.path("time").asText("").trim();
+            if (content instanceof ObjectNode obj) {
+                if (!day.isBlank()) obj.put("day", day);
+                if (!time.isBlank()) obj.put("time", time);
             }
+            String type = w.path("type").asText("STYRKE").toUpperCase(Locale.ROOT);
             workouts.add(new Suggestion(
                     w.path("title").asText("Økt"),
-                    w.path("type").asText("STYRKE").toUpperCase(Locale.ROOT),
-                    content,
+                    type,
+                    normalizeSets(type, content),
                     w.path("rationale").asText("")));
         }
         return workouts;
+    }
+
+    /** Minste antall arbeidssett en vanlig styrkeøvelse får (modellen gir iblant bare ett). */
+    static final int MIN_WORKING_SETS = 3;
+
+    /**
+     * Modellen returnerer av og til ett sett per øvelse selv om instruksen sier 3-4.
+     * Vanlige styrkeøvelser med ett sett utvides til tre like sett. Dropsett og supersett
+     * (der settene gjentas per runde) røres ikke.
+     */
+    static JsonNode normalizeSets(String type, JsonNode content) {
+        if (!"STYRKE".equals(type) || !(content instanceof ObjectNode)) {
+            return content;
+        }
+        for (JsonNode b : content.path("blocks")) {
+            if (!"exercise".equals(b.path("kind").asText("exercise")) || !(b instanceof ObjectNode block)) continue;
+            JsonNode sets = block.path("sets");
+            if (sets.isArray() && sets.size() == 1) {
+                com.fasterxml.jackson.databind.node.ArrayNode expanded = block.putArray("sets");
+                for (int i = 0; i < MIN_WORKING_SETS; i++) {
+                    expanded.add(sets.get(0).deepCopy());
+                }
+            }
+        }
+        return content;
+    }
+
+    /** Språket appen står på; uten det speiler modellen brukerens språk (fungerte dårlig). */
+    static String languageLine(String lang) {
+        if ("en".equalsIgnoreCase(lang)) {
+            return "\n\nSPRÅK: Skriv ALL tekst (tittel, sammendrag, begrunnelser, svar, spørsmål, øvelsesnavn, "
+                    + "ukedager i \"day\" og tider i \"time\") på ENGELSK.";
+        }
+        if ("nb".equalsIgnoreCase(lang) || "no".equalsIgnoreCase(lang)) {
+            return "\n\nSPRÅK: Skriv ALL tekst (tittel, sammendrag, begrunnelser, svar, spørsmål, "
+                    + "ukedager og tider) på NORSK.";
+        }
+        return "";
+    }
+
+    /** Planen brukeren ser nå (evt. redigert i byggeren), så endringer kan gjøres trinnvis. */
+    static String currentPlanContext(JsonNode plan) {
+        if (plan == null || plan.isNull() || !plan.path("workouts").isArray()) {
+            return "";
+        }
+        String json = plan.toString();
+        if (json.length() > 8000) {
+            json = json.substring(0, 8000);
+        }
+        return "\n\nNåværende plan (JSON):\n" + json;
     }
 
     /**
@@ -200,30 +256,52 @@ public class WorkoutSuggester {
         return max > 0 ? "(maks " + max + " kg)" : "";
     }
 
+    /** Kvalitetsregler for alle tre AI-funksjonene (funnet ved testing: utstyr og vekter ble ignorert). */
+    private static final String COMMON_RULES = """
+            Kvalitetsregler:
+              - Respekter «Brukerminne» i konteksten: foreslå ALDRI øvelser under «Liker IKKE»,
+                bruk gjerne øvelser brukeren liker, ta hensyn til notatene, og tilpass antall
+                økter per uke til treningsvanene når brukeren ikke sier noe annet.
+              - UTSTYR: sier brukeren hva de har (f.eks. bare manualer, kettlebells eller kroppsvekt),
+                bruk KUN øvelser som faktisk kan gjøres med det - også når historikken har maskin- eller
+                kabeløvelser. Finn aldri på umulige øvelser som «kettlebell lat pulldown».
+              - Realistiske vekter: stang og maskiner i steg på 2,5 kg; manualer og kettlebells i vekter
+                brukeren har (ellers vanlige steg). Kroppsvektøvelser har weightKg 0.
+              - En styrkeøkt har normalt 5-7 øvelser; færre bare når brukeren begrenser tiden.""";
+
+    /** Ekstra regler for planer (flere økter), inkl. flere økter samme dag og trinnvise endringer. */
+    private static final String PLAN_RULES = """
+              - FLERE AKTIVITETER: nevner brukeren annen trening (BJJ, boksing, fotball, klatring, løping …),
+                skal den stå som EGNE økter i planen på dagene brukeren sier, med riktig type
+                (kampsport som BJJ/boksing = KAMPSPORT). En dag kan ha flere økter - sett da "time"
+                ("morgen"/"kveld", eller "morning"/"evening" på engelsk) på hver av dem.
+              - Legg ikke tung beintrening samme dag som, eller dagen før, harde kamp- eller lagsportsøkter;
+                bruk overkropp eller lettere økter på de dagene.
+              - ENDRINGER: finnes «Nåværende plan» i konteksten og brukeren ber om en endring, endre BARE
+                det som ble bedt om og behold resten (øvelser, sett, dager, tider) uendret.""";
+
     private static String systemPrompt() {
         return """
                 Du er en erfaren treningsassistent. Lag ETT konkret økt-forslag ut fra
                 brukerens fokus og nylige økter. Bruk progressiv overload: foreslå litt mer
                 (vekt eller reps) enn forrige gang for øvelser brukeren allerede gjør.
 
-                Respekter «Brukerminne» i konteksten: foreslå ALDRI øvelser under «Liker IKKE»,
-                bruk gjerne øvelser brukeren liker, ta hensyn til notatene, og tilpass antall
-                økter per uke til treningsvanene når brukeren ikke sier noe annet.
+                %RULES%
 
                 Svar KUN med ett JSON-objekt, ingen tekst utenfor:
                 {
                   "title": "...",
-                  "type": "STYRKE | LØPING | SVØMMING | SYKKEL | BULDRING | HIKING | FRISTIL",
+                  "type": "STYRKE | LØPING | SVØMMING | SYKKEL | BULDRING | HIKING | KAMPSPORT | FRISTIL",
                   "content": { ... },
-                  "rationale": "kort norsk begrunnelse"
+                  "rationale": "kort begrunnelse"
                 }
                 For STYRKE skal content være {"blocks":[ ... ]} der hver blokk er én av:
                   {"kind":"exercise","name":"...","sets":[{"reps":5,"weightKg":80},{"reps":5,"weightKg":80},{"reps":5,"weightKg":80}]}
                   {"kind":"dropset","name":"...","drops":[{"reps":10,"weightKg":15}]}
                   {"kind":"superset","rounds":3,"exercises":[{"name":"...","sets":[{"reps":8,"weightKg":20}]}]}
                 Hvert arbeidssett er ett eget objekt i "sets" - vanligvis 3-4 sett per øvelse, aldri bare 1.
-                For kondisjon: {"distanceKm":5,"durationMin":30} (HIKING kan ha "ascentM").
-                """;
+                For kondisjon og kampsport: {"distanceKm":5,"durationMin":30} (HIKING kan ha "ascentM"; KAMPSPORT bare "durationMin").
+                """.replace("%RULES%", COMMON_RULES).replace("%PLAN_RULES%", PLAN_RULES);
     }
 
     private static String planSystemPrompt() {
@@ -243,10 +321,9 @@ public class WorkoutSuggester {
                   - Balanser muskelgrupper fornuftig innen og på tvers av øktene.
                   - Skriv "title", "summary" og alle "rationale" på SAMME SPRÅK som brukerens
                     forespørsel (engelsk forespørsel -> engelsk svar).
+                %PLAN_RULES%
 
-                Respekter «Brukerminne» i konteksten: foreslå ALDRI øvelser under «Liker IKKE»,
-                bruk gjerne øvelser brukeren liker, ta hensyn til notatene, og tilpass antall
-                økter per uke til treningsvanene når brukeren ikke sier noe annet.
+                %RULES%
 
                 Svar KUN med ett JSON-objekt, ingen tekst utenfor:
                 {
@@ -254,8 +331,8 @@ public class WorkoutSuggester {
                   "summary": "1-2 setninger om planen",
                   "workouts": [
                     {
-                      "title": "...",
-                      "type": "STYRKE | LØPING | SVØMMING | SYKKEL | BULDRING | HIKING | FRISTIL",
+                      "title": "...", "day": "mandag", "time": "morgen",
+                      "type": "STYRKE | LØPING | SVØMMING | SYKKEL | BULDRING | HIKING | KAMPSPORT | FRISTIL",
                       "content": { ... },
                       "rationale": "kort begrunnelse"
                     }
@@ -266,8 +343,8 @@ public class WorkoutSuggester {
                   {"kind":"dropset","name":"...","drops":[{"reps":10,"weightKg":20}]}
                   {"kind":"superset","rounds":3,"exercises":[{"name":"...","sets":[{"reps":10,"weightKg":15}]}]}
                 Hvert arbeidssett er ett eget objekt i "sets" - vanligvis 3-4 sett per øvelse, aldri bare 1.
-                For kondisjon: {"distanceKm":5,"durationMin":30} (HIKING kan ha "ascentM").
-                """;
+                For kondisjon og kampsport: {"distanceKm":5,"durationMin":30} (HIKING kan ha "ascentM"; KAMPSPORT bare "durationMin").
+                """.replace("%RULES%", COMMON_RULES).replace("%PLAN_RULES%", PLAN_RULES);
     }
 
     private static String planUserPrompt(String request, String history) {
@@ -297,10 +374,9 @@ public class WorkoutSuggester {
                   - Gi hver økt en foreslått ukedag ("day") og fordel dem fornuftig utover uka
                     (hvile mellom like muskelgrupper) når planen har flere økter.
                   - Skriv ALT (reply, spørsmål, titler, begrunnelser) på SAMME SPRÅK som brukeren.
+                %PLAN_RULES%
 
-                Respekter «Brukerminne» i konteksten: foreslå ALDRI øvelser under «Liker IKKE»,
-                bruk gjerne øvelser brukeren liker, ta hensyn til notatene, og tilpass antall
-                økter per uke til treningsvanene når brukeren ikke sier noe annet.
+                %RULES%
 
                 Svar KUN med ett JSON-objekt, ingen tekst utenfor:
                 {
@@ -310,8 +386,8 @@ public class WorkoutSuggester {
                     "title": "...",
                     "summary": "...",
                     "workouts": [
-                      { "title": "...", "day": "mandag",
-                        "type": "STYRKE | LØPING | SVØMMING | SYKKEL | BULDRING | HIKING | FRISTIL",
+                      { "title": "...", "day": "mandag", "time": "morgen",
+                        "type": "STYRKE | LØPING | SVØMMING | SYKKEL | BULDRING | HIKING | KAMPSPORT | FRISTIL",
                         "content": { ... }, "rationale": "..." }
                     ]
                   }
@@ -323,8 +399,8 @@ public class WorkoutSuggester {
                   {"kind":"dropset","name":"...","drops":[{"reps":10,"weightKg":20}]}
                   {"kind":"superset","rounds":3,"exercises":[{"name":"...","sets":[{"reps":10,"weightKg":15}]}]}
                 Hvert arbeidssett er ett eget objekt i "sets" - vanligvis 3-4 sett per øvelse, aldri bare 1.
-                For kondisjon: {"distanceKm":5,"durationMin":30} (HIKING kan ha "ascentM").
-                """;
+                For kondisjon og kampsport: {"distanceKm":5,"durationMin":30} (HIKING kan ha "ascentM"; KAMPSPORT bare "durationMin").
+                """.replace("%RULES%", COMMON_RULES).replace("%PLAN_RULES%", PLAN_RULES);
     }
 
     /** Flater samtalen til ett bruker-prompt (klienten er enkel/enkelt-tur). */

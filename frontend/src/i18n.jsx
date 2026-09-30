@@ -230,6 +230,7 @@ const EN = {
   '🧗 Buldring': '🧗 Bouldering',
   '🥾 Hiking': '🥾 Hiking',
   '✨ Fristil': '✨ Freestyle',
+  '🥋 Kampsport': '🥋 Martial arts',
 
   // Værsøk
   'Hva betyr mest for deg?': 'What matters most to you?',

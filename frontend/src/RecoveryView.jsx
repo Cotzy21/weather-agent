@@ -14,7 +14,7 @@ import { useI18n } from './i18n.jsx'
 
 const TYPE_LABELS = {
   STYRKE: '🏋️ Styrke', LØPING: '🏃 Løping', SVØMMING: '🏊 Svømming',
-  SYKKEL: '🚴 Sykkel', BULDRING: '🧗 Buldring', HIKING: '🥾 Hiking', FRISTIL: '✨ Fristil',
+  SYKKEL: '🚴 Sykkel', BULDRING: '🧗 Buldring', HIKING: '🥾 Hiking', KAMPSPORT: '🥋 Kampsport', FRISTIL: '✨ Fristil',
 }
 const label = (type) => TYPE_LABELS[type] || type
 

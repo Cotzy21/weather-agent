@@ -23,6 +23,7 @@ public final class WorkoutCalorieEstimator {
             "STYRKE", 5.0,
             "BULDRING", 6.0,
             "FRISTIL", 5.0,
+            "KAMPSPORT", 10.0, // BJJ/bryting/boksing-sparring (Compendium ~10)
             "SVØMMING", 7.0,
             "SYKKEL", 7.5,
             "HIKING", 6.0,

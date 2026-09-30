@@ -3,6 +3,14 @@ import { dayIndex, strengthVolume, countSets, localIso } from './trainingStats.j
 
 const SHORT = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn']
 
+// Morgen før ettermiddag før kveld; uten tidspunkt havner økta i midten.
+function timeRank(time) {
+  const t = (time || '').toLowerCase()
+  if (/morg|morn|\bam\b/.test(t)) return 0
+  if (/kveld|even|night|\bpm\b/.test(t)) return 2
+  return 1
+}
+
 // Denne uka med planene dine: avhuket når det er logget en økt den dagen,
 // dagens økt kan startes med ett trykk, og totaler for all styrketrening.
 export default function WeekProgram({ plans, workouts, onStart }) {
@@ -15,16 +23,21 @@ export default function WeekProgram({ plans, workouts, onStart }) {
     const day = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i)
     const date = localIso(day)
     const planned = plans.filter((p) => dayIndex(p.content?.day) === i)
+      .sort((a, b) => timeRank(a.content?.time) - timeRank(b.content?.time))
     const logged = workouts.filter((w) => w.date === date)
+    // En dag kan ha flere økter (f.eks. styrke om morgenen, BJJ om kvelden).
     let status = 'rest'
-    if (logged.length) status = 'done'
+    if (logged.length && logged.length >= planned.length) status = 'done'
+    else if (logged.length) status = 'partial'
     else if (i === todayIdx && planned.length) status = 'today'
     else if (planned.length) status = i < todayIdx ? 'missed' : 'planned'
-    return { i, date, dayNum: day.getDate(), planned, logged, status }
+    const remaining = planned.filter((p) => !logged.some((w) => w.title.toLowerCase() === p.title.toLowerCase()))
+    return { i, date, dayNum: day.getDate(), planned, logged, remaining, status }
   })
 
   const today = days[todayIdx]
-  const todayPlan = today.status === 'today' ? today.planned[0] : null
+  // Samme tittel som en logget økt = gjort; de andre kan fortsatt startes i dag.
+  const todayPlans = today.logged.length >= today.planned.length && today.logged.length ? [] : today.remaining
   const strength = workouts.filter((w) => w.type === 'STYRKE')
   const totalKg = Math.round(strength.reduce((sum, w) => sum + strengthVolume(w.content), 0))
   const totalSets = strength.reduce((sum, w) => sum + countSets(w.content), 0)
@@ -43,17 +56,17 @@ export default function WeekProgram({ plans, workouts, onStart }) {
               <div className="week-dot-col" key={d.i}>
                 <span className={`week-dot ${d.status} ${d.i === todayIdx ? 'is-today' : ''}`}
                       title={[...d.planned.map((p) => p.title), ...d.logged.map((w) => w.title)].join(', ')}>
-                  {d.status === 'done' ? '✓' : d.status === 'rest' ? '·' : d.status === 'missed' ? '–' : d.dayNum}
+                  {d.status === 'done' ? '✓' : d.status === 'partial' ? `${d.logged.length}/${d.planned.length}` : d.status === 'rest' ? '·' : d.status === 'missed' ? '–' : d.dayNum}
                 </span>
                 <span className="week-dot-day">{t(SHORT[d.i])}</span>
               </div>
             ))}
           </div>
-          {todayPlan && (
-            <button className="week-start" onClick={() => onStart(todayPlan)}>
-              ▶ {t('Start dagens økt')}: <strong>{todayPlan.title}</strong>
+          {todayPlans.map((p) => (
+            <button className="week-start" key={p.id} onClick={() => onStart(p)}>
+              ▶ {t('Start dagens økt')}: <strong>{p.title}</strong>{p.content?.time ? ` · ${p.content.time}` : ''}
             </button>
-          )}
+          ))}
         </>
       )}
       {strength.length > 0 && (

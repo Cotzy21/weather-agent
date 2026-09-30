@@ -168,7 +168,7 @@ public class TrainingController {
     /** AI-forslag til en økt ut fra fokus + brukerens historikk. */
     @PostMapping("/api/trening/forslag")
     public SuggestionDto suggest(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SuggestionRequest request) {
-        Suggestion s = suggester.suggest(UUID.fromString(jwt.getSubject()), request.focus(), request.type());
+        Suggestion s = suggester.suggest(UUID.fromString(jwt.getSubject()), request.focus(), request.type(), request.lang());
         return SuggestionDto.from(s);
     }
 
@@ -180,7 +180,7 @@ public class TrainingController {
     @PostMapping("/api/trening/plan-forslag")
     public PlanSuggestionDto suggestPlan(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SuggestionRequest request) {
         return PlanSuggestionDto.from(
-                suggester.suggestPlan(UUID.fromString(jwt.getSubject()), request.focus()));
+                suggester.suggestPlan(UUID.fromString(jwt.getSubject()), request.focus(), request.lang()));
     }
 
     /**
@@ -193,7 +193,7 @@ public class TrainingController {
                 .map(m -> new ChatTurn(m.role(), m.content()))
                 .toList();
         return AssistantReplyDto.from(
-                suggester.chat(UUID.fromString(jwt.getSubject()), turns));
+                suggester.chat(UUID.fromString(jwt.getSubject()), turns, request.currentPlan(), request.lang()));
     }
 
     /** Lagre en plan i profilen - typisk et forslag brukeren likte. */

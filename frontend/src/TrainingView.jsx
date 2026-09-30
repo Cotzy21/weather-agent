@@ -17,6 +17,7 @@ const TYPES = [
   { v: 'SVØMMING', t: '🏊 Svømming' },
   { v: 'SYKKEL', t: '🚴 Sykkel' },
   { v: 'BULDRING', t: '🧗 Buldring' },
+  { v: 'KAMPSPORT', t: '🥋 Kampsport' },
   { v: 'HIKING', t: '🥾 Hiking' },
   { v: 'FRISTIL', t: '✨ Fristil' },
 ]
@@ -322,7 +323,7 @@ export default function TrainingView({ session }) {
     const num = (x) => (x === '' ? undefined : Number(x))
     if (type === 'HIKING') return { distanceKm: num(cardio.distanceKm), durationMin: num(cardio.durationMin), ascentM: num(cardio.ascentM) }
     if (CARDIO.includes(type)) return { distanceKm: num(cardio.distanceKm), durationMin: num(cardio.durationMin) }
-    return { durationMin: num(cardio.durationMin) } // FRISTIL / BULDRING
+    return { durationMin: num(cardio.durationMin) } // FRISTIL / BULDRING / KAMPSPORT
   }
 
   async function submit() {
@@ -405,7 +406,7 @@ export default function TrainingView({ session }) {
       const res = await fetch(apiUrl('/api/trening/forslag'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({ focus, type: 'STYRKE' }),
+        body: JSON.stringify({ focus, type: 'STYRKE', lang }),
       })
       if (!res.ok) throw new Error(await readError(res))
       setAiwResult(await res.json())
@@ -448,6 +449,9 @@ export default function TrainingView({ session }) {
             role: m.role,
             content: m.questions?.length ? `${m.content}\n${m.questions.join('\n')}` : m.content,
           })),
+          // Planen slik brukeren ser den nå (inkl. endringer fra byggeren), så AI-en kan endre trinnvis.
+          currentPlan: aiPlan,
+          lang,
         }),
       })
       if (!res.ok) throw new Error(await readError(res))
@@ -494,7 +498,11 @@ export default function TrainingView({ session }) {
     const merge = (orig) => ({
       title: edited.title || orig.title,
       type: edited.type,
-      content: { ...(orig.content?.day ? { day: orig.content.day } : {}), ...edited.content },
+      content: {
+        ...(orig.content?.day ? { day: orig.content.day } : {}),
+        ...(orig.content?.time ? { time: orig.content.time } : {}),
+        ...edited.content,
+      },
     })
     setEditTarget(null)
     window.scrollTo(0, 0)
@@ -593,7 +601,7 @@ export default function TrainingView({ session }) {
 
   function planSubtitle(p) {
     const parts = []
-    if (p.content?.day) parts.push(p.content.day)
+    if (p.content?.day) parts.push(p.content.time ? `${p.content.day} ${p.content.time}` : p.content.day)
     if (p.type === 'STYRKE') {
       const n = (p.content?.blocks || []).reduce((sum, b) => sum + (b.kind === 'superset' ? (b.exercises || []).length : 1), 0)
       parts.push(t(n === 1 ? '1 øvelse' : '{n} øvelser', { n }))
@@ -831,7 +839,7 @@ export default function TrainingView({ session }) {
             {aiPlan.workouts.map((w, i) => (
               <div className="ai-workout" key={i}>
                 <div className="ai-workout-head">
-                  {w.content?.day && <span className="ai-workout-day">{w.content.day}</span>}
+                  {w.content?.day && <span className="ai-workout-day">{w.content.day}{w.content.time ? ` · ${w.content.time}` : ''}</span>}
                   <strong>{w.title}</strong>
                   <span className="ai-workout-type">{t((TYPES.find((tp) => tp.v === w.type)?.t) || w.type)}</span>
                   <button className="mini" onClick={() => applySuggestion(w, { kind: 'ai-plan', index: i })}>{t('Rediger')}</button>

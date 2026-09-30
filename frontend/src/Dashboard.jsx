@@ -9,7 +9,7 @@ import { cachedGet, getCached, apiUrl, readError } from './api'
 import { useReveal, useCountUp } from './anim'
 import { useI18n } from './i18n.jsx'
 
-const ICONS = { STYRKE: '🏋️', LØPING: '🏃', SVØMMING: '🏊', SYKKEL: '🚴', BULDRING: '🧗', HIKING: '🥾', FRISTIL: '✨' }
+const ICONS = { STYRKE: '🏋️', LØPING: '🏃', SVØMMING: '🏊', SYKKEL: '🚴', BULDRING: '🧗', HIKING: '🥾', KAMPSPORT: '🥋', FRISTIL: '✨' }
 const DAY_LETTERS = { nb: ['M', 'T', 'O', 'T', 'F', 'L', 'S'], en: ['M', 'T', 'W', 'T', 'F', 'S', 'S'] } // mandag først
 
 function startOfWeek() {
