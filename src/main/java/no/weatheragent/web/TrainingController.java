@@ -28,6 +28,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -190,6 +191,15 @@ public class TrainingController {
         return plans.listFor(UUID.fromString(jwt.getSubject())).stream()
                 .map(TrainingPlanDto::from)
                 .toList();
+    }
+
+    @PutMapping("/api/trening/planer/{id}")
+    public ResponseEntity<TrainingPlanDto> updatePlan(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+                                                      @Valid @RequestBody SavePlanRequest request) {
+        JsonNode content = request.content() == null ? JsonNodeFactory.instance.objectNode() : request.content();
+        return plans.update(id, UUID.fromString(jwt.getSubject()), request.title(), request.type(), content)
+                .map(p -> ResponseEntity.ok(TrainingPlanDto.from(p)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/api/trening/planer/{id}")

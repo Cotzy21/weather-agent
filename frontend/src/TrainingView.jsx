@@ -96,6 +96,10 @@ export default function TrainingView({ session }) {
   const [showPicker, setShowPicker] = useState(false)
   // Hvilket øvelsesfelt velgeren fyller: { bi, ei? } i byggeren, eller 'progress'.
   const [pickFor, setPickFor] = useState(null)
+  // Hvor byggeren ble åpnet fra, så «tilbake» kan skrive endringene dit:
+  // { kind: 'ai-plan', index } | { kind: 'ai-workout' } | { kind: 'saved', id } | null.
+  const [editTarget, setEditTarget] = useState(null)
+  const [planMsg, setPlanMsg] = useState(null)
 
   // AI-økt: én økt til i dag (forskjellig fra AI-treningsplan, som lager flere).
   const [aiwFocus, setAiwFocus] = useState('')
@@ -157,6 +161,7 @@ export default function TrainingView({ session }) {
       })),
     }
     setBlocks((prev) => [...prev.filter((b) => b.kind !== 'exercise' || b.name.trim()), block])
+    setEditTarget(null)
     setShowPicker(false)
     setMode('builder')
     window.scrollTo(0, 0)
@@ -342,6 +347,7 @@ export default function TrainingView({ session }) {
 
   function pickNew(kind) {
     setSheetOpen(false)
+    setEditTarget(null)
     if (kind === 'build' || kind === 'muscles') {
       setShowPicker(kind === 'muscles')
       setMode('builder')
@@ -439,8 +445,53 @@ export default function TrainingView({ session }) {
     })
   }
 
+  function resetBuilder() {
+    setTitle(''); setNotes(''); setBlocks([newExercise()]); setCardio({ distanceKm: '', durationMin: '', ascentM: '' })
+  }
+
+  // Skriv byggerens endringer tilbake dit økta kom fra. Ukedagen i planen beholdes;
+  // resten av innholdet erstattes (typen kan ha endret seg i byggeren).
+  async function returnFromBuilder() {
+    const target = editTarget
+    const edited = { title: title.trim(), type, content: buildContent() }
+    const merge = (orig) => ({
+      title: edited.title || orig.title,
+      type: edited.type,
+      content: { ...(orig.content?.day ? { day: orig.content.day } : {}), ...edited.content },
+    })
+    setEditTarget(null)
+    window.scrollTo(0, 0)
+    if (target.kind === 'ai-plan') {
+      setAiPlan((p) => p && { ...p, workouts: p.workouts.map((w, i) => (i === target.index ? { ...w, ...merge(w) } : w)) })
+      setMode('ai-plan')
+    } else if (target.kind === 'ai-workout') {
+      setAiwResult((r) => r && { ...r, ...merge(r) })
+      setMode('ai-workout')
+    } else {
+      const orig = plans.find((x) => x.id === target.id)
+      setMode('overview')
+      if (orig) {
+        try {
+          const res = await fetch(apiUrl(`/api/trening/planer/${target.id}`), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+            body: JSON.stringify({ ...merge(orig), rationale: orig.rationale || null }),
+          })
+          if (!res.ok) throw new Error(await readError(res))
+          setPlanMsg(t('✓ Planen er oppdatert'))
+          loadPlans()
+        } catch (e) {
+          setPlanMsg(e.message)
+        }
+        setTimeout(() => setPlanMsg(null), 3000)
+      }
+    }
+    resetBuilder()
+  }
+
   // Fyll forslaget inn i byggeren så brukeren kan finpusse og lagre.
-  function applySuggestion(s) {
+  function applySuggestion(s, target = null) {
+    setEditTarget(target)
     const t = s.type || 'STYRKE'
     setType(t)
     setTitle(s.title || '')
@@ -576,6 +627,7 @@ export default function TrainingView({ session }) {
           )}
 
           <h3 className="detail-h3" data-reveal>{t('Mine planer')}</h3>
+          {planMsg && <p className={planMsg.startsWith('✓') ? 'success' : 'error'}>{planMsg}</p>}
           {plans.length === 0 ? (
             <button className="plan-empty" data-reveal onClick={() => pickNew('ai-plan')}>
               ✨ {t('Lag en treningsplan med AI')}
@@ -584,7 +636,7 @@ export default function TrainingView({ session }) {
             <ul className="plan-cards" data-reveal>
               {sortedPlans.map((p) => (
                 <li key={p.id} className="plan-card">
-                  <button className="plan-card-main" onClick={() => applySuggestion(p)} title={t('Rediger i byggeren')}>
+                  <button className="plan-card-main" onClick={() => applySuggestion(p, { kind: 'saved', id: p.id })} title={t('Rediger i byggeren')}>
                     <strong>{p.title}</strong>
                     <span className="muted">{planSubtitle(p)}</span>
                   </button>
@@ -632,7 +684,14 @@ export default function TrainingView({ session }) {
       )}
 
       {mode !== 'overview' && mode !== 'live' && (
-        <button className="back" onClick={() => setMode('overview')}>← {t('Trening')}</button>
+        mode === 'builder' && editTarget ? (
+          <button className="back" onClick={returnFromBuilder}>
+            ← {t(editTarget.kind === 'ai-plan' ? 'Tilbake til planen'
+              : editTarget.kind === 'ai-workout' ? 'Tilbake til AI-økta' : 'Lagre og tilbake')}
+          </button>
+        ) : (
+          <button className="back" onClick={() => setMode('overview')}>← {t('Trening')}</button>
+        )
       )}
 
       {mode === 'builder' && showPicker && <MusclePicker onCreate={applyMuscles} />}
@@ -661,7 +720,7 @@ export default function TrainingView({ session }) {
                 <button className="primary" onClick={() => startLive(aiwResult.title, fromPlan(aiwResult.content, nextSets))}>
                   ▶ {t('Start nå')}
                 </button>
-                <button className="mini" onClick={() => applySuggestion(aiwResult)}>{t('Rediger')}</button>
+                <button className="mini" onClick={() => applySuggestion(aiwResult, { kind: 'ai-workout' })}>{t('Rediger')}</button>
               </div>
             </div>
           )}
@@ -729,7 +788,7 @@ export default function TrainingView({ session }) {
                   {w.content?.day && <span className="ai-workout-day">{w.content.day}</span>}
                   <strong>{w.title}</strong>
                   <span className="ai-workout-type">{t((TYPES.find((tp) => tp.v === w.type)?.t) || w.type)}</span>
-                  <button className="mini" onClick={() => applySuggestion(w)}>{t('Til bygger ↓')}</button>
+                  <button className="mini" onClick={() => applySuggestion(w, { kind: 'ai-plan', index: i })}>{t('Rediger')}</button>
                 </div>
                 {w.rationale && <p className="muted ai-workout-why">{w.rationale}</p>}
                 <WorkoutBody workout={w} />

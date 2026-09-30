@@ -59,6 +59,13 @@ public class TrainingPlan {
         this.createdAt = Instant.now();
     }
 
+    /** Endringer fra byggeren; begrunnelsen fra AI-en beholdes. */
+    public void update(String title, String type, JsonNode content) {
+        this.title = title;
+        this.type = type;
+        this.content = content;
+    }
+
     public UUID getId() { return id; }
     public UUID getUserId() { return userId; }
     public String getTitle() { return title; }

@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -35,6 +36,15 @@ public class TrainingPlanService {
     @Transactional(readOnly = true)
     public List<TrainingPlan> listFor(UUID userId) {
         return repository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    /** Tom hvis planen ikke finnes eller tilhører en annen bruker. */
+    @Transactional
+    public Optional<TrainingPlan> update(UUID id, UUID userId, String title, String type, JsonNode content) {
+        return repository.findByIdAndUserId(id, userId).map(plan -> {
+            plan.update(title, type, content);
+            return repository.save(plan);
+        });
     }
 
     @Transactional
