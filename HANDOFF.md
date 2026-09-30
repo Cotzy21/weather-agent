@@ -46,10 +46,9 @@ Dockerfile + PORT-config for backend-deploy finnes.
   ▶ Start og fullført: styrke via live-økta (`LiveSession`), alt annet (løping, sykkel, tur, svømming, buldring, kampsport, fristil) via
   `ActivitySession` (klokke, mål fra malen, bekreft distanse/varighet ved fullføring). Begge går gjennom samme offline-kø
   (`POST /api/treningsokter`). Garmin-import er den eneste andre veien til en logget økt.
-- **Start-skjermen** (`WorkoutStart.jsx`): tom styrkeøkt, annen aktivitet, «Planlagt i dag», og malene sortert etter **kategori**
-  (`workoutCategories.js`: Push, Pull, Bein, Overkropp, Underkropp, Hele kroppen, Kjerne, Annen styrke, og aktivitetstypene) med søk og
-  «sist gjort». Kategorien velges i byggeren (lagres som `content.category`, ingen migrering) eller gjettes fra tittel og øvelsenes
-  muskelgrupper. Taket på lagrede økter er 100.
+- **Start-skjermen** (`WorkoutStart.jsx`): tom styrkeøkt, annen aktivitet, «Planlagt i dag», og malene sortert etter **kategori = økttype**
+  (`workoutCategories.js`: Styrke, Løping, Svømming, Sykkel, Buldring, Kampsport, Hiking, Fristil) med søk (tittel, type, øvelse) og «sist
+  gjort». Innen en kategori: sist brukt først, så alfabetisk. Taket på lagrede økter er 100.
 - Logging (styrke/cardio/hiking, supersett m/runder, dra-og-slipp), progresjon,
   Garmin CSV-import (ekte kalorier), treningsplaner i profilen, AI-assistent
   (samtale m/oppfølgingsspørsmål → ukeplan man aksepterer/forkaster).

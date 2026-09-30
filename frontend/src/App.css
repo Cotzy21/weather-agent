@@ -2336,7 +2336,6 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .start-group-head.static { cursor: default; }
 .start-chevron { margin-left: auto; color: var(--muted); }
 .start-group .plan-cards { margin-top: 8px; }
-.builder-category { margin: 12px 0; }
 .activity-hint { margin: 0; font-size: var(--fs-sm); }
 .activity-finish { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; padding: 0; }
 .activity-finish button { width: 100%; padding: 14px; border-radius: 14px; font-size: 16px; font-weight: 600; }

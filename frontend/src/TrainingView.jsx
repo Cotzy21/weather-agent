@@ -10,7 +10,6 @@ import { detectPRs } from './prDetection.js'
 import WorkoutStart from './WorkoutStart.jsx'
 import ActivitySession from './ActivitySession.jsx'
 import { loadActivity, clearActivity, newActivity } from './activitySession.js'
-import { STRENGTH_CATEGORIES, CATEGORY_LABELS } from './workoutCategories.js'
 import ExercisePicker from './ExercisePicker.jsx'
 import { exerciseKey } from './exercises'
 import TrainingMemoryCard from './TrainingMemoryCard.jsx'
@@ -71,7 +70,6 @@ export default function TrainingView({ session }) {
   const { t, lang } = useI18n()
   const [type, setType] = useState('STYRKE')
   const [title, setTitle] = useState('')
-  const [category, setCategory] = useState('auto') // kategori for malen (STYRKE): 'auto' = gjettes fra tittel og øvelser
   const [blocks, setBlocks] = useState([newExercise()])
   const [cardio, setCardio] = useState({ distanceKm: '', durationMin: '', ascentM: '' })
 
@@ -411,7 +409,7 @@ export default function TrainingView({ session }) {
         const key = b.kind === 'dropset' ? 'drops' : 'sets'
         return { kind: b.kind, name: b.name.trim(), [key]: cleanSets(b[key]) }
       }).filter((b) => (b.kind === 'superset' ? b.exercises.length : b.name))
-      return { blocks: out, ...(STRENGTH_CATEGORIES.includes(category) ? { category } : {}) }
+      return { blocks: out }
     }
     const num = (x) => (x === '' ? undefined : Number(x))
     if (type === 'HIKING') return { distanceKm: num(cardio.distanceKm), durationMin: num(cardio.durationMin), ascentM: num(cardio.ascentM) }
@@ -581,7 +579,7 @@ export default function TrainingView({ session }) {
   }
 
   function resetBuilder() {
-    setTitle(''); setCategory('auto'); setBlocks([newExercise()]); setCardio({ distanceKm: '', durationMin: '', ascentM: '' }); setError(null)
+    setTitle(''); setBlocks([newExercise()]); setCardio({ distanceKm: '', durationMin: '', ascentM: '' }); setError(null)
   }
 
   // Skriv byggerens endringer tilbake dit økta kom fra. Ukedagen i planen beholdes;
@@ -635,7 +633,6 @@ export default function TrainingView({ session }) {
     setType(t)
     setTitle(s.title || '')
     const c = s.content || {}
-    setCategory(STRENGTH_CATEGORIES.includes(c.category) ? c.category : 'auto')
     if (t === 'STYRKE') {
       const bs = (c.blocks || []).map((b) => {
         if (b.kind === 'superset') {
@@ -1114,18 +1111,6 @@ export default function TrainingView({ session }) {
             <label>{t('Stigning (m)')}<input type="number" min="0" value={cardio.ascentM}
                    onChange={(e) => setCardio({ ...cardio, ascentM: e.target.value })} /></label>
           )}
-        </div>
-      )}
-
-      {type === 'STYRKE' && (
-        <div className="builder-category">
-          <span className="sheet-label">{t('Kategori')}</span>
-          <div className="type-select">
-            <button className={`type-chip ${category === 'auto' ? 'active' : ''}`} onClick={() => setCategory('auto')}>{t('Automatisk')}</button>
-            {STRENGTH_CATEGORIES.map((c) => (
-              <button key={c} className={`type-chip ${category === c ? 'active' : ''}`} onClick={() => setCategory(c)}>{t(CATEGORY_LABELS[c])}</button>
-            ))}
-          </div>
         </div>
       )}
 

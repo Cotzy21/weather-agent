@@ -1,124 +1,60 @@
 import { describe, it, expect } from 'vitest'
 import {
-  categoryOf, guessStrengthCategory, groupTemplates, matchesQuery, lastDoneDate, plannedToday, exerciseNames,
-  CATEGORY_ORDER, CATEGORY_LABELS, STRENGTH_CATEGORIES,
+  categoryOf, groupTemplates, matchesQuery, lastDoneDate, plannedToday, exerciseNames, CATEGORY_ORDER, CATEGORY_LABELS,
 } from './workoutCategories.js'
 
 const ex = (name) => ({ kind: 'exercise', name, sets: [{ reps: 8, weightKg: 20 }] })
-const plan = (title, names = [], extra = {}) => ({
-  id: title, title, type: 'STYRKE', content: { blocks: names.map(ex), ...(extra.content ?? {}) }, ...extra,
-})
-const cat = (title, names) => categoryOf(plan(title, names))
-
-describe('gjetting fra tittel', () => {
-  it('kjenner Push, Pull, Bein, Overkropp, Underkropp, Hele kroppen og Kjerne (norsk og engelsk)', () => {
-    expect(cat('Push A')).toBe('push')
-    expect(cat('Pull day')).toBe('pull')
-    expect(cat('Legs')).toBe('legs')
-    expect(cat('Bein og rumpe')).toBe('legs')
-    expect(cat('Overkropp')).toBe('upper')
-    expect(cat('Upper body')).toBe('upper')
-    expect(cat('Underkropp B')).toBe('lower')
-    expect(cat('Lower')).toBe('lower')
-    expect(cat('Fullkropp 3x')).toBe('full')
-    expect(cat('Full body')).toBe('full')
-    expect(cat('Hele kroppen')).toBe('full')
-    expect(cat('Kjerne og mage')).toBe('core')
-  })
-
-  it('«ben» treffer ikke «benkpress», og store/små bokstaver og aksenter spiller ingen rolle', () => {
-    expect(cat('Benkpress-dag')).not.toBe('legs')
-    expect(cat('BEIN')).toBe('legs')
-    expect(cat('Knebøy fokus')).toBe('legs')
-  })
-
-  it('Overkropp slår Push når begge står i tittelen (mest spesifikke først)', () => {
-    expect(cat('Overkropp push')).toBe('upper')
-    expect(cat('Push/Pull/Legs')).toBe('push')
-  })
-})
-
-describe('gjetting fra øvelser (uten treffende tittel)', () => {
-  it('bare brystøvelser er push', () => {
-    expect(cat('Mandagsøkt', ['Benkpress', 'Skråbenkpress', 'Flies'])).toBe('push')
-  })
-  it('bryst og skuldre er push, også med litt triceps', () => {
-    expect(cat('X', ['Benkpress', 'Skulderpress', 'Sidehev', 'Triceps pushdown'])).toBe('push')
-  })
-  it('ryggøvelser er pull', () => {
-    expect(cat('X', ['Nedtrekk', 'Sittende roing', 'Face pulls', 'Bicepscurl'])).toBe('pull')
-  })
-  it('bare beinøvelser er bein', () => {
-    expect(cat('X', ['Knebøy', 'Leg press', 'Utfall'])).toBe('legs')
-  })
-  it('bryst og rygg uten bein er overkropp', () => {
-    expect(cat('X', ['Benkpress', 'Nedtrekk', 'Skulderpress', 'Sittende roing'])).toBe('upper')
-  })
-  it('bare armer regnes som overkropp', () => {
-    expect(cat('X', ['Bicepscurl', 'Hammercurl', 'Skullcrushers'])).toBe('upper')
-  })
-  it('bein sammen med overkropp er hele kroppen', () => {
-    expect(cat('X', ['Knebøy', 'Benkpress', 'Nedtrekk'])).toBe('full')
-  })
-  it('helkroppsøvelser er hele kroppen', () => {
-    expect(cat('X', ['Kettlebell swing', 'Burpees', 'Thruster'])).toBe('full')
-  })
-  it('mageøvelser er kjerne', () => {
-    expect(cat('X', ['Planke', 'Sit-ups', 'Russian twists'])).toBe('core')
-  })
-  it('ukjente øvelser og tomme økter havner i «annen styrke»', () => {
-    expect(cat('X', ['Min egen øvelse'])).toBe('other')
-    expect(cat('X', [])).toBe('other')
-    expect(guessStrengthCategory(undefined, null)).toBe('other')
-  })
-  it('øvelser i supersett teller med', () => {
-    const p = { id: 's', title: 'X', type: 'STYRKE', content: { blocks: [{ kind: 'superset', rounds: 3, exercises: [{ name: 'Knebøy', sets: [] }, { name: 'Leg press', sets: [] }] }] } }
-    expect(categoryOf(p)).toBe('legs')
-    expect(exerciseNames(p.content)).toEqual(['Knebøy', 'Leg press'])
-  })
-})
+const strength = (title, names = [], extra = {}) => ({ id: title, title, type: 'STYRKE', content: { blocks: names.map(ex) }, ...extra })
+const other = (id, title, type) => ({ id, title, type, content: { distanceKm: 5 } })
 
 describe('categoryOf', () => {
-  it('brukerens eget valg går foran gjetting', () => {
-    expect(categoryOf(plan('Push A', ['Benkpress'], { content: { category: 'lower' } }))).toBe('lower')
+  it('kategorien er økttypen', () => {
+    expect(categoryOf(strength('Push A'))).toBe('STYRKE')
+    expect(categoryOf(other('r', 'Intervall', 'LØPING'))).toBe('LØPING')
+    expect(categoryOf(other('h', 'Langtur', 'HIKING'))).toBe('HIKING')
+    expect(categoryOf(other('s', 'Crawl', 'SVØMMING'))).toBe('SVØMMING')
   })
-  it('ugyldig lagret kategori ignoreres', () => {
-    expect(categoryOf(plan('Push A', [], { content: { category: 'tull' } }))).toBe('push')
+  it('ukjent eller manglende type havner i fristil', () => {
+    expect(categoryOf({ type: 'YOGA' })).toBe('FRISTIL')
+    expect(categoryOf(null)).toBe('FRISTIL')
+    expect(categoryOf({})).toBe('FRISTIL')
   })
-  it('andre aktiviteter er sin egen kategori etter type, og ukjente typer havner i fristil', () => {
-    expect(categoryOf({ type: 'LØPING', title: 'Intervall' })).toBe('LØPING')
-    expect(categoryOf({ type: 'HIKING', title: 'Langtur' })).toBe('HIKING')
-    expect(categoryOf({ type: 'YOGA', title: 'Yoga' })).toBe('FRISTIL')
-  })
-  it('alle kategorier har et navn og en plass i rekkefølgen', () => {
+  it('alle kategorier har et navn, og Styrke kommer først', () => {
     for (const id of CATEGORY_ORDER) expect(CATEGORY_LABELS[id]).toBeTruthy()
-    expect(STRENGTH_CATEGORIES.every((c) => CATEGORY_ORDER.includes(c))).toBe(true)
+    expect(CATEGORY_ORDER[0]).toBe('STYRKE')
+    expect(CATEGORY_ORDER[1]).toBe('LØPING')
   })
 })
 
-describe('gruppering', () => {
+describe('gruppering etter økttype', () => {
   const plans = [
-    plan('Pull B', ['Nedtrekk']),
-    plan('Push A', ['Benkpress']),
-    plan('Push C', ['Benkpress']),
-    plan('Bein', ['Knebøy']),
-    { id: 'run', title: 'Intervall', type: 'LØPING', content: { distanceKm: 5 } },
-    plan('Fullkropp', ['Burpees']),
+    other('r', 'Intervall', 'LØPING'),
+    strength('Pull B', ['Nedtrekk']),
+    strength('Push A', ['Benkpress']),
+    other('h', 'Langtur', 'HIKING'),
+    strength('Bein', ['Knebøy']),
+    other('r2', 'Rolig tur', 'LØPING'),
   ]
 
-  it('gir kategoriene i fast rekkefølge og utelater tomme', () => {
-    const g = groupTemplates(plans, [])
-    expect(g.map((x) => x.id)).toEqual(['push', 'pull', 'legs', 'full', 'LØPING'])
+  it('gir typene i fast rekkefølge (Styrke, Løping, … Hiking) og utelater tomme', () => {
+    expect(groupTemplates(plans, []).map((g) => g.id)).toEqual(['STYRKE', 'LØPING', 'HIKING'])
+    expect(groupTemplates([plans[0]], []).map((g) => g.id)).toEqual(['LØPING'])
   })
 
-  it('sorterer innen en kategori: sist brukt først, så alfabetisk', () => {
-    const workouts = [{ id: 'w', date: '2026-09-20', title: 'Push C', plannedId: 'Push C' }]
-    const push = groupTemplates(plans, workouts).find((x) => x.id === 'push')
-    expect(push.items.map((i) => i.plan.title)).toEqual(['Push C', 'Push A'])
-    expect(push.items[0].lastDone).toBe('2026-09-20')
-    expect(push.items[1].lastDone).toBeNull()
-    const alpha = groupTemplates(plans, []).find((x) => x.id === 'push')
-    expect(alpha.items.map((i) => i.plan.title)).toEqual(['Push A', 'Push C'])
+  it('samler alle styrkeøktene under Styrke, alfabetisk uten historikk', () => {
+    const g = groupTemplates(plans, []).find((x) => x.id === 'STYRKE')
+    expect(g.items.map((i) => i.plan.title)).toEqual(['Bein', 'Pull B', 'Push A'])
+  })
+
+  it('sorterer innen en type: sist brukt først, så alfabetisk', () => {
+    const workouts = [
+      { id: 'a', date: '2026-09-20', title: 'Push A', plannedId: 'Push A' },
+      { id: 'b', date: '2026-09-25', title: 'Pull B', plannedId: 'Pull B' },
+    ]
+    const g = groupTemplates(plans, workouts).find((x) => x.id === 'STYRKE')
+    expect(g.items.map((i) => i.plan.title)).toEqual(['Pull B', 'Push A', 'Bein'])
+    expect(g.items[0].lastDone).toBe('2026-09-25')
+    expect(g.items[2].lastDone).toBeNull()
   })
 
   it('tomt utvalg gir ingen grupper', () => {
@@ -126,12 +62,22 @@ describe('gruppering', () => {
     expect(groupTemplates(null, null)).toEqual([])
   })
 
-  it('søk filtrerer på tittel, kategorinavn og øvelse (uten hensyn til store/små bokstaver og aksenter)', () => {
-    expect(groupTemplates(plans, [], { query: 'push' }).flatMap((g) => g.items.map((i) => i.plan.title))).toEqual(['Push A', 'Push C'])
-    expect(groupTemplates(plans, [], { query: 'KNEBØY' }).flatMap((g) => g.items.map((i) => i.plan.title))).toEqual(['Bein'])
-    expect(groupTemplates(plans, [], { query: 'hele kroppen' }).flatMap((g) => g.items.map((i) => i.plan.title))).toEqual(['Fullkropp'])
-    expect(groupTemplates(plans, [], { query: 'finnesikke' })).toEqual([])
+  it('søk filtrerer på tittel, økttype og øvelse (uten hensyn til store/små bokstaver og aksenter)', () => {
+    const titles = (q) => groupTemplates(plans, [], { query: q }).flatMap((g) => g.items.map((i) => i.plan.title))
+    expect(titles('push')).toEqual(['Push A'])
+    expect(titles('KNEBØY')).toEqual(['Bein'])
+    expect(titles('løping')).toEqual(['Intervall', 'Rolig tur'])
+    expect(titles('hiking')).toEqual(['Langtur'])
+    expect(titles('finnesikke')).toEqual([])
     expect(matchesQuery(plans[0], '   ')).toBe(true)
+  })
+})
+
+describe('øvelsesnavn', () => {
+  it('samler navn også fra supersett og hopper over tomme', () => {
+    const content = { blocks: [ex('Benkpress'), { kind: 'superset', rounds: 3, exercises: [{ name: 'Knebøy' }, { name: '  ' }] }, { kind: 'dropset', name: '' }] }
+    expect(exerciseNames(content)).toEqual(['Benkpress', 'Knebøy'])
+    expect(exerciseNames(null)).toEqual([])
   })
 })
 
