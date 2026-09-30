@@ -3,18 +3,22 @@ package no.weatheragent.hiking;
 import com.fasterxml.jackson.databind.JsonNode;
 import no.weatheragent.geo.Location;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
 import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.UnknownContentTypeException;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -22,7 +26,9 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -65,6 +71,15 @@ public class OverpassClient {
     /** Selve kallene går på virtuelle tråder, så en hengende tilkobling ikke tar en plattformtråd. */
     private static final ExecutorService ATTEMPTS = Executors.newVirtualThreadPerTaskExecutor();
 
+    /**
+     * Minnevern (gratisinstansen har ca. 330 MB heap, og en OOM tar hele tjenesten ned, se Dockerfile):
+     * høyst {@link #MAX_IN_FLIGHT} Overpass-kall om gangen i hele appen (flere får «travelt» med en gang), og svar
+     * over {@link #MAX_RESPONSE_BYTES} avvises før de leses inn. Speil som taper kappløpet avbrytes.
+     */
+    static final int MAX_IN_FLIGHT = 3;
+    static final Semaphore IN_FLIGHT = new Semaphore(MAX_IN_FLIGHT);
+    static final long MAX_RESPONSE_BYTES = 4L * 1024 * 1024;
+
     /** Maks antall ruter vi returnerer (etter dedup på navn) for et helt område. */
     private static final int MAX_TRAILS = 25;
 
@@ -73,12 +88,25 @@ public class OverpassClient {
     private final long hedgeDelayMs;
     private final long totalBudgetMs;
 
+    /**
+     * {@code overpass.endpoints} (kommaseparert URL-liste) overstyrer speilene, f.eks. for å bytte dem uten ny kode
+     * eller for å peke appen mot en falsk server i en lokal test.
+     */
     @Autowired
-    public OverpassClient(RestClient.Builder builder) {
-        this(builder
+    public OverpassClient(RestClient.Builder builder, @Value("${overpass.endpoints:}") String endpointsOverride) {
+        this(limitResponses(builder)
                 .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(ClientHttpRequestFactorySettings.defaults()
                         .withConnectTimeout(CONNECT_TIMEOUT).withReadTimeout(READ_TIMEOUT)))
-                .build(), ENDPOINTS, HEDGE_DELAY_MS, TOTAL_BUDGET_MS);
+                .build(),
+                endpointsOverride == null || endpointsOverride.isBlank()
+                        ? ENDPOINTS
+                        : List.of(endpointsOverride.trim().split("\\s*,\\s*")),
+                HEDGE_DELAY_MS, TOTAL_BUDGET_MS);
+    }
+
+    /** Legger størrelsesgrensen på en klient-bygger (brukes også i tester, så de går gjennom samme løype). */
+    static RestClient.Builder limitResponses(RestClient.Builder builder) {
+        return builder.requestInterceptor(new ResponseSizeLimit(MAX_RESPONSE_BYTES));
     }
 
     /** For tester: ferdig bygd klient (f.eks. mot en mock-server) og egne tidsgrenser. */
@@ -127,12 +155,23 @@ public class OverpassClient {
      */
     static JsonNode raceMirrors(List<String> endpoints, Function<String, JsonNode> call, long hedgeDelayMs, long totalBudgetMs) {
         BlockingQueue<Object> events = new LinkedBlockingQueue<>();
+        List<Future<?>> attempts = new ArrayList<>();
+        try {
+            return race(endpoints, call, hedgeDelayMs, totalBudgetMs, events, attempts);
+        } finally {
+            // Vinneren er funnet (eller vi gir opp): speil som fortsatt laster ned skal ikke fortsette å ta minne.
+            attempts.forEach(a -> a.cancel(true));
+        }
+    }
+
+    private static JsonNode race(List<String> endpoints, Function<String, JsonNode> call, long hedgeDelayMs,
+                                 long totalBudgetMs, BlockingQueue<Object> events, List<Future<?>> attempts) {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(totalBudgetMs);
         int started = 0;
         int finished = 0;
         RestClientException lastBusy = null;
 
-        launch(endpoints.get(started++), call, events);
+        attempts.add(launch(endpoints.get(started++), call, events));
         while (true) {
             long remainingMs = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime());
             if (remainingMs <= 0) {
@@ -147,7 +186,7 @@ public class OverpassClient {
             }
             if (event == null) { // ingen har svart ennå: sett neste speil i gang ved siden av (hedging)
                 if (started < endpoints.size()) {
-                    launch(endpoints.get(started++), call, events);
+                    attempts.add(launch(endpoints.get(started++), call, events));
                 }
                 continue;
             }
@@ -161,24 +200,44 @@ public class OverpassClient {
             }
             lastBusy = failure;
             if (started < endpoints.size()) {
-                launch(endpoints.get(started++), call, events);
+                attempts.add(launch(endpoints.get(started++), call, events));
             } else if (finished >= started) {
                 throw new OverpassUnavailableException(lastBusy);
             }
         }
     }
 
-    private static void launch(String endpoint, Function<String, JsonNode> call, BlockingQueue<Object> events) {
-        ATTEMPTS.execute(() -> {
+    private static Future<?> launch(String endpoint, Function<String, JsonNode> call, BlockingQueue<Object> events) {
+        return ATTEMPTS.submit(() -> {
+            if (!IN_FLIGHT.tryAcquire()) { // for mange samtidige kall i appen: behandles som «travelt»
+                events.add(new ResourceAccessException("For mange samtidige Overpass-kall"));
+                return;
+            }
             try {
                 JsonNode node = call.apply(endpoint);
                 events.add(node != null ? node : new ResourceAccessException("Tomt svar fra Overpass"));
             } catch (RestClientException e) {
-                events.add(e);
+                events.add(asMirrorFailure(e));
             } catch (RuntimeException e) {
                 events.add(new ResourceAccessException("Overpass-kallet feilet: " + e.getClass().getSimpleName()));
+            } finally {
+                IN_FLIGHT.release();
             }
         });
+    }
+
+    /**
+     * Et svar som er for stort eller ikke kan leses som JSON (f.eks. en HTML-feilside med status 200) er et speil som
+     * ikke fungerer akkurat nå, akkurat som en timeout: gjør det om til en nettverksfeil slik at neste speil prøves.
+     */
+    private static RestClientException asMirrorFailure(RestClientException e) {
+        if (ResponseSizeLimit.isTooLarge(e)) {
+            return new ResourceAccessException("Overpass-svaret er for stort", new java.io.IOException(e));
+        }
+        if (e instanceof UnknownContentTypeException || e.getCause() instanceof HttpMessageNotReadableException) {
+            return new ResourceAccessException("Overpass ga et svar som ikke kan leses", new java.io.IOException(e));
+        }
+        return e;
     }
 
     /** Overbelastet/utilgjengelig instans: 429, 5xx eller nettverks-/timeout-feil. */

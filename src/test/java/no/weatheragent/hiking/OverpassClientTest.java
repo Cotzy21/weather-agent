@@ -23,7 +23,7 @@ class OverpassClientTest {
 
     /** Klient mot mock-serveren (den offentlige konstruktøren bytter ut request factory, som ville brutt mocken). */
     private static OverpassClient client(RestClient.Builder builder) {
-        return new OverpassClient(builder.build(), OverpassClient.ENDPOINTS, 6_000, 35_000);
+        return new OverpassClient(OverpassClient.limitResponses(builder).build(), OverpassClient.ENDPOINTS, 6_000, 35_000);
     }
 
     private static final String PEAKS_JSON = """

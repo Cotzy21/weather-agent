@@ -181,6 +181,15 @@ Dockerfile + PORT-config for backend-deploy finnes.
    tillegg: er Overpass travel vises værsvaret uten turer (stedsside og vanlig søk); topper/ruter til selve rangeringen er
    nødvendige og gir den vennlige feilen. Testet mot ekte nettverksfeil (stedsside med Overpass utilgjengelig: 200 etter 36 s
    i stedet for å henge).
+   **Oppfølging samme dag (krasj i produksjon):** rett etter utrullingen ga `/api/turvaer` en tom 502 etter 30 s og hele
+   tjenesten gikk ned i ca. 5 minutter (Render: `hibernate-wake-error`, kom seg selv). Årsak (gjenskapt lokalt med
+   `-Xmx330m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError`, samme som Render, og falske speil som sender 12 MB sakte):
+   speil som tapte kappløpet ble aldri avbrutt og fortsatte å laste ned og gjøre svaret om til et JSON-tre, og 3 parallelle
+   kall x flere brukere ga `OutOfMemoryError` (forrige bygg døde på 18 s). Nå: tapende/hengende kall avbrytes, høyst 3
+   Overpass-kall om gangen i hele appen (flere får «travelt» med en gang), svar over 4 MB avvises før de leses inn
+   (`ResponseSizeLimit`), og en 200 med HTML/ugyldig JSON regnes som et speil som ikke virker (neste speil prøves).
+   Samme stresstest mot det nye bygget: 9 samtidige oppslag, alle 200 på 8-10 s, ingen OOM. `OVERPASS_ENDPOINTS`
+   (kommaseparert) overstyrer speilene uten ny kode.
 
 ## Oppsett på ny maskin (det som IKKE følger med git)
 
