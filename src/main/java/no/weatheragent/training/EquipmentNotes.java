@@ -1,6 +1,5 @@
 package no.weatheragent.training;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -150,10 +149,16 @@ final class EquipmentNotes {
     }
 
     private static Set<String> itemsIn(String s) {
-        List<String> found = new ArrayList<>();
+        Set<String> found = new HashSet<>();
+        String rest = s;
         for (Item it : ITEMS) {
-            if (it.pattern().matcher(s).find()) found.add(it.tag());
+            Matcher m = it.pattern().matcher(rest);
+            if (m.find()) {
+                found.add(it.tag());
+                // Fjern det som er brukt, så «cable machine» ikke også teller som «machine» (kabel står før maskin i ITEMS).
+                rest = m.replaceAll(" ");
+            }
         }
-        return new HashSet<>(found);
+        return found;
     }
 }

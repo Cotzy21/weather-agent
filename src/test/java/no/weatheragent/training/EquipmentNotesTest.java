@@ -54,6 +54,9 @@ class EquipmentNotesTest {
         assertEquals(minus(GYM, "barbell", "bench"), have("uten stang og benk", GYM));
         assertEquals(minus(GYM, "barbell"), have("no barbell at my gym", GYM));
         assertEquals(minus(GYM, "machine"), have("Jeg har ikke tilgang på maskiner", GYM));
+        // «cable machine» er kabel, ikke også maskin (leg press m.m. skal ikke falle bort)
+        assertEquals(minus(GYM, "cable"), have("no cable machine at the gym", GYM));
+        assertEquals(minus(GYM, "cable"), have("ingen kabelmaskin", GYM));
         assertEquals(minus(HOME, "bench"), have("I don't have a bench", HOME));
     }
 
