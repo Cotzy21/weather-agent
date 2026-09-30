@@ -34,11 +34,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final Pattern IP_LIKE = Pattern.compile("^[0-9a-fA-F:.]{2,45}$");
 
     /** En regel: hvilke kall den gjelder, og grenser per IP (minutt/time) og globalt (time). */
-    private record Rule(String name, String path, String method, SlidingWindowLimiter perMinute,
+    private record Rule(String name, List<String> paths, String method, SlidingWindowLimiter perMinute,
                         SlidingWindowLimiter perHour, SlidingWindowLimiter global) {
         boolean matches(HttpServletRequest r) {
-            return (path.endsWith("/**") ? r.getRequestURI().startsWith(path.substring(0, path.length() - 2))
-                    : r.getRequestURI().equals(path)) && (method == null || method.equals(r.getMethod()));
+            String uri = r.getRequestURI();
+            boolean pathHit = paths.stream().anyMatch(path -> path.endsWith("/**")
+                    ? uri.startsWith(path.substring(0, path.length() - 2)) : uri.equals(path));
+            return pathHit && (method == null || method.equals(r.getMethod()));
         }
     }
 
@@ -55,15 +57,20 @@ public class RateLimitFilter extends OncePerRequestFilter {
         this.trustForwardedFor = trustForwardedFor;
         this.rules = enabled ? List.of(
                 // Værsøket kaller LLM + Overpass + MET: dyrest.
-                rule("turvaer", "/api/turvaer", "GET", 10, 80, 600, clock),
-                rule("sted", "/api/sted", "GET", 30, 300, 3000, clock),
-                rule("rute", "/api/rute", "POST", 30, 300, 3000, clock),
-                // Alt annet: bred grense mot skripting og passord-/token-gjetting.
-                rule("api", "/api/**", null, 300, 6000, 60_000, clock)) : List.of();
+                rule("turvaer", List.of("/api/turvaer"), "GET", 10, 80, 600, clock),
+                rule("sted", List.of("/api/sted"), "GET", 30, 300, 3000, clock),
+                rule("rute", List.of("/api/rute"), "POST", 30, 300, 3000, clock),
+                // AI-treningsforslag (betalt LLM). I tillegg til kvoten per bruker: alle kontoer fra én IP
+                // deler denne grensen, og den globale grensen stopper masseregistrering av kontoer.
+                rule("ai", List.of("/api/trening/forslag", "/api/trening/plan-forslag", "/api/trening/assistent"),
+                        "POST", 10, 60, 3000, clock),
+                // Alt annet: bred grense mot skripting og passord-/token-gjetting. Romslig, siden
+                // søk-mens-du-skriver og innlasting av faner gir mange kall fra ett nettsted/nettverk.
+                rule("api", List.of("/api/**"), null, 600, 20_000, 200_000, clock)) : List.of();
     }
 
-    private static Rule rule(String name, String path, String method, int perMinute, int perHour, int global, Clock clock) {
-        return new Rule(name, path, method,
+    private static Rule rule(String name, List<String> paths, String method, int perMinute, int perHour, int global, Clock clock) {
+        return new Rule(name, paths, method,
                 new SlidingWindowLimiter(perMinute, MINUTE, clock),
                 new SlidingWindowLimiter(perHour, HOUR, clock),
                 new SlidingWindowLimiter(global, HOUR, clock));

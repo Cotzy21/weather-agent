@@ -104,6 +104,15 @@ Render sin gratisplan legger tjenesten i dvale, og første kall etter en pause t
 Appen viser nå «Vekker serveren …» etter 4 sekunder i stedet for å se ødelagt ut, men det fjerner ikke ventetiden.
 Reelle løsninger, i rekkefølge:
 - **Betalt instans** (ingen dvale). Enkleste og eneste som er garantert.
-- Gratis: en ekstern helsesjekk som pinger backend hvert 10. minutt holder den våken, men det er ikke garantert
-  og kan stride mot vilkårene på gratisplanen.
+- **Keep-alive (bygget):** `.github/workflows/keepalive.yml` henter `https://weather-agent-t801.onrender.com/` hvert 5. minutt
+  fra GitHub Actions. Den må ligge i `main` (planlagte jobber kjører bare fra standard-branchen), kan bli forsinket av GitHub,
+  og slås av i offentlige repoer uten aktivitet på 60 dager. Under «Actions → Keep-alive» ser du om den kjører.
+- Reserve: en gratis ekstern tjeneste (f.eks. UptimeRobot, cron-job.org) mot samme adresse hvert 5.–10. minutt.
+- Ping-trafikk kan stride mot vilkårene på gratisplanen, og gratisplanen har 750 timer/måned per konto (én alltid-våken tjeneste bruker ca. 744).
+
+## Sikkerhet ved deploy
+
+Se `SECURITY.md`. Kort: migreringen `V16` slår på radnivåsikkerhet i Supabase (uten den er hele databasen åpen via anon-nøkkelen),
+backend må koble til som databaseeieren, og `APP_CORS_ALLOWED_ORIGINS` bør settes til appens egen adresse. Innholdspolicyen (CSP)
+tillater `*.supabase.co`; bruker du eget Supabase-domene må det legges til i `SecurityConfig.CSP`.
 

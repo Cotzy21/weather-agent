@@ -73,6 +73,11 @@ Dockerfile + PORT-config for backend-deploy finnes.
   når nettet er tilbake (backend er idempotent på `clientId`); treningsdata ligger også lokalt, og
   service worker cacher app-skallet. Økter kobles til planer på `plannedId` (tittel som reserve).
 - **Tester/CI:** Vitest i frontend (`npm test`), GitHub Actions i `.github/workflows/ci.yml`.
+- **Sikkerhet** (se `SECURITY.md` for hele gjennomgangen): RLS/rettigheter i Supabase (`V16`), JWT må tilhøre en innlogget
+  bruker (`SupabaseClaimsValidator`), per-IP og global rate limit (`RateLimitFilter`, `AiRateLimiter` med global døgnkvote),
+  størrelsesgrense på forespørsler, begrensede cacher, CSP/HSTS-hoder, tidsavbrudd og `max_tokens` mot LLM, generiske
+  feilsvar, escapede kart-popups, container som ikke-root, Spring Boot 3.5.16. Keep-alive mot Render:
+  `.github/workflows/keepalive.yml` (må ligge i `main`).
 - Gjenstår: real-time tracking (sen fase i planen), klokke-integrasjoner.
 
 ### Kosthold ✅

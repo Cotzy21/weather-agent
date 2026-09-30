@@ -38,17 +38,25 @@ public class AiRateLimiter {
 
     private final int perHour;
     private final int perDay;
+    private final int globalPerDay;
     private final Clock clock;
+    private final Deque<Long> globalCalls = new ArrayDeque<>();
     private final Map<UUID, Deque<Long>> calls = new ConcurrentHashMap<>();
 
     @Autowired
-    public AiRateLimiter(@Value("${ai.limit.per-hour:20}") int perHour, @Value("${ai.limit.per-day:60}") int perDay) {
-        this(perHour, perDay, Clock.systemUTC());
+    public AiRateLimiter(@Value("${ai.limit.per-hour:20}") int perHour, @Value("${ai.limit.per-day:60}") int perDay,
+                         @Value("${ai.limit.global-per-day:1500}") int globalPerDay) {
+        this(perHour, perDay, globalPerDay, Clock.systemUTC());
     }
 
     AiRateLimiter(int perHour, int perDay, Clock clock) {
+        this(perHour, perDay, Integer.MAX_VALUE, clock);
+    }
+
+    AiRateLimiter(int perHour, int perDay, int globalPerDay, Clock clock) {
         this.perHour = perHour;
         this.perDay = perDay;
+        this.globalPerDay = globalPerDay;
         this.clock = clock;
     }
 
@@ -67,6 +75,18 @@ public class AiRateLimiter {
             }
             if (times.size() >= perDay) {
                 throw exceeded("døgnet", DAY_MS - (now - times.peekFirst()));
+            }
+            // Kostnadsbrems for hele tjenesten: uten den kan noen registrere mange kontoer, som hver får sin kvote.
+            synchronized (globalCalls) {
+                while (!globalCalls.isEmpty() && now - globalCalls.peekFirst() >= DAY_MS) {
+                    globalCalls.pollFirst();
+                }
+                if (globalCalls.size() >= globalPerDay) {
+                    throw new LimitExceededException(
+                            "AI-assistenten har nådd dagens grense for alle brukere. Prøv igjen senere i dag.",
+                            Math.max(1, (DAY_MS - (now - globalCalls.peekFirst()) + 999) / 1000));
+                }
+                globalCalls.addLast(now);
             }
             times.addLast(now);
         }

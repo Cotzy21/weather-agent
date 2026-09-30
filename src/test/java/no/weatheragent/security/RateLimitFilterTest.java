@@ -94,4 +94,12 @@ class RateLimitFilterTest {
         req.addHeader("X-Forwarded-For", xff);
         return req;
     }
+
+    @Test
+    void aiEndpointsShareOneBudgetPerIpAcrossAccounts() throws Exception {
+        for (int i = 0; i < 5; i++) call("POST", "/api/trening/forslag", "1.2.3.4");
+        for (int i = 0; i < 5; i++) call("POST", "/api/trening/assistent", "1.2.3.4");
+        assertEquals(429, call("POST", "/api/trening/plan-forslag", "1.2.3.4").getStatus());
+        assertEquals(200, call("GET", "/api/trening/planer", "1.2.3.4").getStatus()); // ikke-AI berøres ikke
+    }
 }
