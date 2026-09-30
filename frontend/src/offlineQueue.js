@@ -49,15 +49,18 @@ export function isNetworkError(err) {
  * Køen. `send(item)` gjør selve POST-en og returnerer { ok, status } (kaster ved nettverksfeil).
  * Tjenesten er ren logikk over `store` og `send`, så den kan testes uten nettleser.
  */
-export function createQueue({ store, send, onChange = () => {} }) {
+export function createQueue({ store, send, owner = () => null, onChange = () => {} }) {
   let flushing = null
 
+  // Kun innlogget brukers økter. En annen bruker på samme enhet skal aldri sende (eller se) andres
+  // økter under sin egen innlogging; de blir liggende til riktig bruker logger inn igjen.
   async function pending() {
-    return (await store.all()).sort((a, b) => a.queuedAt - b.queuedAt)
+    const me = owner()
+    return (await store.all()).filter((i) => me && i.owner === me).sort((a, b) => a.queuedAt - b.queuedAt)
   }
 
   async function notify() {
-    onChange((await store.all()).length)
+    onChange((await pending()).length)
   }
 
   /**
@@ -66,7 +69,9 @@ export function createQueue({ store, send, onChange = () => {} }) {
    * 4xx (ugyldig økt) kastes videre, for et nytt forsøk hjelper ikke.
    */
   async function submit(item) {
-    const entry = { ...item, queuedAt: Date.now() }
+    const me = owner()
+    if (!me) throw new Error('Du er ikke innlogget.')
+    const entry = { ...item, owner: me, queuedAt: Date.now() }
     await store.put(entry) // først på enheten, så ingenting går tapt hvis appen lukkes midt i
     try {
       const res = await send(entry)
@@ -95,6 +100,8 @@ export function createQueue({ store, send, onChange = () => {} }) {
     if (flushing) return flushing
     flushing = (async () => {
       let sent = 0
+      // Økter uten eier (fra før eier ble lagret) kan ikke knyttes til noen og slettes.
+      for (const orphan of (await store.all()).filter((i) => !i.owner)) await store.remove(orphan.clientId)
       for (const item of await pending()) {
         try {
           const res = await send(item)
@@ -115,13 +122,19 @@ export function createQueue({ store, send, onChange = () => {} }) {
     return flushing
   }
 
-  return { submit, flush, pending, count: async () => (await store.all()).length }
+  return { submit, flush, pending, count: async () => (await pending()).length }
 }
 
 // --- Bruk i appen ---
 
 let shared = null
+let currentOwner = null
 const listeners = new Set()
+
+/** Hvem er innlogget (Supabase-bruker-id), eller null ved utlogging. Køen bruker dette som eier. */
+export function setQueueOwner(uid) {
+  currentOwner = uid ?? null
+}
 
 /** Antall økter som venter (for banneret). Returnerer en funksjon som avmelder. */
 export function onPendingChange(fn) {
@@ -135,6 +148,7 @@ export function workoutQueue(getHeaders) {
     try { store = typeof indexedDB === 'undefined' ? memoryStore() : idbStore() } catch { store = memoryStore() }
     shared = createQueue({
       store,
+      owner: () => currentOwner,
       onChange: (n) => listeners.forEach((fn) => fn(n)),
       send: async (item) => {
         const res = await fetch(apiUrl('/api/treningsokter'), {

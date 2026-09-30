@@ -11,7 +11,7 @@ import TrainingMemoryCard from './TrainingMemoryCard.jsx'
 import TrainingOnboarding from './TrainingOnboarding.jsx'
 import ThinkingText from './ThinkingText.jsx'
 import { loadLive, clearLive, newLive, newId, fromPlan } from './liveSession.js'
-import { workoutQueue, onPendingChange } from './offlineQueue.js'
+import { workoutQueue, onPendingChange, setQueueOwner } from './offlineQueue.js'
 import { dayIndex, strengthVolume, localIso } from './trainingStats.js'
 import WeekProgram from './WeekProgram.jsx'
 
@@ -145,6 +145,7 @@ export default function TrainingView({ session }) {
 
   // Send økter som ventet på nett: ved oppstart, når nettet kommer tilbake, og jevnlig.
   useEffect(() => {
+    setQueueOwner(session?.user?.id ?? null)
     if (!session) return undefined
     const off = onPendingChange(setPendingCount)
     const flush = () => queue.flush().then((sent) => { if (sent) { loadWorkouts(); loadNextSets() } }).catch(() => {})

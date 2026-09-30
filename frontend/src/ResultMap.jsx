@@ -1,3 +1,4 @@
+import { escapeHtml } from './escapeHtml.js'
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -55,7 +56,7 @@ export default function ResultMap({ places, trails = [], selected = null, highli
         weight: 2,
       })
         .bindPopup(
-          `<strong>${p.name}</strong><br/>${p.temp.toFixed(1)} °C · ` +
+          `<strong>${escapeHtml(p.name)}</strong><br/>${p.temp.toFixed(1)} °C · ` +
             `${p.precip.toFixed(1)} mm · ${p.elevation.toFixed(0)} moh`
         )
         .addTo(layer)
@@ -71,7 +72,7 @@ export default function ResultMap({ places, trails = [], selected = null, highli
         ? { color: '#dc2626', weight: 7, opacity: 0.95 }
         : { color: '#ea580c', weight: 4, opacity: 0.8 }
       const line = L.polyline(tr.lines, style)
-        .bindPopup(`🥾 <strong>${tr.name}</strong>${tr.operator ? `<br/>${tr.operator}` : ''}`)
+        .bindPopup(`🥾 <strong>${escapeHtml(tr.name)}</strong>${tr.operator ? `<br/>${escapeHtml(tr.operator)}` : ''}`)
         .on('mouseover', () => line.setStyle({ weight: on ? 8 : 6 }))
         .on('mouseout', () => line.setStyle(style))
         .addTo(layer)
@@ -92,7 +93,7 @@ export default function ResultMap({ places, trails = [], selected = null, highli
         fillOpacity: 0.9,
         weight: 2,
       })
-        .bindPopup(`🥾 <strong>${tr.name}</strong>${tr.operator ? `<br/>${tr.operator}` : ''}`)
+        .bindPopup(`🥾 <strong>${escapeHtml(tr.name)}</strong>${tr.operator ? `<br/>${escapeHtml(tr.operator)}` : ''}`)
         .addTo(layer)
       points.push([tr.lat, tr.lon])
     })

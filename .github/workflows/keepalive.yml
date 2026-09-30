@@ -1,0 +1,32 @@
+name: Keep-alive
+
+# Render sin gratisplan legger tjenesten i dvale etter ~15 min uten trafikk, og vekking tar ~1 min.
+# Denne jobben henter forsiden hvert 5. minutt så den holder seg våken.
+#
+# VIKTIG:
+#  - Planlagte jobber (schedule) kjører bare fra STANDARD-branchen (main). Flett denne filen inn i main.
+#  - GitHub kan forsinke planlagte jobber med noen minutter når det er travelt, og skrur dem av i
+#    offentlige repoer uten aktivitet på 60 dager (kjør «Run workflow» eller push noe for å slå på igjen).
+#  - Gratisplanen på Render har 750 timer/måned per konto: én tjeneste som alltid er våken bruker ca. 744.
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Ping tjenesten
+        env:
+          URL: https://weather-agent-t801.onrender.com/
+        run: |
+          # En kald start kan ta over ett minutt, så vi gir hvert forsøk god tid og prøver på nytt.
+          curl --silent --show-error --fail \
+               --max-time 100 --retry 3 --retry-delay 15 --retry-all-errors \
+               --output /dev/null \
+               --write-out 'HTTP %{http_code} på %{time_total}s\n' \
+               "$URL"

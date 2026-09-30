@@ -27,6 +27,9 @@ RUN mvn -B -q -DskipTests package
 FROM eclipse-temurin:23-jre
 WORKDIR /app
 COPY --from=backend /app/target/weather-agent-*.jar app.jar
+# Kjør som vanlig bruker, ikke root: en sårbarhet i appen gir da ikke rot-tilgang i containeren.
+RUN useradd --system --uid 10001 --no-create-home app
+USER app
 EXPOSE 8080
 # Container-vennlige JVM-flagg (viktig på små hosts som Render free / 512 MB):
 #  - MaxRAMPercentage: bruk en ANDEL av containerens RAM, ikke anta en stor maskin

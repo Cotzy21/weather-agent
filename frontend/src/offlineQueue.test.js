@@ -3,12 +3,13 @@ import { createQueue, memoryStore } from './offlineQueue.js'
 
 const item = (id) => ({ clientId: id, body: { title: id } })
 
-function setup(responses) {
+function setup(responses, owner = { id: 'u1' }) {
   const store = memoryStore()
   const calls = []
   const counts = []
   const queue = createQueue({
     store,
+    owner: () => owner.id,
     onChange: (n) => counts.push(n),
     send: async (i) => {
       calls.push(i.clientId)
@@ -17,7 +18,7 @@ function setup(responses) {
       return r
     },
   })
-  return { store, queue, calls, counts }
+  return { store, queue, calls, counts, owner }
 }
 
 describe('offline queue', () => {
@@ -73,5 +74,32 @@ describe('offline queue', () => {
     await queue.submit(item('a'))
     await queue.flush()
     expect(counts).toEqual([1, 0])
+  })
+
+  it("never sends or counts another user's workouts, and keeps them for the right user", async () => {
+    const { queue, store, calls, owner } = setup(['offline', { ok: true, status: 200 }])
+    await queue.submit(item('a')) // u1 er innlogget, ingen nett
+    owner.id = 'u2' // en annen bruker logger inn på samme enhet
+    expect(await queue.count()).toBe(0)
+    expect(await queue.flush()).toBe(0)
+    expect(calls).toEqual(['a']) // bare det første forsøket, ingenting sendt under u2
+    expect((await store.all()).length).toBe(1) // ligger fortsatt der
+
+    owner.id = 'u1'
+    expect(await queue.count()).toBe(1)
+    expect(await queue.flush()).toBe(1)
+  })
+
+  it('refuses to queue when nobody is logged in', async () => {
+    const { queue } = setup([], { id: null })
+    await expect(queue.submit(item('a'))).rejects.toThrow('innlogget')
+  })
+
+  it('drops entries that have no owner instead of sending them under someone else', async () => {
+    const { queue, store, calls } = setup([])
+    await store.put({ clientId: 'gammel', body: {}, queuedAt: 1 })
+    expect(await queue.flush()).toBe(0)
+    expect(calls).toEqual([])
+    expect(await store.all()).toEqual([])
   })
 })
