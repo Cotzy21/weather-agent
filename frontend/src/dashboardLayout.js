@@ -1,6 +1,7 @@
 // Kortene på Hjem. Rekkefølgen her er standardoppsettet; `wide` tar hele bredden.
 export const WIDGETS = [
   { id: 'week', icon: '🏋️', label: 'Trening denne uka' },
+  { id: 'streak', icon: '🔥', label: 'Ukeserie' },
   { id: 'nutrition', icon: '🥗', label: 'Kosthold i dag' },
   { id: 'latest', icon: '⏱️', label: 'Siste økt' },
   { id: 'weather', icon: '🌤️', label: 'Turvær' },

@@ -19,8 +19,8 @@ import java.time.ZoneId;
 import java.util.UUID;
 
 /**
- * Innstillinger som følger kontoen på tvers av enheter: dashboard-oppsett, og treningsprogrammet
- * (startdato + lengde) som gir «Dag 12/56».
+ * Innstillinger som følger kontoen på tvers av enheter: dashboard-oppsett, ukeserien (mål og pauser), og
+ * treningsprogrammet (startdato + lengde) som gir «Dag 12/56».
  */
 @RestController
 public class SettingsController {
@@ -33,10 +33,10 @@ public class SettingsController {
         this.settings = settings;
     }
 
-    /** Dashboard-oppsettet. 204 = ikke lagret ennå (frontenden bruker standard). */
+    /** Dashboard-oppsettet og ukeserien (mål og pausede uker). 204 = ikke lagret ennå (frontenden bruker standard). */
     @GetMapping("/api/innstillinger/{key}")
     public ResponseEntity<JsonNode> get(@AuthenticationPrincipal Jwt jwt, @PathVariable String key) {
-        if (!UserSettingsService.DASHBOARD.equals(key)) return ResponseEntity.notFound().build();
+        if (!UserSettingsService.isClientKey(key)) return ResponseEntity.notFound().build();
         return settings.get(UUID.fromString(jwt.getSubject()), key)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.noContent().build());
@@ -44,7 +44,7 @@ public class SettingsController {
 
     @PutMapping("/api/innstillinger/{key}")
     public ResponseEntity<JsonNode> put(@AuthenticationPrincipal Jwt jwt, @PathVariable String key, @RequestBody JsonNode value) {
-        if (!UserSettingsService.DASHBOARD.equals(key)) return ResponseEntity.notFound().build();
+        if (!UserSettingsService.isClientKey(key)) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(settings.put(UUID.fromString(jwt.getSubject()), key, value));
     }
 

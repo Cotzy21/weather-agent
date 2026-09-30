@@ -50,9 +50,36 @@ class SettingsControllerSecurityTest {
     }
 
     @Test
-    void onlyDashboardIsExposedAsAGenericSetting() throws Exception {
+    void onlyDashboardAndStreakAreExposedAsGenericSettings() throws Exception {
         mvc.perform(get("/api/innstillinger/program").with(jwt().jwt(j -> j.subject(USER))))
                 .andExpect(status().isNotFound());
+        mvc.perform(get("/api/innstillinger/noe-annet").with(jwt().jwt(j -> j.subject(USER))))
+                .andExpect(status().isNotFound());
+        mvc.perform(put("/api/innstillinger/program").with(jwt().jwt(j -> j.subject(USER)))
+                        .contentType("application/json").content("{\"startDate\":\"tull\",\"weeks\":1}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void theStreakSettingIsEmptyUntilSavedAndThenReturnsWhatWasStored() throws Exception {
+        when(settings.get(any(), eq("streak"))).thenReturn(Optional.empty());
+        mvc.perform(get("/api/innstillinger/streak").with(jwt().jwt(j -> j.subject(USER))))
+                .andExpect(status().isNoContent());
+
+        var stored = new com.fasterxml.jackson.databind.ObjectMapper().readTree("{\"goal\":4,\"pauses\":[\"2026-09-28\"]}");
+        when(settings.put(any(), eq("streak"), any())).thenReturn(stored);
+        mvc.perform(put("/api/innstillinger/streak").with(jwt().jwt(j -> j.subject(USER)))
+                        .contentType("application/json").content("{\"goal\":4,\"pauses\":[\"2026-09-28\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.goal").value(4))
+                .andExpect(jsonPath("$.pauses[0]").value("2026-09-28"));
+    }
+
+    @Test
+    void theStreakSettingRequiresAuthentication() throws Exception {
+        mvc.perform(get("/api/innstillinger/streak")).andExpect(status().isUnauthorized());
+        mvc.perform(put("/api/innstillinger/streak").contentType("application/json").content("{}"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { BodyweightCard, BodyweightSheet } from './Bodyweight.jsx'
 import LifetimeStats from './LifetimeStats.jsx'
 import DashboardCustomizer from './DashboardCustomizer.jsx'
+import StreakCard from './StreakCard.jsx'
+import { loadStreakSettings, storeStreakSettings, hasStoredStreakSettings, pullStreakSettings, pushStreakSettings } from './streakSettings.js'
 import { WIDGET_BY_ID, loadLayout, storeLayout, mergeLayout, hasStoredLayout } from './dashboardLayout.js'
 import { localIso } from './trainingStats.js'
 import { authHeaders } from './supabase'
@@ -40,6 +42,33 @@ export default function Dashboard({ session, onNavigate }) {
   const [showWeight, setShowWeight] = useState(false)
   const [layout, setLayout] = useState(() => loadLayout(session?.user?.id ?? 'anon'))
   const [customizing, setCustomizing] = useState(false)
+  const [streakSettings, setStreakSettings] = useState(() => loadStreakSettings(session?.user?.id ?? 'anon'))
+
+  // Ukeseriens mål og pauser følger kontoen (samme mønster som dashboard-oppsettet): lokal kopi først, server er fasit.
+  async function saveStreakSettings(next) {
+    const uid = session?.user?.id ?? 'anon'
+    setStreakSettings(next)
+    storeStreakSettings(uid, next)
+    if (!session) return
+    try {
+      const saved = await pushStreakSettings(next, await authHeaders())
+      setStreakSettings(saved)
+      storeStreakSettings(uid, saved)
+    } catch { /* offline: lokal kopi er lagret, neste endring prøver igjen */ }
+  }
+
+  async function syncStreakSettings() {
+    try {
+      const uid = session.user.id
+      const remote = await pullStreakSettings(await authHeaders())
+      if (remote) {
+        setStreakSettings(remote)
+        storeStreakSettings(uid, remote)
+      } else if (hasStoredStreakSettings(uid)) {
+        pushStreakSettings(loadStreakSettings(uid), await authHeaders()).catch(() => {}) // engangs: løft lokalt oppsett opp til kontoen
+      }
+    } catch { /* sekundært */ }
+  }
 
   function saveLayout(next) {
     setLayout(next)
@@ -79,6 +108,7 @@ export default function Dashboard({ session, onNavigate }) {
     loadNutrition()
     loadWeighIns()
     syncLayout()
+    syncStreakSettings()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, lang]) // lang: rådene fra backend kommer på valgt språk, så de hentes på nytt ved språkbytte
 
@@ -180,6 +210,7 @@ export default function Dashboard({ session, onNavigate }) {
         </div>
       </div>
     ),
+    streak: <StreakCard workouts={workouts} settings={streakSettings} today={isoToday()} onChange={saveStreakSettings} />,
     nutrition: (
       <button className="focus-card clickable" data-reveal onClick={() => onNavigate('kosthold')}>
         <span className="focus-head">{t('🥗 Kosthold i dag')}</span>

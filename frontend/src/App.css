@@ -851,6 +851,26 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .week-letter { font-size: var(--fs-xs); color: var(--muted); font-weight: 600; }
 .week-day.today .week-letter { color: var(--accent-strong); font-weight: 800; }
 
+/* Ukeserie-kortet: fremdriftsprikker for uka, ukestripe, hvilekort og kontroller. Tilgivende tone, ingen røde alarmer. */
+.streak-card { gap: 6px; }
+.streak-progress { display: flex; align-items: center; gap: 6px; }
+.streak-pip { width: 22px; height: 8px; border-radius: 4px; background: var(--tint); transition: background 0.3s; }
+.streak-pip.on { background: var(--gradient); }
+.streak-count { font-size: var(--fs-xs); margin-left: 4px; }
+.streak-message { color: var(--text); }
+.streak-repair { color: var(--accent-strong); font-weight: 600; }
+.streak-weeks { display: flex; gap: 6px; align-items: center; }
+.streak-dot { width: 22px; text-align: center; font-size: var(--fs-sm); line-height: 1; color: var(--muted); }
+.streak-dot.good, .streak-dot.comeback, .streak-dot.repaired { color: var(--accent-strong); }
+.streak-dot.current { color: var(--text); font-weight: 800; }
+.streak-stats { font-size: var(--fs-xs); }
+.streak-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; width: 100%; margin-top: 4px; }
+.streak-goal { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-sm); }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
 .today-col { display: flex; flex-direction: column; gap: 8px; }
 .today-col .detail-h3 { margin-top: 0; }
 .today-card {
