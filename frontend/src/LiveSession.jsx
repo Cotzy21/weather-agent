@@ -23,12 +23,14 @@ function beep(ctx) {
 }
 
 export default function LiveSession({ userId, initial, nextSets, fmtKg, onFinish, onCancel }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [s, setS] = useState(initial)
   const [now, setNow] = useState(() => Date.now())
   const [newName, setNewName] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const [infoOpen, setInfoOpen] = useState(null)
+  const [scrollTick, setScrollTick] = useState(0)
   const audio = useRef(null)
   const alerted = useRef(null)
 
@@ -75,12 +77,19 @@ export default function LiveSession({ userId, initial, nextSets, fmtKg, onFinish
     }
     audio.current?.resume?.()
     const start = Date.now()
+    if (!s.exercises[ei].sets[si].done) setScrollTick((n) => n + 1)
     edit((c) => {
       const set = c.exercises[ei].sets[si]
       set.done = !set.done
       if (set.done) c.restEnd = start + c.restSec * 1000
     })
   }
+
+  // Etter avhuking: rull neste sett inn i midten, så tommelen alltid treffer riktig rad.
+  useEffect(() => {
+    if (!scrollTick) return
+    document.querySelector('.live-set.current')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [scrollTick])
 
   function adjustRest(delta) {
     edit((c) => {
@@ -117,54 +126,89 @@ export default function LiveSession({ userId, initial, nextSets, fmtKg, onFinish
   const doneCount = allSets.filter((x) => x.done).length
   const inSession = new Set(s.exercises.map((e) => e.name.trim().toLowerCase()))
   const quickAdd = (nextSets || []).filter((x) => !inSession.has(x.exercise.toLowerCase()))
+  // Første sett som ikke er huket av = «nå»-settet som utheves.
+  let current = null
+  s.exercises.some((ex, ei) => {
+    const si = ex.sets.findIndex((x) => !x.done)
+    if (si >= 0) current = `${ei}-${si}`
+    return si >= 0
+  })
+  const currentNo = Math.min(doneCount + 1, allSets.length)
+
+  function endWorkout() {
+    const left = allSets.length - doneCount
+    if (doneCount > 0 && left > 0
+      && !window.confirm(t('Avslutte økta? {n} sett er ikke huket av og lagres ikke.', { n: left }))) return
+    finish()
+  }
 
   return (
     <div className="live">
-      <div className="live-head">
-        <input
-          className="live-title"
-          value={s.title}
-          placeholder={t('Styrkeøkt')}
-          onChange={(e) => { const v = e.target.value; edit((c) => { c.title = v }) }}
-        />
-        <div className="live-stats">
-          <span>⏱ {fmtClock(Math.max(0, Math.floor((now - s.startedAt) / 1000)))}</span>
-          <span>{t('{done}/{total} sett', { done: doneCount, total: allSets.length })}</span>
+      <div className="live-bar">
+        <div className="live-bar-row">
+          <span className="live-clock">{fmtClock(Math.max(0, Math.floor((now - s.startedAt) / 1000)))}</span>
+          <span className="live-bar-sep" aria-hidden="true" />
+          <span className="live-count">{t('Sett {n}/{total}', { n: currentNo, total: allSets.length })}</span>
+          <button className="live-end" disabled={busy} onClick={endWorkout}>
+            {busy ? t('Lagrer …') : t('Avslutt økt')}
+          </button>
         </div>
+        <div className="live-progress" aria-hidden="true">
+          <span style={{ width: `${allSets.length ? (doneCount / allSets.length) * 100 : 0}%` }} />
+        </div>
+        {error && <p className="error live-error">{error}</p>}
       </div>
+
+      <input
+        className="live-title"
+        value={s.title}
+        placeholder={t('Styrkeøkt')}
+        onChange={(e) => { const v = e.target.value; edit((c) => { c.title = v }) }}
+      />
 
       {s.exercises.map((ex, ei) => {
         const sug = ex.kind === 'dropset' ? null : findSuggestion(ex.name, nextSets)
+        const first = ex.sets[0]
+        const target = first
+          ? `${ex.sets.length} × ${first.reps || '–'}${first.weightKg ? ` · ${String(first.weightKg).replace('.', lang === 'en' ? '.' : ',')} kg` : ''}`
+          : ''
+        const showInfo = infoOpen === ei
         return (
           <div className="live-ex" key={ei}>
             <div className="live-ex-head">
-              <strong>{ex.name}{ex.kind === 'dropset' && <span className="muted"> · {t('dropsett')}</span>}</strong>
-              <button
-                className="del"
-                aria-label={t('Fjern øvelse')}
-                onClick={() => edit((c) => { c.exercises.splice(ei, 1) })}
-              >✕</button>
+              <span className="live-ex-name">
+                <strong>{ex.name}{ex.kind === 'dropset' && <span className="muted"> · {t('dropsett')}</span>}</strong>
+                <span className="muted live-target">{target}</span>
+              </span>
+              {sug && (
+                <button className={`live-info ${showInfo ? 'on' : ''}`} aria-label={t('Hvorfor dette målet?')}
+                        aria-expanded={showInfo} onClick={() => setInfoOpen(showInfo ? null : ei)}>i</button>
+              )}
+              <button className="del" aria-label={t('Fjern øvelse')}
+                      onClick={() => edit((c) => { c.exercises.splice(ei, 1) })}>✕</button>
             </div>
-            {sug && (
+            {sug && showInfo && (
               <p className="live-hint muted">
-                📈 {sug.nextWeightKg > 0 ? `${fmtKg(sug.nextWeightKg)} kg` : t('kroppsvekt')} × {sug.nextReps} · {sug.reason}
+                📈 {sug.lastWeightKg > 0 ? `${fmtKg(sug.lastWeightKg)} kg` : t('kroppsvekt')} × {sug.lastReps.join(', ')} → {sug.reason}
               </p>
             )}
+            <div className="live-grid live-grid-head" aria-hidden="true">
+              <span>{t('Sett')}</span><span>kg</span><span>{t('Reps')}</span><span>✓</span>
+            </div>
             {ex.sets.map((set, si) => (
-              <div className={`live-set ${set.done ? 'done' : ''}`} key={si}>
+              <div className={`live-grid live-set ${set.done ? 'done' : ''} ${current === `${ei}-${si}` ? 'current' : ''}`} key={si}>
                 <span className="live-set-no">{si + 1}</span>
                 <input
                   inputMode="decimal"
                   aria-label={t('Vekt (kg)')}
-                  placeholder="kg"
+                  placeholder="–"
                   value={set.weightKg}
                   onChange={(e) => { const v = e.target.value; edit((c) => { c.exercises[ei].sets[si].weightKg = v }) }}
                 />
-                <span className="muted">kg ×</span>
                 <input
                   inputMode="numeric"
                   aria-label={t('Reps')}
-                  placeholder="reps"
+                  placeholder="–"
                   value={set.reps}
                   onChange={(e) => { const v = e.target.value; edit((c) => { c.exercises[ei].sets[si].reps = v }) }}
                 />
@@ -212,11 +256,7 @@ export default function LiveSession({ userId, initial, nextSets, fmtKg, onFinish
         )}
       </div>
 
-      {error && <p className="error">{error}</p>}
-      <div className="live-actions">
-        <button className="primary" disabled={busy} onClick={finish}>{busy ? t('Lagrer …') : t('Fullfør økt')}</button>
-        <button onClick={cancel} disabled={busy}>{t('Avbryt')}</button>
-      </div>
+      <button className="live-cancel" onClick={cancel} disabled={busy}>{t('Avbryt økt uten å lagre')}</button>
 
       <div className={`live-rest ${restLeft === 0 ? 'over' : ''} ${restLeft ? 'running' : ''}`}>
         {restLeft === null && <span>{t('Pause')}: {fmtClock(s.restSec)}</span>}

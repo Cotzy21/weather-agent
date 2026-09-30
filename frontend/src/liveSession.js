@@ -31,9 +31,11 @@ export function findSuggestion(name, nextSets) {
 // Dropsett har synkende vekt per drop, så der brukes planen uendret.
 export function liveExercise(name, planSets, nextSets, kind = 'exercise') {
   const s = kind === 'dropset' ? null : findSuggestion(name, nextSets)
-  const count = planSets?.length || s?.sets || 3
+  // Eldre AI-planer lagret ett sett per øvelse; ett arbeidssett er nesten aldri meningen.
+  const planned = Math.max(planSets?.length || 0, s?.sets || 0)
+  const count = kind === 'exercise' && planned < 2 ? 3 : planned || 3
   const sets = Array.from({ length: count }, (_, i) => {
-    const p = planSets?.[i]
+    const p = planSets?.[i] ?? planSets?.[planSets.length - 1]
     const weight = s ? (s.nextWeightKg > 0 ? s.nextWeightKg : '') : (p?.weightKg || '')
     return { reps: String(s?.nextReps ?? p?.reps ?? ''), weightKg: String(weight), done: false }
   })
