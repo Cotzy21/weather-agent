@@ -1,10 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useI18n } from './i18n.jsx'
 import { saveLive, liveExercise, findSuggestion, toContent } from './liveSession.js'
 import ExercisePicker from './ExercisePicker.jsx'
 import ExerciseHistory from './ExerciseHistory.jsx'
 import { sameGroup, exerciseKey } from './exercises'
 import { priorBests, livePRSets } from './prDetection.js'
+import LiveFocus from './LiveFocus.jsx'
+import {
+  buildSteps, currentIndex, nextUndone, restAfter, adjustRestTimer, removeExercise, DEFAULT_REST_SEC,
+} from './liveFlow.js'
 
 const fmtClock = (sec) => {
   const h = Math.floor(sec / 3600)
@@ -30,7 +35,9 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
   const { t, lang } = useI18n()
   const [s, setS] = useState(initial)
   const [now, setNow] = useState(() => Date.now())
-  const [picking, setPicking] = useState(false)
+  // Fokusmodus (ett sett om gangen, hele skjermen) er standard; «Alle sett (liste)» viser hele økta på en gang.
+  const [view, setView] = useState('focus')
+  const [picker, setPicker] = useState(null) // { cb(name) }: øvelsesvelgeren, med det som skjer når en øvelse velges
   // Egen bekreftelse i appen: window.confirm vises ikke alltid i hjemskjerm-apper på iPhone.
   const [confirming, setConfirming] = useState(null) // null | 'discard' | 'end'
   const [busy, setBusy] = useState(false)
@@ -85,23 +92,66 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
   }, [restLeft, s.restEnd])
 
   function edit(fn) {
+    setNow(Date.now()) // klokka og nedtellingen skal stemme med en gang, ikke vente på neste sekund-tikk
     setS((prev) => { const c = structuredClone(prev); fn(c); return c })
   }
 
-  function toggleSet(ei, si) {
-    // Lyd må låses opp av et trykk (iOS), så AudioContext lages her.
+  // Lyd må låses opp av et trykk (iOS), så AudioContext lages ved første sett.
+  function unlockAudio() {
     if (!audio.current) {
       try { audio.current = new (window.AudioContext || window.webkitAudioContext)() } catch { /* ingen lyd */ }
     }
     audio.current?.resume?.()
-    const start = Date.now()
-    if (!s.exercises[ei].sets[si].done) setScrollTick((n) => n + 1)
+  }
+
+  // Fullfør et sett: huk av, finn neste sett, og start hvilen (supersett: ingen hvile mellom øvelsene i en runde, full hvile etter runden).
+  // Neste sett i samme øvelse arver kg/reps fra dette hvis det er tomt. Ingen hvile etter det siste settet.
+  function completeSet(ei, si) {
+    unlockAudio()
+    navigator.vibrate?.(30)
+    setScrollTick((n) => n + 1)
+    const start = Date.now() // samme tidspunkt for hvilens start som klokka, så nedtellingen starter på hele tallet (1:30, ikke 1:31)
     edit((c) => {
+      const steps = buildSteps(c.exercises)
+      const idx = steps.findIndex((st) => st.ei === ei && st.si === si)
       const set = c.exercises[ei].sets[si]
-      set.done = !set.done
-      if (set.done) c.restEnd = start + c.restSec * 1000
+      set.done = true
+      c.lastDone = { ei, si }
+      const nxt = nextUndone(c.exercises, steps, idx)
+      c.cursor = nxt >= 0 ? { ei: steps[nxt].ei, si: steps[nxt].si } : null
+      if (nxt >= 0) {
+        const n = steps[nxt]
+        const target = c.exercises[n.ei].sets[n.si]
+        if (n.ei === ei && target.reps === '' && target.weightKg === '') { target.reps = set.reps; target.weightKg = set.weightKg }
+      }
+      const secs = nxt >= 0 ? restAfter(c.exercises, steps, idx, { restSec: c.restSec ?? DEFAULT_REST_SEC }) : 0
+      c.restEnd = secs > 0 ? start + secs * 1000 : null
+      c.restTotal = secs > 0 ? secs : null
     })
   }
+
+  // Listevisningen: trykk på ✓ avhuker (som fullfør sett), eller angrer et avhuket sett.
+  function toggleSet(ei, si) {
+    if (!s.exercises[ei].sets[si].done) { completeSet(ei, si); return }
+    edit((c) => {
+      c.exercises[ei].sets[si].done = false
+      if (c.lastDone?.ei === ei && c.lastDone?.si === si) c.lastDone = null
+    })
+  }
+
+  // Angre siste fullførte sett: det blir «nå»-settet igjen, og hvilen avbrytes.
+  function undoLast() {
+    edit((c) => {
+      if (!c.lastDone) return
+      const { ei, si } = c.lastDone
+      if (c.exercises[ei]?.sets[si]) { c.exercises[ei].sets[si].done = false; c.cursor = { ei, si } }
+      c.lastDone = null
+      c.restEnd = null
+      c.restTotal = null
+    })
+  }
+
+  const skipRest = () => edit((c) => { c.restEnd = null; c.restTotal = null })
 
   // Etter avhuking: rull neste sett inn i midten, så tommelen alltid treffer riktig rad.
   useEffect(() => {
@@ -109,10 +159,11 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
     document.querySelector('.live-set.current')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [scrollTick])
 
+  // Pågår en hvile, justeres den (±sekunder). Ellers (listevisningens «Pause»-felt) justeres standardhvilen for økta.
   function adjustRest(delta) {
     edit((c) => {
-      c.restSec = Math.max(15, c.restSec + delta)
-      if (c.restEnd) c.restEnd = Math.max(Date.now(), c.restEnd + delta * 1000)
+      if (c.restEnd) Object.assign(c, adjustRestTimer(c, delta))
+      else c.restSec = Math.max(15, (c.restSec ?? DEFAULT_REST_SEC) + delta)
     })
   }
 
@@ -155,13 +206,10 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
   const allSets = s.exercises.flatMap((e) => e.sets)
   const doneCount = allSets.filter((x) => x.done).length
   const inSession = new Set(s.exercises.map((e) => exerciseKey(e.name)))
-  // Første sett som ikke er huket av = «nå»-settet som utheves.
-  let current = null
-  s.exercises.some((ex, ei) => {
-    const si = ex.sets.findIndex((x) => !x.done)
-    if (si >= 0) current = `${ei}-${si}`
-    return si >= 0
-  })
+  // «Nå»-settet som utheves (supersett vekselvis, ellers første sett som ikke er huket av).
+  const steps = buildSteps(s.exercises)
+  const ci = currentIndex(s.exercises, steps, s.cursor)
+  const current = ci >= 0 ? `${steps[ci].ei}-${steps[ci].si}` : null
   const currentNo = Math.min(doneCount + 1, allSets.length)
 
   function endWorkout() {
@@ -169,11 +217,83 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
     else finish()
   }
 
+  const extras = (
+    <>
+      {picker && (
+        <ExercisePicker
+          title={t('Legg til øvelse')}
+          mine={(nextSets || []).map((x) => x.exercise).filter((n) => !inSession.has(exerciseKey(n)))}
+          liked={(memory?.liked || []).filter((n) => !inSession.has(exerciseKey(n)))}
+          disliked={memory?.disliked}
+          onPick={(name) => { const cb = picker.cb; setPicker(null); cb(name.trim()) }}
+          onClose={() => setPicker(null)}
+        />
+      )}
+
+      {sheet?.kind === 'history' && s.exercises[sheet.ei] && (
+        <ExerciseHistory
+          name={s.exercises[sheet.ei].name}
+          planTitle={s.title}
+          workouts={workouts}
+          fmtKg={fmtKg}
+          onClose={() => setSheet(null)}
+        />
+      )}
+
+      {sheet?.kind === 'swap' && s.exercises[sheet.ei] && (
+        <ExercisePicker
+          title={t('Bytt {name}', { name: s.exercises[sheet.ei].name })}
+          recommended={sameGroup(s.exercises[sheet.ei].name).filter((n) => !inSession.has(exerciseKey(n)))}
+          mine={(nextSets || []).map((x) => x.exercise).filter((n) => !inSession.has(exerciseKey(n)))}
+          liked={(memory?.liked || []).filter((n) => !inSession.has(exerciseKey(n)))}
+          disliked={memory?.disliked}
+          onClose={() => setSheet(null)}
+          onPick={(name) => { swapExercise(sheet.ei, name); setSheet(null) }}
+        />
+      )}
+
+      {confirming && (
+        <div className="sheet-backdrop" onClick={() => setConfirming(null)}>
+          <div className="sheet confirm-sheet" role="alertdialog" onClick={(e) => e.stopPropagation()}>
+            <span className="sheet-handle" aria-hidden="true" />
+            <p className="confirm-text">
+              {confirming === 'discard'
+                ? t('Avbryte økta? Avhukede sett blir ikke lagret.')
+                : t('Avslutte økta? {n} sett er ikke huket av og lagres ikke.', { n: allSets.length - doneCount })}
+            </p>
+            <button
+              className={confirming === 'discard' ? 'confirm-danger' : 'primary'}
+              onClick={() => { const c = confirming; setConfirming(null); if (c === 'discard') onCancel(); else finish() }}
+            >{confirming === 'discard' ? t('Avbryt økt') : t('Avslutt og lagre')}</button>
+            <button className="confirm-keep" onClick={() => setConfirming(null)}>{t('Fortsett økta')}</button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+
+  if (view === 'focus') {
+    // Helskjerm over resten av appen (portal, så ingen foreldre-stil hindrer `position: fixed`).
+    return createPortal(
+      <LiveFocus
+        s={s} now={now} restLeft={restLeft} nextSets={nextSets} fmtKg={fmtKg} prSets={prSets} edit={edit}
+        onComplete={completeSet} onUndo={undoLast} onSkipRest={skipRest} onAdjustRest={adjustRest}
+        onOpenList={() => setView('list')} onEnd={endWorkout} onDiscard={() => setConfirming('discard')}
+        onHistory={(ei) => setSheet({ ei, kind: 'history' })} onSwap={(ei) => setSheet({ ei, kind: 'swap' })}
+        onPickExercise={(cb) => setPicker({ cb })} busy={busy} error={error}
+      >
+        {extras}
+      </LiveFocus>,
+      document.body,
+    )
+  }
+
 
   return (
     <div className="live">
       <div className="live-bar">
         <div className="live-bar-row">
+          <button className="live-end" onClick={() => setView('focus')}>🎯 {t('Fokus')}</button>
           <span className="live-clock">{fmtClock(Math.max(0, Math.floor((now - s.startedAt) / 1000)))}</span>
           <span className="live-bar-sep" aria-hidden="true" />
           <span className="live-count">{t('Sett {n}/{total}', { n: currentNo, total: allSets.length })}</span>
@@ -206,11 +326,11 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
           <div className="live-ex" key={ei}>
             <div className="live-ex-head">
               <span className="live-ex-name">
-                <strong>{ex.name}{ex.kind === 'dropset' && <span className="muted"> · {t('dropsett')}</span>}</strong>
+                <strong>{ex.name}{ex.kind === 'dropset' && <span className="muted"> · {t('dropsett')}</span>}{ex.group && <span className="muted"> · ⇄ {t('Supersett')}</span>}</strong>
                 <span className="muted live-target">{target}</span>
               </span>
               <button className="del" aria-label={t('Fjern øvelse')}
-                      onClick={() => edit((c) => { c.exercises.splice(ei, 1) })}>✕</button>
+                      onClick={() => edit((c) => { c.exercises = removeExercise(c.exercises, ei); c.cursor = null })}>✕</button>
             </div>
             <div className="live-actions-bar">
               {sug && (
@@ -282,60 +402,11 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
         )
       })}
 
-      <button className="live-add-btn" onClick={() => setPicking(true)}>＋ {t('Legg til øvelse')}</button>
+      <button className="live-add-btn" onClick={() => setPicker({ cb: addExercise })}>＋ {t('Legg til øvelse')}</button>
 
       <button className="live-cancel" onClick={() => setConfirming('discard')} disabled={busy}>{t('Avbryt økt uten å lagre')}</button>
 
-      {picking && (
-        <ExercisePicker
-          title={t('Legg til øvelse')}
-          mine={(nextSets || []).map((x) => x.exercise).filter((n) => !inSession.has(exerciseKey(n)))}
-          liked={(memory?.liked || []).filter((n) => !inSession.has(exerciseKey(n)))}
-          disliked={memory?.disliked}
-          onPick={(name) => { addExercise(name); setPicking(false) }}
-          onClose={() => setPicking(false)}
-        />
-      )}
-
-      {sheet?.kind === 'history' && s.exercises[sheet.ei] && (
-        <ExerciseHistory
-          name={s.exercises[sheet.ei].name}
-          planTitle={s.title}
-          workouts={workouts}
-          fmtKg={fmtKg}
-          onClose={() => setSheet(null)}
-        />
-      )}
-
-      {sheet?.kind === 'swap' && s.exercises[sheet.ei] && (
-        <ExercisePicker
-          title={t('Bytt {name}', { name: s.exercises[sheet.ei].name })}
-          recommended={sameGroup(s.exercises[sheet.ei].name).filter((n) => !inSession.has(exerciseKey(n)))}
-          mine={(nextSets || []).map((x) => x.exercise).filter((n) => !inSession.has(exerciseKey(n)))}
-          liked={(memory?.liked || []).filter((n) => !inSession.has(exerciseKey(n)))}
-          disliked={memory?.disliked}
-          onClose={() => setSheet(null)}
-          onPick={(name) => { swapExercise(sheet.ei, name); setSheet(null) }}
-        />
-      )}
-
-      {confirming && (
-        <div className="sheet-backdrop" onClick={() => setConfirming(null)}>
-          <div className="sheet confirm-sheet" role="alertdialog" onClick={(e) => e.stopPropagation()}>
-            <span className="sheet-handle" aria-hidden="true" />
-            <p className="confirm-text">
-              {confirming === 'discard'
-                ? t('Avbryte økta? Avhukede sett blir ikke lagret.')
-                : t('Avslutte økta? {n} sett er ikke huket av og lagres ikke.', { n: allSets.length - doneCount })}
-            </p>
-            <button
-              className={confirming === 'discard' ? 'confirm-danger' : 'primary'}
-              onClick={() => { const c = confirming; setConfirming(null); if (c === 'discard') onCancel(); else finish() }}
-            >{confirming === 'discard' ? t('Avbryt økt') : t('Avslutt og lagre')}</button>
-            <button className="confirm-keep" onClick={() => setConfirming(null)}>{t('Fortsett økta')}</button>
-          </div>
-        </div>
-      )}
+      {extras}
 
       <div className={`live-rest ${restLeft === 0 ? 'over' : ''} ${restLeft ? 'running' : ''}`}>
         {restLeft === null && <span>{t('Pause')}: {fmtClock(s.restSec)}</span>}

@@ -46,6 +46,14 @@ Dockerfile + PORT-config for backend-deploy finnes.
   ▶ Start og fullført: styrke via live-økta (`LiveSession`), alt annet (løping, sykkel, tur, svømming, buldring, kampsport, fristil) via
   `ActivitySession` (klokke, mål fra malen, bekreft distanse/varighet ved fullføring). Begge går gjennom samme offline-kø
   (`POST /api/treningsokter`). Garmin-import er den eneste andre veien til en logget økt.
+- **Live-økta i fokusmodus** (2026-10-01, `LiveFocus.jsx` + `liveFlow.js`): ▶ på en økt åpner en HELSKJERMS fokusvisning med ÉN øvelse og ÉTT sett
+  om gangen (store kg/reps-knapper, «Fullfør sett»). Etter hvert sett kommer en hvileskjerm med nedtelling (ring), −15/+15 s, «Hopp over
+  hvile», neste opp (kg/reps kan justeres allerede) og «Angre forrige sett». **Hvile etter hvert sett**, standard 90 s, kan endres underveis:
+  per øvelse eller for hele økta (30 s–5 min), og pågående hvile justeres med ±15 s. **Supersett** (felles `group` på øvelsene) gjøres
+  vekselvis A1, B1, A2, B2 … uten hvile mellom øvelsene og full hvile etter runden; supersett fra planer beholdes, og du kan lage/løse opp et
+  supersett DYNAMISK midt i økta («Lag supersett» → en av øvelsene som kommer, eller en ny). «Neste øvelser» (☰) viser rekkefølgen med
+  fremdrift og lar deg hoppe til en øvelse, flytte den sist, fjerne den eller lage supersett. Menyen (✕): alle sett som liste (den gamle
+  visningen, med 🎯 Fokus-knapp), avslutt og lagre, avbryt. Supersett lagres som én supersett-blokk i historikken. Kommende: hvile satt i selve malen.
 - **Start-skjermen** (`WorkoutStart.jsx`): tom styrkeøkt, annen aktivitet, «Planlagt i dag», og malene sortert etter **kategori = økttype**
   (`workoutCategories.js`: Styrke, Løping, Svømming, Sykkel, Buldring, Kampsport, Hiking, Fristil) med søk (tittel, type, øvelse) og «sist
   gjort». Innen en kategori: sist brukt først, så alfabetisk. Taket på lagrede økter er 100.

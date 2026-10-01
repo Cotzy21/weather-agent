@@ -54,15 +54,19 @@ export function liveExercise(name, planSets, nextSets, kind = 'exercise') {
   return { kind, name, sets }
 }
 
-// Supersett foldes ut til vanlige øvelser (runder × sett) - enklere å huke av på mobil.
+// Supersett foldes ut til øvelser (runder × sett) som henger sammen med en felles `group`: de gjøres vekselvis (A1, B1, A2, B2 …)
+// med hvile først etter hver runde (se liveFlow.js).
 export function fromPlan(content, nextSets) {
   const out = []
   for (const b of content?.blocks || []) {
     if (b.kind === 'superset') {
       const rounds = Math.max(1, Number(b.rounds) || 1)
+      const group = (b.exercises || []).length > 1 ? newId() : undefined
       for (const e of b.exercises || []) {
         const sets = Array.from({ length: rounds }, () => e.sets || []).flat()
-        out.push(liveExercise(e.name || '', sets, nextSets))
+        const ex = liveExercise(e.name || '', sets, nextSets)
+        if (group) ex.group = group
+        out.push(ex)
       }
     } else if (b.kind === 'dropset') {
       out.push(liveExercise(b.name || '', b.drops, nextSets, 'dropset'))
@@ -73,18 +77,40 @@ export function fromPlan(content, nextSets) {
   return out
 }
 
-// Bare avhukede sett lagres. durationMin gir ekte kaloriberegning i backend.
+// Bare avhukede sett lagres. durationMin gir ekte kaloriberegning i backend. Øvelser som er et supersett (felles `group`) lagres som
+// ÉN supersett-blokk, så det syns i historikken at de ble gjort sammen.
 export function toContent(exercises, startedAt, now = Date.now()) {
-  const blocks = exercises
-    .map((e) => {
-      const done = e.sets
-        .filter((s) => s.done && s.reps !== '')
-        .map((s) => ({ reps: toNum(s.reps), weightKg: toNum(s.weightKg) || 0 }))
-      const block = { kind: e.kind, name: e.name.trim(), [e.kind === 'dropset' ? 'drops' : 'sets']: done }
-      if (e.note?.trim()) block.note = e.note.trim()
-      return block
-    })
-    .filter((b) => b.name && (b.sets || b.drops).length)
+  const doneSets = (e) => e.sets
+    .filter((s) => s.done && s.reps !== '')
+    .map((s) => ({ reps: toNum(s.reps), weightKg: toNum(s.weightKg) || 0 }))
+  const plain = (e, sets) => {
+    const block = { kind: e.kind, name: e.name.trim(), [e.kind === 'dropset' ? 'drops' : 'sets']: sets }
+    if (e.note?.trim()) block.note = e.note.trim()
+    return block
+  }
+  const blocks = []
+  const emitted = new Set()
+  for (const e of exercises) {
+    if (e.group) {
+      if (emitted.has(e.group)) continue
+      emitted.add(e.group)
+      const members = exercises
+        .filter((m) => m.group === e.group && m.name.trim() && doneSets(m).length)
+        .map((m) => ({ m, sets: doneSets(m) }))
+      if (members.length > 1) {
+        blocks.push({
+          kind: 'superset',
+          rounds: 1,
+          exercises: members.map(({ m, sets }) => ({ name: m.name.trim(), sets, ...(m.note?.trim() ? { note: m.note.trim() } : {}) })),
+        })
+      } else if (members.length === 1) {
+        blocks.push(plain(members[0].m, members[0].sets))
+      }
+      continue
+    }
+    const sets = doneSets(e)
+    if (e.name.trim() && sets.length) blocks.push(plain(e, sets))
+  }
   return { blocks, durationMin: Math.max(1, Math.round((now - startedAt) / 60000)) }
 }
 
