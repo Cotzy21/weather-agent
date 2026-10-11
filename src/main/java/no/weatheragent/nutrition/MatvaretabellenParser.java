@@ -1,6 +1,13 @@
 package no.weatheragent.nutrition;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.StreamReadConstraints;
+
+import java.io.IOException;
+import java.io.InputStream;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,7 +32,40 @@ import java.util.Map;
  */
 public final class MatvaretabellenParser {
 
+    private static final ObjectMapper STREAM_MAPPER = new ObjectMapper(JsonFactory.builder()
+            .streamReadConstraints(StreamReadConstraints.builder()
+                    .maxDocumentLength(32L * 1024 * 1024).maxStringLength(100_000).build())
+            .build());
+    private static final int MAX_FOODS = 10_000;
+
     private MatvaretabellenParser() {
+    }
+
+    /** Keep only one food's JSON tree in memory, rather than the entire 14 MB document. */
+    public static List<FoodItem> parse(InputStream input) throws IOException {
+        List<FoodItem> foods = new ArrayList<>();
+        boolean found = false;
+        try (var parser = STREAM_MAPPER.createParser(input)) {
+            if (parser.nextToken() != JsonToken.START_OBJECT) throw new IOException("Expected food document object");
+            while (parser.nextToken() != JsonToken.END_OBJECT) {
+                if (parser.currentToken() != JsonToken.FIELD_NAME) throw new IOException("Invalid food document");
+                String field = parser.currentName();
+                parser.nextToken();
+                if (!"foods".equals(field)) {
+                    parser.skipChildren();
+                    continue;
+                }
+                if (found || parser.currentToken() != JsonToken.START_ARRAY) throw new IOException("Invalid foods array");
+                found = true;
+                while (parser.nextToken() != JsonToken.END_ARRAY) {
+                    if (parser.currentToken() != JsonToken.START_OBJECT) throw new IOException("Invalid food entry");
+                    if (foods.size() >= MAX_FOODS) throw new IOException("Too many food entries");
+                    foods.add(parseFood(STREAM_MAPPER.readTree(parser)));
+                }
+            }
+            if (!found || parser.nextToken() != null) throw new IOException("Invalid food document");
+        }
+        return List.copyOf(foods);
     }
 
     public static List<FoodItem> parse(JsonNode root) {

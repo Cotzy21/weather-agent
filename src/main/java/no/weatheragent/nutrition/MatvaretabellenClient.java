@@ -1,10 +1,10 @@
 package no.weatheragent.nutrition;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import no.weatheragent.support.Retry;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.DefaultResponseErrorHandler;
 
 import java.util.List;
 
@@ -34,12 +34,16 @@ public class MatvaretabellenClient {
                 .build();
     }
 
-    @Cacheable("foods")
+    @Cacheable(value = "foods", sync = true)
     public List<FoodItem> allFoods() {
-        JsonNode root = Retry.withRetry(MAX_ATTEMPTS, BACKOFF_MS, () -> http.get()
+        return Retry.withRetry(MAX_ATTEMPTS, BACKOFF_MS, () -> http.get()
                 .uri("/nb/foods.json")
-                .retrieve()
-                .body(JsonNode.class));
-        return MatvaretabellenParser.parse(root);
+                .exchange((request, response) -> {
+                    // exchange bypasses retrieve's error handlers; retain 5xx retry behavior.
+                    if (response.getStatusCode().isError()) {
+                        new DefaultResponseErrorHandler().handleError(request.getURI(), request.getMethod(), response);
+                    }
+                    return MatvaretabellenParser.parse(response.getBody());
+                }));
     }
 }

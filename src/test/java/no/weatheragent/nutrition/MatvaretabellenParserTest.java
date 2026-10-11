@@ -5,9 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class MatvaretabellenParserTest {
 
@@ -61,5 +65,33 @@ class MatvaretabellenParserTest {
         // "Vit E" mangler quantity i kilden -> skal ikke inn i kartet, leses som 0.
         assertTrue(!melk.nutrientsPer100g().containsKey("Vit E"));
         assertEquals(0.0, melk.nutrient("Vit E"));
+    }
+
+    @Test
+    void streamingMatchesExistingNutrientsPortionsAndKeywords() throws Exception {
+        assertEquals(MatvaretabellenParser.parse(new ObjectMapper().readTree(SAMPLE)), stream(SAMPLE));
+    }
+
+    @Test
+    void skipsUnneededMetadataBeforeAndAfterFoods() throws Exception {
+        assertEquals(stream(SAMPLE), stream(SAMPLE.replace("{\"foods\":", "{\"metadata\":{\"foods\":[1]},\"foods\":")
+                .stripTrailing().replaceFirst("}$", ",\"other\":[{\"large\":\"ignored\"}]}")));
+    }
+
+    @Test
+    void rejectsMissingMalformedTruncatedOrDuplicateFoodArray() {
+        for (String json : List.of("{}", "[]", "{\"foods\":null}", "{\"foods\":[null]}",
+                "{\"foods\":[{}", "{\"foods\":[],\"foods\":[]}", "{\"foods\":[]} {}")) {
+            assertThrows(IOException.class, () -> stream(json), json);
+        }
+    }
+
+    @Test
+    void limitsRetainedFoodEntries() {
+        assertThrows(IOException.class, () -> stream("{\"foods\":[" + "{},".repeat(10_000) + "{}]}"));
+    }
+
+    private static List<FoodItem> stream(String json) throws IOException {
+        return MatvaretabellenParser.parse(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
     }
 }
