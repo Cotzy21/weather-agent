@@ -39,6 +39,9 @@ class TrainingControllerSecurityTest {
     private TrainingPlanService plans;
 
     @MockitoBean
+    private no.weatheragent.training.TrainingPlanBatchService planBatches;
+
+    @MockitoBean
     private WorkoutImportService importer;
 
     @MockitoBean
@@ -235,5 +238,37 @@ class TrainingControllerSecurityTest {
         mvc.perform(get("/api/trening/planer")
                         .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
                 .andExpect(status().isOk());
+    }
+    @Test
+    void batchRequiresAuthentication() throws Exception {
+        mvc.perform(post("/api/trening/planer/batch").contentType("application/json")
+                .content("{}" )).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void batchRejectsEmptyWorkouts() throws Exception {
+        mvc.perform(post("/api/trening/planer/batch")
+                .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111")))
+                .contentType("application/json")
+                .content("{\"clientId\":\"22222222-2222-2222-2222-222222222222\",\"workouts\":[]}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void batchUsesAuthenticatedOwnerAndValidatesNestedWorkouts() throws Exception {
+        mvc.perform(post("/api/trening/planer/batch")
+                .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111")))
+                .contentType("application/json")
+                .content("{\"clientId\":\"22222222-2222-2222-2222-222222222222\",\"workouts\":[{\"title\":\"\",\"type\":\"STYRKE\"}]}"))
+                .andExpect(status().isBadRequest());
+        when(planBatches.save(any(), any(), any())).thenReturn(List.of());
+        mvc.perform(post("/api/trening/planer/batch")
+                .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111")))
+                .contentType("application/json")
+                .content("{\"clientId\":\"22222222-2222-2222-2222-222222222222\",\"workouts\":[{\"title\":\"A\",\"type\":\"STYRKE\"}]}"))
+                .andExpect(status().isOk());
+        org.mockito.Mockito.verify(planBatches).save(
+                org.mockito.ArgumentMatchers.eq(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111")),
+                org.mockito.ArgumentMatchers.eq(java.util.UUID.fromString("22222222-2222-2222-2222-222222222222")), any());
     }
 }

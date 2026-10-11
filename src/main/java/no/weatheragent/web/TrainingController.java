@@ -63,6 +63,8 @@ public class TrainingController {
     private final WorkoutService workouts;
     private final WorkoutSuggester suggester;
     private final TrainingPlanService plans;
+
+    private final no.weatheragent.training.TrainingPlanBatchService planBatches;
     private final WorkoutImportService importer;
     private final ReadinessService readiness;
     private final TrainingMemoryService memory;
@@ -71,13 +73,15 @@ public class TrainingController {
     private final no.weatheragent.training.ExerciseMatchService exerciseMatch;
 
     public TrainingController(WorkoutService workouts, WorkoutSuggester suggester,
-                              TrainingPlanService plans, WorkoutImportService importer,
+                              TrainingPlanService plans, no.weatheragent.training.TrainingPlanBatchService planBatches,
+                              WorkoutImportService importer,
                               ReadinessService readiness, TrainingMemoryService memory,
                               TrainingProfileService profiles, AiRateLimiter aiLimit,
                               no.weatheragent.training.ExerciseMatchService exerciseMatch) {
         this.workouts = workouts;
         this.suggester = suggester;
         this.plans = plans;
+        this.planBatches = planBatches;
         this.importer = importer;
         this.readiness = readiness;
         this.memory = memory;
@@ -254,6 +258,13 @@ public class TrainingController {
         return TrainingPlanDto.from(plans.save(
                 UUID.fromString(jwt.getSubject()),
                 request.title(), request.type(), content, request.rationale()));
+    }
+
+    /** Accept every workout together; retries return the original saved plans. */
+    @PostMapping("/api/trening/planer/batch")
+    public List<TrainingPlanDto> savePlanBatch(@AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody no.weatheragent.web.dto.SavePlanBatchRequest request) {
+        return planBatches.save(UUID.fromString(jwt.getSubject()), request.clientId(), request.workouts());
     }
 
     @GetMapping("/api/trening/planer")

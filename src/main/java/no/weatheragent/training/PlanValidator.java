@@ -60,6 +60,10 @@ public final class PlanValidator {
         Set<String> reportedEquipment = new HashSet<>();
         Set<String> reportedDisliked = new HashSet<>();
         for (Suggestion w : plan.workouts()) {
+            if (emptyStrength(w)) {
+                out.add(new Violation("«" + w.title() + "» mangler øvelser. Lag en komplett styrkeøkt.",
+                        "\"" + w.title() + "\" has no exercises. Create a complete strength workout.", false));
+            }
             for (String name : exerciseNames(w)) {
                 String key = ExerciseCatalog.groupKey(name);
                 if (have != null && ExerciseCatalog.missingEquipment(name, have) && reportedEquipment.add(key)) {
@@ -126,7 +130,8 @@ public final class PlanValidator {
                 ArrayNode kept = obj.arrayNode();
                 for (JsonNode b : content.path("blocks")) {
                     if ("superset".equals(b.path("kind").asText(""))) {
-                        if (b instanceof ObjectNode sup && b.path("exercises").isArray()) {
+                        if (b instanceof ObjectNode originalSup && b.path("exercises").isArray()) {
+                            ObjectNode sup = originalSup.deepCopy();
                             ArrayNode ex = sup.arrayNode();
                             b.path("exercises").forEach(e -> {
                                 if (!bad(e.path("name").asText(""), have, dislikedKeys)) ex.add(e);
@@ -149,6 +154,10 @@ public final class PlanValidator {
             fixed.add(new Suggestion(w.title(), w.type(), content, w.rationale()));
         }
         return new PlanSuggestion(plan.title(), plan.summary(), fixed);
+    }
+
+    static boolean emptyStrength(Suggestion workout) {
+        return "STYRKE".equals(workout.type()) && exerciseNames(workout).isEmpty();
     }
 
     private static boolean bad(String name, Set<String> have, Set<String> disliked) {

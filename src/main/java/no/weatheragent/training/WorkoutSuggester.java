@@ -47,23 +47,32 @@ public class WorkoutSuggester {
     public Suggestion suggest(UUID userId, String focus, String type, String lang) {
         String history = recentHistory(userId);
         // Forslag krever resonnering over historikken (progressiv overload) -> smart modell, sterkest for nybegynnere.
-        String raw = llm.complete(profiles.tierFor(userId), systemPrompt(), userPrompt(focus, type, history) + languageLine(lang));
+        String system = systemPrompt();
+        String user = userPrompt(focus, type, history) + languageLine(lang);
+        String raw = llm.complete(profiles.tierFor(userId), system, user);
         try {
             JsonNode json = mapper.readTree(extractJson(raw));
-            String resolvedType = json.path("type").asText("");
-            if (resolvedType.isBlank()) {
-                resolvedType = (type == null || type.isBlank()) ? "STYRKE" : type;
-            }
-            String upperType = resolvedType.toUpperCase(Locale.ROOT);
-            JsonNode content = json.path("content").isObject() ? json.get("content") : mapper.createObjectNode();
-            return new Suggestion(
-                    json.path("title").asText("Forslag"),
-                    upperType,
-                    normalizeSets(upperType, content),
-                    json.path("rationale").asText(""));
+            Suggestion suggestion = parseSuggestion(json, type);
+            PlanSuggestion checked = enforce(userId,
+                    new PlanSuggestion(suggestion.title(), "", List.of(suggestion)),
+                    focus, lang, system, user, raw, true);
+            Suggestion result = checked.workouts().getFirst();
+            return new Suggestion(result.title(), result.type(), result.content(),
+                    result.rationale() + checked.summary());
+        } catch (AiSuggestionException e) {
+            throw e;
         } catch (Exception e) {
             throw new AiSuggestionException("Klarte ikke å tolke AI-forslaget. Prøv igjen.");
         }
+    }
+
+    private Suggestion parseSuggestion(JsonNode json, String fallbackType) {
+        String type = json.path("type").asText("");
+        if (type.isBlank()) type = fallbackType == null || fallbackType.isBlank() ? "STYRKE" : fallbackType;
+        type = type.toUpperCase(Locale.ROOT);
+        JsonNode content = json.path("content").isObject() ? json.get("content") : mapper.createObjectNode();
+        return new Suggestion(json.path("title").asText("Forslag"), type,
+                normalizeSets(type, content), json.path("rationale").asText(""));
     }
 
     /**
@@ -82,7 +91,7 @@ public class WorkoutSuggester {
             if (plan == null) {
                 throw new AiSuggestionException("Klarte ikke å lage en plan. Beskriv ønsket tydeligere.");
             }
-            return enforce(userId, plan, request, lang, system, user, raw);
+            return enforce(userId, plan, request, lang, system, user, raw, false);
         } catch (AiSuggestionException e) {
             throw e;
         } catch (Exception e) {
@@ -113,7 +122,7 @@ public class WorkoutSuggester {
 
             PlanSuggestion plan = parsePlan(json.path("plan"));
             if (plan != null) {
-                plan = enforce(userId, plan, conversationText(messages), lang, system, prompt, raw);
+                plan = enforce(userId, plan, conversationText(messages), lang, system, prompt, raw, false);
             }
 
             String reply = json.path("reply").asText("");
@@ -150,7 +159,7 @@ public class WorkoutSuggester {
      * utstyr/liker-ikke deterministisk, og resten (dager) blir en advarsel i sammendraget.
      */
     private PlanSuggestion enforce(UUID userId, PlanSuggestion plan, String requestText, String lang,
-                                   String system, String user, String previousRaw) {
+                                   String system, String user, String previousRaw, boolean singleWorkout) {
         PlanValidator.Context ctx = new PlanValidator.Context(
                 profiles.find(userId).map(TrainingProfileData::equipment).orElse(null),
                 memory.profile(userId, LocalDate.now(ZoneId.of("Europe/Oslo"))).disliked(),
@@ -165,11 +174,16 @@ public class WorkoutSuggester {
         fix.append("\nForrige svar:\n").append(previous);
         try {
             String retryRaw = llm.complete(LlmTier.PRO, system, user + fix);
-            PlanSuggestion retried = parsePlan(mapper.readTree(extractJson(retryRaw)));
-            // parsePlan gjelder planer med workouts-array; assistenten pakker planen i "plan".
-            if (retried == null) {
-                JsonNode wrapped = mapper.readTree(extractJson(retryRaw)).path("plan");
-                retried = parsePlan(wrapped);
+            JsonNode retryJson = mapper.readTree(extractJson(retryRaw));
+            PlanSuggestion retried;
+            if (singleWorkout) {
+                retried = retryJson.has("content")
+                        ? new PlanSuggestion(plan.title(), "", List.of(parseSuggestion(retryJson, plan.workouts().getFirst().type())))
+                        : null;
+            } else {
+                retried = parsePlan(retryJson);
+                // parsePlan gjelder planer med workouts-array; assistenten pakker planen i "plan".
+                if (retried == null) retried = parsePlan(retryJson.path("plan"));
             }
             if (retried != null) plan = retried;
         } catch (Exception e) {
@@ -177,6 +191,11 @@ public class WorkoutSuggester {
         }
         plan = PlanValidator.repair(plan, ctx);
         List<PlanValidator.Violation> left = PlanValidator.check(plan, ctx);
+        if (plan.workouts().stream().anyMatch(PlanValidator::emptyStrength)) {
+            throw new AiSuggestionException("en".equalsIgnoreCase(lang)
+                    ? "I couldn't make a complete workout with your equipment and preferences. Try a simpler request."
+                    : "Jeg klarte ikke å lage en komplett økt med utstyret og ønskene dine. Prøv en enklere forespørsel.");
+        }
         if (left.isEmpty()) return plan;
         return new PlanSuggestion(plan.title(),
                 plan.summary() + PlanValidator.warning(left, "en".equalsIgnoreCase(lang)), plan.workouts());

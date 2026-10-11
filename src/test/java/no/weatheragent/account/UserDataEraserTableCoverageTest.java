@@ -39,6 +39,8 @@ class UserDataEraserTableCoverageTest {
             entityTables.add(table != null ? table.name() : entity.getName().toLowerCase());
         }
         entityTables.removeAll(SHARED_TABLES);
+        // Receipts are accessed through JDBC, without a JPA entity.
+        entityTables.add("training_plan_batches");
 
         assertEquals(new TreeSet<>(UserDataEraser.coveredTables()), entityTables,
                 "UserDataEraser.OWNED_TABLES og entitetene i appen må være like");

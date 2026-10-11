@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPlanAcceptor } from './planAcceptance.js'
 import { authHeaders } from './supabase'
 import { apiUrl, readError, cachedGet, getCached } from './api'
 import MusclePicker from './MusclePicker'
@@ -334,20 +335,26 @@ export default function TrainingView({ session }) {
     } catch { /* sekundært – behold cachet */ }
   }
 
-  // Aksepter planen: lagre HVER økt som en gjenbrukbar plan i profilen.
+  const [acceptPlanRequest] = useState(() => createPlanAcceptor({
+    newId,
+    send: async (body) => {
+      const res = await fetch(apiUrl('/api/trening/planer/batch'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body,
+      })
+      if (!res.ok) throw new Error(await readError(res))
+      return res.json()
+    },
+  }))
+
+  // Aksepter planen: lagre alle øktene samlet som gjenbrukbare maler i profilen.
   async function acceptPlan() {
     if (!aiPlan) return
     setAiSaving(true)
     setAiError(null)
     try {
-      for (const w of aiPlan.workouts) {
-        const res = await fetch(apiUrl('/api/trening/planer'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-          body: JSON.stringify({ title: w.title, type: w.type, content: w.content, rationale: w.rationale || null }),
-        })
-        if (!res.ok) throw new Error(await readError(res))
-      }
+      await acceptPlanRequest(aiPlan)
       setAiPlan(null)
       setAiFocus('')
       setAiMessages([])

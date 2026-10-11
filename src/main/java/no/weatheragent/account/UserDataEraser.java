@@ -29,6 +29,7 @@ public class UserDataEraser {
     static final List<OwnedTable> OWNED_TABLES = List.of(
             new OwnedTable("workouts", "user_id"),
             new OwnedTable("training_plans", "user_id"),
+            new OwnedTable("training_plan_batches", "user_id"),
             new OwnedTable("training_memory", "user_id"),
             new OwnedTable("training_profile", "user_id"),
             new OwnedTable("user_settings", "user_id"),

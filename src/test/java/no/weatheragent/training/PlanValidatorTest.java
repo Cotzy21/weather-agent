@@ -137,4 +137,25 @@ class PlanValidatorTest {
         assertTrue(content.contains("Bicepscurl"));
         assertTrue(PlanValidator.check(fixed, ctx).isEmpty());
     }
+    @Test
+    void repairedEmptyWorkoutRemainsAReportedViolation() {
+        var context = ctx("BODYWEIGHT", "");
+        var repaired = PlanValidator.repair(plan(strength("Push", "mandag", "Benkpress")), context);
+        assertEquals(0, repaired.workouts().getFirst().content().path("blocks").size());
+        assertEquals(1, PlanValidator.check(repaired, context).size());
+        assertTrue(PlanValidator.check(repaired, context).getFirst().messageEn().contains("no exercises"));
+    }
+
+    @Test
+    void repairingSupersetDoesNotMutateOriginalSuggestion() {
+        var workout = new Suggestion("Pull", "STYRKE", json("""
+                {"blocks":[{"kind":"superset","exercises":[
+                {"name":"Face Pulls","sets":[{"reps":8}]},
+                {"name":"Push-ups","sets":[{"reps":8}]}]}]}
+                """), "");
+        String before = workout.content().toString();
+        var repaired = PlanValidator.repair(plan(workout), ctx("BODYWEIGHT", ""));
+        assertEquals(before, workout.content().toString());
+        assertEquals("Push-ups", repaired.workouts().getFirst().content().path("blocks").get(0).path("name").asText());
+    }
 }

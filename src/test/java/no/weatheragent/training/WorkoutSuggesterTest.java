@@ -42,7 +42,7 @@ class WorkoutSuggesterTest {
         when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(readiness.promptContext(user)).thenReturn("\nSøvn siste netter: 2026-09-29 5.0 t\nDagsform i dag (fra søvn): LAV");
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn(
-                "{\"title\":\"Rolig\",\"type\":\"STYRKE\",\"content\":{\"blocks\":[]},\"rationale\":\"\"}");
+                "{\"title\":\"Rolig\",\"type\":\"STYRKE\",\"content\":{\"blocks\":[{\"kind\":\"exercise\",\"name\":\"Push-ups\",\"sets\":[{\"reps\":8,\"weightKg\":0}]}]},\"rationale\":\"\"}");
 
         suggester.suggest(user, "styrke", "STYRKE", null);
 
@@ -57,7 +57,7 @@ class WorkoutSuggesterTest {
         when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(memory.promptContext(eq(user), any())).thenReturn("\nBrukerminne:\n- Liker IKKE (ikke foreslå): Burpees");
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn(
-                "{\"title\":\"Økt\",\"type\":\"STYRKE\",\"content\":{\"blocks\":[]},\"rationale\":\"\"}");
+                "{\"title\":\"Økt\",\"type\":\"STYRKE\",\"content\":{\"blocks\":[{\"kind\":\"exercise\",\"name\":\"Push-ups\",\"sets\":[{\"reps\":8,\"weightKg\":0}]}]},\"rationale\":\"\"}");
 
         suggester.suggest(user, "styrke", "STYRKE", null);
 
@@ -102,8 +102,8 @@ class WorkoutSuggesterTest {
                 {"title":"Push/Pull/Legs","summary":"3-dagers split.",
                  "workouts":[
                    {"title":"Push","type":"styrke","content":{"blocks":[{"kind":"exercise","name":"Benkpress","sets":[{"reps":8,"weightKg":70}]}]},"rationale":"Bryst/skulder/triceps."},
-                   {"title":"Pull","type":"STYRKE","content":{"blocks":[]},"rationale":"Rygg/biceps."},
-                   {"title":"Legs","type":"STYRKE","content":{"blocks":[]},"rationale":"Bein."}
+                   {"title":"Pull","type":"STYRKE","content":{"blocks":[{"kind":"exercise","name":"Push-ups","sets":[{"reps":8,"weightKg":0}]}]},"rationale":"Rygg/biceps."},
+                   {"title":"Legs","type":"STYRKE","content":{"blocks":[{"kind":"exercise","name":"Push-ups","sets":[{"reps":8,"weightKg":0}]}]},"rationale":"Bein."}
                  ]}
                 """);
 
@@ -122,7 +122,7 @@ class WorkoutSuggesterTest {
         when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         StringBuilder ws = new StringBuilder();
         for (int i = 0; i < 12; i++) {
-            ws.append(i > 0 ? "," : "").append("{\"title\":\"Økt ").append(i).append("\",\"type\":\"STYRKE\",\"content\":{}}");
+            ws.append(i > 0 ? "," : "").append("{\"title\":\"Økt ").append(i).append("\",\"type\":\"STYRKE\",\"content\":{\"blocks\":[{\"name\":\"Push-ups\",\"sets\":[{\"reps\":8}]}]}}");
         }
         when(llm.complete(eq(LlmTier.SMART), any(), any()))
                 .thenReturn("{\"title\":\"Stor plan\",\"summary\":\"\",\"workouts\":[" + ws + "]}");
@@ -163,8 +163,8 @@ class WorkoutSuggesterTest {
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("""
                 {"reply":"Her er et opplegg.","questions":[],
                  "plan":{"title":"Upper/Lower","summary":"2-dagers.","workouts":[
-                   {"title":"Upper","day":"mandag","type":"STYRKE","content":{"blocks":[]},"rationale":"Overkropp."},
-                   {"title":"Lower","day":"torsdag","type":"STYRKE","content":{"blocks":[]},"rationale":"Underkropp."}
+                   {"title":"Upper","day":"mandag","type":"STYRKE","content":{"blocks":[{"kind":"exercise","name":"Push-ups","sets":[{"reps":8,"weightKg":0}]}]},"rationale":"Overkropp."},
+                   {"title":"Lower","day":"torsdag","type":"STYRKE","content":{"blocks":[{"kind":"exercise","name":"Push-ups","sets":[{"reps":8,"weightKg":0}]}]},"rationale":"Underkropp."}
                  ]}}
                 """);
 
@@ -215,7 +215,7 @@ class WorkoutSuggesterTest {
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("""
                 {"reply":"Ok.","questions":[],
                  "plan":{"title":"Upper/Lower + BJJ","summary":"","workouts":[
-                   {"title":"Upper","day":"tuesday","time":"morning","type":"STYRKE","content":{"blocks":[]},"rationale":""},
+                   {"title":"Upper","day":"tuesday","time":"morning","type":"STYRKE","content":{"blocks":[{"kind":"exercise","name":"Push-ups","sets":[{"reps":8,"weightKg":0}]}]},"rationale":""},
                    {"title":"BJJ","day":"tuesday","time":"evening","type":"KAMPSPORT","content":{"durationMin":90},"rationale":""}
                  ]}}
                 """);
@@ -252,7 +252,7 @@ class WorkoutSuggesterTest {
         when(profiles.promptContext(user)).thenReturn("\nTreningsprofil (fra onboarding):\n- Erfaringsnivå: nybegynner");
         when(profiles.tierFor(user)).thenReturn(LlmTier.PRO);
         when(llm.complete(eq(LlmTier.PRO), any(), any())).thenReturn(
-                "{\"title\":\"Økt\",\"type\":\"STYRKE\",\"content\":{\"blocks\":[]},\"rationale\":\"\"}");
+                "{\"title\":\"Økt\",\"type\":\"STYRKE\",\"content\":{\"blocks\":[{\"kind\":\"exercise\",\"name\":\"Push-ups\",\"sets\":[{\"reps\":8,\"weightKg\":0}]}]},\"rationale\":\"\"}");
 
         suggester.suggest(user, "styrke", "STYRKE", null);
 
@@ -308,5 +308,58 @@ class WorkoutSuggesterTest {
         suggester.suggestPlan(user, "pull-dag", null);
 
         org.mockito.Mockito.verify(llm, org.mockito.Mockito.times(1)).complete(any(), any(), any());
+    }
+    private static final String SINGLE_BAD = """
+            {"title":"Pull","type":"STYRKE","content":{"blocks":[
+            {"kind":"exercise","name":"Face Pulls","sets":[{"reps":12,"weightKg":10}]},
+            {"kind":"exercise","name":"Push-ups","sets":[{"reps":8,"weightKg":0}]}]},"rationale":"Keep moving"}
+            """;
+
+    @Test
+    void singleWorkoutRetriesWithSingleWorkoutJsonAndRespectsRequestEquipment() {
+        when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn(SINGLE_BAD);
+        when(llm.complete(eq(LlmTier.PRO), any(), any())).thenReturn(SINGLE_BAD.replace("Face Pulls", "Bicep Curls"));
+        Suggestion result = suggester.suggest(user, "I only have dumbbells", "STYRKE", "en");
+        assertTrue(result.content().toString().contains("Bicep Curls"));
+        assertTrue(!result.content().toString().contains("Face Pulls"));
+        assertEquals("Keep moving", result.rationale());
+        org.mockito.Mockito.verify(llm, org.mockito.Mockito.times(2)).complete(any(), any(), any());
+    }
+
+    @Test
+    void singleWorkoutRemovesDislikedExerciseEvenWhenRetryFails() {
+        when(memory.profile(any(), any())).thenReturn(new TrainingMemoryProfile(
+                List.of(), List.of("Face Pulls"), "", 0, 0, List.of(), List.of(), null));
+        when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn(SINGLE_BAD);
+        when(llm.complete(eq(LlmTier.PRO), any(), any())).thenThrow(new RuntimeException("timeout"));
+        Suggestion result = suggester.suggest(user, "pull", "STYRKE", null);
+        assertEquals(1, result.content().path("blocks").size());
+        assertEquals("Push-ups", result.content().path("blocks").get(0).path("name").asText());
+    }
+
+    @Test
+    void rejectsWorkoutWhenRepairRemovesEveryExercise() {
+        when(llm.complete(any(), any(), any())).thenReturn(SINGLE_BAD.replace("Push-ups", "Face Pulls"));
+        var error = assertThrows(AiSuggestionException.class,
+                () -> suggester.suggest(user, "I only have dumbbells", "STYRKE", "en"));
+        assertTrue(error.getMessage().contains("complete workout"));
+    }
+
+    @Test
+    void emptyInitialWorkoutGetsOneRepairAttemptThenFailsClearly() {
+        when(llm.complete(any(), any(), any())).thenReturn("{\"title\":\"Empty\",\"type\":\"STYRKE\",\"content\":{\"blocks\":[]}}");
+        assertThrows(AiSuggestionException.class, () -> suggester.suggest(user, "styrke", null, null));
+        org.mockito.Mockito.verify(llm, org.mockito.Mockito.times(2)).complete(any(), any(), any());
+    }
+
+    @Test
+    void planAndChatRejectEmptyStrengthAfterRepair() {
+        when(llm.complete(any(), any(), any())).thenReturn(PLAN_WITH_FACE_PULLS.replace("Bicep Curls", "Face Pulls"));
+        assertThrows(AiSuggestionException.class,
+                () -> suggester.suggestPlan(user, "I only have dumbbells", null));
+        when(llm.complete(any(), any(), any())).thenReturn("{\"reply\":\"Done\",\"plan\":"
+                + PLAN_WITH_FACE_PULLS.replace("Bicep Curls", "Face Pulls") + "}");
+        assertThrows(AiSuggestionException.class,
+                () -> suggester.chat(user, List.of(new ChatTurn("user", "I only have dumbbells")), null, null));
     }
 }
