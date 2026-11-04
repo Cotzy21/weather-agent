@@ -1,6 +1,7 @@
 import { useI18n } from './i18n.jsx'
 import { dayIndex, strengthVolume, countSets, localIso, matchesPlan } from './trainingStats.js'
 import ProgramBar from './ProgramBar.jsx'
+import { remainingPlansToday } from './todayPlans.js'
 
 const SHORT = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn']
 
@@ -14,7 +15,7 @@ function timeRank(time) {
 
 // Denne uka med planene dine: avhuket når det er logget en økt den dagen,
 // dagens økt kan startes med ett trykk, og totaler for all styrketrening.
-export default function WeekProgram({ plans, workouts, onStart }) {
+export default function WeekProgram({ plans, workouts, onStart, hideTodayStart = false }) {
   const { t, lang } = useI18n()
   const now = new Date()
   const todayIdx = (now.getDay() + 6) % 7 // mandag = 0
@@ -36,9 +37,8 @@ export default function WeekProgram({ plans, workouts, onStart }) {
     return { i, date, dayNum: day.getDate(), planned, logged, remaining, status }
   })
 
-  const today = days[todayIdx]
   // Samme tittel som en logget økt = gjort; de andre kan fortsatt startes i dag.
-  const todayPlans = today.logged.length >= today.planned.length && today.logged.length ? [] : today.remaining
+  const todayPlans = remainingPlansToday(plans, workouts, now)
   const strength = workouts.filter((w) => w.type === 'STYRKE')
   const totalKg = Math.round(strength.reduce((sum, w) => sum + strengthVolume(w.content), 0))
   const totalSets = strength.reduce((sum, w) => sum + countSets(w.content), 0)
@@ -64,7 +64,7 @@ export default function WeekProgram({ plans, workouts, onStart }) {
               </div>
             ))}
           </div>
-          {todayPlans.map((p) => (
+          {!hideTodayStart && todayPlans.map((p) => (
             <button className="week-start" key={p.id} onClick={() => onStart(p)}>
               ▶ {t('Start dagens økt')}: <strong>{p.title}</strong>{p.content?.time ? ` · ${p.content.time}` : ''}
             </button>

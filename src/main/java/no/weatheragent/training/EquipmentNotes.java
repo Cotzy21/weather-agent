@@ -122,6 +122,22 @@ final class EquipmentNotes {
         if (found != null && found.equals(Set.of("bodyweight"))) {
             return new HashSet<>(); // «bare kroppsvekt»
         }
+        // Equipment limits are also commonly written after the list: "dumbbells and bench only".
+        Matcher postfix = LIMIT.matcher(t);
+        while (postfix.find()) {
+            int start = Math.max(0, postfix.start() - LOOKAHEAD);
+            String before = t.substring(start, postfix.start());
+            int boundary = -1;
+            for (char c : new char[]{'.', '!', '?', '\n', ';', ':'}) boundary = Math.max(boundary, before.lastIndexOf(c));
+            before = before.substring(boundary + 1);
+            // Require a list immediately before the limiter, not unrelated equipment earlier in a sentence.
+            if (!before.matches(".*(?:manualer|dumbbells?|benk|bench|kettlebells?|barbells?|kroppsvekt|bodyweight)\\s*$")) continue;
+            Set<String> tags = itemsIn(before);
+            if (!tags.isEmpty()) {
+                if (found == null) found = new HashSet<>();
+                found.addAll(tags);
+            }
+        }
         return found;
     }
 

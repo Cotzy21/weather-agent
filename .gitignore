@@ -34,6 +34,8 @@ Thumbs.db
 # Lokale, hemmelige overstyringer (f.eks. egen kontaktinfo / nøkler)
 application-local.properties
 .env
+.env.mobile
+frontend/mobile-dist/
 
 # Lokal prosjektkontekst / handover - ikke en del av selve kodebasen
 docs/

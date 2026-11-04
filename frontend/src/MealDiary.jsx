@@ -96,6 +96,7 @@ export default function MealDiary({ session }) {
   const [week, setWeek] = useState([])
   const [showWeek, setShowWeek] = useState(false)
   const [error, setError] = useState(null)
+  const [dayError, setDayError] = useState(false)
 
   const [goal, setGoal] = useState(null)       // lagret profil + utregnet mål
   const [showGoal, setShowGoal] = useState(false)
@@ -185,10 +186,15 @@ export default function MealDiary({ session }) {
   }
 
   async function loadDay() {
+    setDayError(false)
     try {
       const res = await fetch(apiUrl(`/api/kosthold/dag?dato=${date}&lang=${lang}`), { headers: await authHeaders() })
-      if (res.ok) setDay(await res.json())
-    } catch { /* vis bare tom dag */ }
+      if (!res.ok) throw new Error('Could not load nutrition day')
+      setDay(await res.json())
+    } catch {
+      setDay(null)
+      setDayError(true)
+    }
   }
 
   async function loadWeek() {
@@ -384,13 +390,13 @@ export default function MealDiary({ session }) {
                        options={MEALS.map((m) => ({ v: m.v, t: t(m.t) }))} />
         </div>
         <button className="linklike goal-toggle" onClick={() => setShowPrefs(!showPrefs)}>
-          ⚙️ {t('Preferanser & allergier')}
+          {t('Preferanser & allergier')}
           {(prefs.allergies.length > 0 || prefs.diet !== 'ALT') && (
             <span className="prefs-count"> ({prefs.allergies.length + (prefs.diet !== 'ALT' ? 1 : 0)})</span>
           )} {showPrefs ? '▾' : '▸'}
         </button>
         <button className="linklike goal-toggle" onClick={() => setShowGoal(!showGoal)}>
-          🎯 {goal ? t('Mål: {n} kcal/dag', { n: goal.dailyTargetKcal.toFixed(0) }) : t('Sett opp kalorimål')} {showGoal ? '▾' : '▸'}
+          {goal ? t('Mål: {n} kcal/dag', { n: goal.dailyTargetKcal.toFixed(0) }) : t('Sett opp kalorimål')} {showGoal ? '▾' : '▸'}
         </button>
       </div>
 
@@ -459,8 +465,11 @@ export default function MealDiary({ session }) {
         </div>
       )}
 
+      <label className="diary-search-label" htmlFor="food-search">{t('Søk etter matvare … (f.eks. havregryn)')}</label>
       <div className="diary-search-row">
         <input
+          id="food-search"
+          aria-label={t('Søk etter matvare … (f.eks. havregryn)')}
           className="diary-search"
           placeholder={t('Søk etter matvare … (f.eks. havregryn)')}
           value={query}
@@ -582,6 +591,8 @@ export default function MealDiary({ session }) {
       )}
 
       {error && <p className="error">{t('Beklager –')} {error}</p>}
+
+      {dayError && <div className="diary-load-error" role="alert"><p>{t('Kunne ikke laste kostholdsdagboka. Prøv igjen.')}</p><button onClick={loadDay}>{t('Prøv igjen')}</button></div>}
 
       {day && (
         <>

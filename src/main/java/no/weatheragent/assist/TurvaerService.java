@@ -6,6 +6,8 @@ import no.weatheragent.geo.OpenMeteoGeocodingClient;
 import no.weatheragent.hiking.CandidateSelector;
 import no.weatheragent.hiking.OverpassClient;
 import no.weatheragent.hiking.OverpassUnavailableException;
+import no.weatheragent.hiking.KartverketClient;
+import no.weatheragent.hiking.KartverketUnavailableException;
 import no.weatheragent.hiking.Peak;
 import no.weatheragent.hiking.Trail;
 import no.weatheragent.interpret.Interpretation;
@@ -69,6 +71,7 @@ public class TurvaerService {
 
     private final QueryInterpreter interpreter;
     private final OverpassClient overpassClient;
+    private final KartverketClient kartverket;
     private final BestWeatherFinder bestWeatherFinder;
     private final ResilientWeatherClient weatherClient;
     private final OpenMeteoGeocodingClient geocoding;
@@ -77,12 +80,14 @@ public class TurvaerService {
                           OverpassClient overpassClient,
                           BestWeatherFinder bestWeatherFinder,
                           ResilientWeatherClient weatherClient,
-                          OpenMeteoGeocodingClient geocoding) {
+                          OpenMeteoGeocodingClient geocoding,
+                          KartverketClient kartverket) {
         this.interpreter = interpreter;
         this.overpassClient = overpassClient;
         this.bestWeatherFinder = bestWeatherFinder;
         this.weatherClient = weatherClient;
         this.geocoding = geocoding;
+        this.kartverket = kartverket;
     }
 
     /** Finn beste vær med normal vekt på alle faktorer. */
@@ -122,7 +127,7 @@ public class TurvaerService {
         // merkede turer nær topp-stedene (idé #1). Gjelder også VARSEL-stedet.
         List<Trail> trails = tolkning.target() == Target.TUR
                 ? List.of()
-                : optionalTrails(() -> overpassClient.trailsNear(topLocations(ranking), TRAIL_RADIUS_M));
+                : optionalTrails(() -> nearbyTrails(topLocations(ranking)));
 
         // Klær/utstyr-råd basert på været hos vinneren (idé #3).
         RankedPlaceOverPeriod winner = ranking.getFirst();
@@ -132,24 +137,30 @@ public class TurvaerService {
         return new TurResult(tolkning, ranking, trails, clothing);
     }
 
-    /**
-     * Turruter rundt stedene er et TILLEGG til værsvaret. Er Overpass travel, viser vi værsvaret uten turer i stedet for
-     * å la hele søket feile. (Selve rangeringen trenger topper eller ruter fra Overpass og feiler tydelig hvis de mangler.)
-     */
     private static List<Trail> optionalTrails(Supplier<List<Trail>> lookup) {
-        try {
-            return lookup.get();
-        } catch (OverpassUnavailableException e) {
-            log.warn("Overpass er travel: viser værsvaret uten turruter");
-            return List.of();
+        try { return lookup.get(); }
+        catch (OverpassUnavailableException | KartverketUnavailableException | org.springframework.web.client.RestClientException | IllegalStateException e) { return List.of(); }
+    }
+
+    private List<Trail> nearbyTrails(List<Location> locations) {
+        if (locations.stream().allMatch(kartverket::covers)) {
+            // One national WFS request around the winner; do not perform ten slow lookups.
+            return locations.isEmpty() ? List.of() : kartverket.trailsNear(locations.getFirst(), TRAIL_RADIUS_M);
         }
+        return overpassClient.trailsNear(locations, TRAIL_RADIUS_M);
+    }
+
+    private List<Trail> detailTrails(Location location) {
+        return kartverket.covers(location) ? kartverket.trailsNear(location, TRAIL_RADIUS_M)
+                : overpassClient.trailGeometriesNear(location, TRAIL_RADIUS_M);
     }
 
     /** Topper i området, redusert til et spredt kandidatsett. */
     private List<Location> peakCandidates(String region, String country, TripType tripType) {
         double minElevation = tripType == TripType.FJELLTUR
                 ? FJELL_MIN_ELEVATION_M : DEFAULT_MIN_ELEVATION_M;
-        List<Peak> peaks = overpassClient.peaksInArea(region, country);
+        List<Peak> peaks = kartverket.peaksInArea(region, country)
+                .orElseGet(() -> overpassClient.peaksInArea(region, country));
         return CandidateSelector.representativePeaks(peaks, CELL_DEGREES, minElevation)
                 .stream()
                 .map(Peak::location)
@@ -158,7 +169,8 @@ public class TurvaerService {
 
     /** Turruter i området (rute-senterpunkt), tynnet til et spredt kandidatsett. */
     private List<Location> trailCandidates(String region, String country) {
-        List<Location> locations = overpassClient.trailsInArea(region, country).stream()
+        List<Location> locations = kartverket.trailsInArea(region, country)
+                .orElseGet(() -> overpassClient.trailsInArea(region, country)).stream()
                 .map(t -> new Location(t.name(), t.latitude(), t.longitude()))
                 .toList();
         return thinByGrid(locations, TRAIL_CELL_DEGREES, MAX_TRAIL_CANDIDATES);
@@ -198,7 +210,7 @@ public class TurvaerService {
         }
 
         // Med linjegeometri: detaljsiden tegner og highlighter selve stiene rundt stedet.
-        List<Trail> trails = optionalTrails(() -> overpassClient.trailGeometriesNear(loc, TRAIL_RADIUS_M));
+        List<Trail> trails = optionalTrails(() -> detailTrails(loc));
 
         List<String> clothing = days.isEmpty() ? List.of() : ClothingAdvisor.recommend(
                 days.getFirst().maxTempC(), days.getFirst().totalPrecipMm(), days.getFirst().avgWindMs());

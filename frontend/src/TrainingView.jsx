@@ -1,5 +1,8 @@
+import Sheet from './Sheet.jsx'
 import { useState, useEffect } from 'react'
 import { createPlanAcceptor } from './planAcceptance.js'
+import Icon from './Icon.jsx'
+import { remainingPlansToday } from './todayPlans.js'
 import { authHeaders } from './supabase'
 import { apiUrl, readError, cachedGet, getCached } from './api'
 import MusclePicker from './MusclePicker'
@@ -23,16 +26,17 @@ import { loadLive, clearLive, newLive, newId, fromPlan } from './liveSession.js'
 import { workoutQueue, onPendingChange, setQueueOwner } from './offlineQueue.js'
 import { dayIndex, strengthVolume, localIso } from './trainingStats.js'
 import WeekProgram from './WeekProgram.jsx'
+import { summarizeSets, cleanBuilderSets } from './trainingPresentation.js'
 
 const TYPES = [
-  { v: 'STYRKE', t: '🏋️ Styrke' },
-  { v: 'LØPING', t: '🏃 Løping' },
-  { v: 'SVØMMING', t: '🏊 Svømming' },
-  { v: 'SYKKEL', t: '🚴 Sykkel' },
-  { v: 'BULDRING', t: '🧗 Buldring' },
-  { v: 'KAMPSPORT', t: '🥋 Kampsport' },
-  { v: 'HIKING', t: '🥾 Hiking' },
-  { v: 'FRISTIL', t: '✨ Fristil' },
+  { v: 'STYRKE', t: 'Styrke' },
+  { v: 'LØPING', t: 'Løping' },
+  { v: 'SVØMMING', t: 'Svømming' },
+  { v: 'SYKKEL', t: 'Sykkel' },
+  { v: 'BULDRING', t: 'Buldring' },
+  { v: 'KAMPSPORT', t: 'Kampsport' },
+  { v: 'HIKING', t: 'Hiking' },
+  { v: 'FRISTIL', t: 'Fristil' },
 ]
 const CARDIO = ['LØPING', 'SVØMMING', 'SYKKEL']
 
@@ -44,11 +48,7 @@ const newDropset = () => ({ kind: 'dropset', name: '', drops: [newSet()] })
 // Supersett har runder (à la Garmins «Repeat x Sets»): hele gruppa gjentas N ganger.
 const newSuperset = () => ({ kind: 'superset', rounds: 3, exercises: [{ name: '', sets: [newSet()] }] })
 
-function cleanSets(arr) {
-  return (arr || [])
-    .filter((s) => s.reps !== '' && s.reps != null)
-    .map((s) => ({ reps: Number(s.reps), weightKg: Number(s.weightKg) || 0 }))
-}
+const cleanSets = (arr) => cleanBuilderSets(arr || [])
 
 // Fra AI-forslag (tall) til byggerens redigerbare felter.
 function mapSets(arr) {
@@ -56,7 +56,6 @@ function mapSets(arr) {
   return out.length ? out : [newSet()]
 }
 
-const READINESS_ICONS = { GOD: '💪', MIDDELS: '🙂', LAV: '😴' }
 const READINESS_LABELS = { GOD: 'God', MIDDELS: 'Middels', LAV: 'Lav' }
 
 // Merkelapper for progressive overload-forslagene (nøklene oversettes via t()).
@@ -669,10 +668,7 @@ export default function TrainingView({ session }) {
     return (
       <div className="training" ref={revealRef}>
 
-      {session && profile !== undefined && (onboarding || (profile === null && !onboardingSkipped)) && (
-        <TrainingOnboarding initial={profile} onSave={saveProfile} onSkip={skipOnboarding} />
-      )}
-        <h2 className="detail-title" data-reveal>{t('Trening')}</h2>
+        <h1 className="detail-title" data-reveal>{t('Trening')}</h1>
         <p className="muted" data-reveal>
           {t('Logg inn for å lagre økter, se progresjon og få AI-forslag – men prøv gjerne kroppsmodellen:')}
         </p>
@@ -699,6 +695,7 @@ export default function TrainingView({ session }) {
     ))
 
   const dayKey = (p) => { const i = dayIndex(p.content?.day); return i < 0 ? 7 : i }
+  const todayPlan = remainingPlansToday(plans, workouts)[0]
   const sortedPlans = [...plans].sort((a, b) => dayKey(a) - dayKey(b))
   const myExercises = nextSets.map((x) => x.exercise)
 
@@ -718,6 +715,9 @@ export default function TrainingView({ session }) {
     <div className="training" ref={revealRef}>
 
       {prs && <PrCelebration prs={prs} fmtKg={fmtKg} onClose={() => setPrs(null)} />}
+      {session && profile !== undefined && (onboarding || (profile === null && !onboardingSkipped)) && (
+        <TrainingOnboarding initial={profile} onSave={saveProfile} onSkip={skipOnboarding} />
+      )}
 
       {mode === 'live' && live && (
         <LiveSession
@@ -774,19 +774,23 @@ export default function TrainingView({ session }) {
 
       {mode === 'overview' && (
         <>
-          <h2 className="detail-title" data-reveal>{t('Trening')}</h2>
-          <div className="train-actions" data-reveal>
-            <button className="train-action" onClick={() => setSheetOpen(true)}>
-              <span className="ta-icon" aria-hidden="true">＋</span>{t('Ny')}
-            </button>
-            <button className="train-action go" onClick={() => { setMode('start'); window.scrollTo(0, 0) }}>
-              <span className="ta-icon" aria-hidden="true">▶</span>{t('Start')}
-            </button>
-            <button className="train-action" onClick={() => { setMode('progress'); window.scrollTo(0, 0) }}>
-              <span className="ta-icon" aria-hidden="true">📈</span>{t('Progresjon')}
-            </button>
+          <div className="train-heading">
+            <h1 className="detail-title">{t('Trening')}</h1>
+            <button onClick={() => { setMode('progress'); window.scrollTo(0, 0) }}><Icon name="trend" size={18} />{t('Progresjon')}</button>
+          </div>
+          <section className="train-start" aria-label={t('Start styrkeøkt')}>
+            <div><h2>{todayPlan?.title ?? t('Klar for dagens økt?')}</h2><p>{t(todayPlan ? 'Dagens plan. Logg settene underveis.' : 'Logg sett, repetisjoner og vekt underveis.')}</p></div>
+            <button className="primary" onClick={() => todayPlan
+              ? startPlan(todayPlan)
+              : startLive('', [])}><Icon name="play" size={18} />{t(todayPlan ? 'Start dagens økt' : 'Start styrkeøkt')}</button>
+          </section>
+          <div className="train-shortcuts">
+            <button onClick={() => pickNew('ai-workout')}><Icon name="spark" />{t('Få en AI-økt')}</button>
+            <button onClick={() => { setMode('start'); window.scrollTo(0, 0) }}><Icon name="play" />{t('Velg en økt')}</button>
+            <button onClick={() => setSheetOpen(true)}><Icon name="plus" />{t('Økter og planer')}</button>
           </div>
           <WeekProgram
+            hideTodayStart
             plans={plans}
             workouts={workouts}
             onStart={startPlan}
@@ -797,12 +801,11 @@ export default function TrainingView({ session }) {
             </p>
           )}
           {liveSaved && <p className="success">{liveSaved === 'queued' ? t('✓ Lagret på enheten – sendes når nettet er tilbake') : t('✓ Økt lagret')}</p>}
-          <GarminImport imp={imp} />
 
           {readiness && !readiness.none && (
             <details className={`readiness-line ${readiness.level.toLowerCase()}`} data-reveal>
               <summary>
-                {READINESS_ICONS[readiness.level]} {t('Dagsform')}: <strong>{t(READINESS_LABELS[readiness.level])}</strong>
+                <Icon name="recovery" size={18} /> {t('Dagsform')}: <strong>{t(READINESS_LABELS[readiness.level])}</strong>
                 <span className="muted"> · {fmtHours(readiness.lastNightHours)} {t('t søvn')}</span>
               </summary>
               <p className="muted">{readiness.advice}</p>
@@ -813,7 +816,7 @@ export default function TrainingView({ session }) {
           {planMsg && <p className={planMsg.startsWith('✓') ? 'success' : 'error'}>{planMsg}</p>}
           {plans.length === 0 ? (
             <button className="plan-empty" data-reveal onClick={() => pickNew('ai-plan')}>
-              ✨ {t('Lag en treningsplan med AI')}
+              <Icon name="spark" size={18} /> {t('Lag en treningsplan med AI')}
             </button>
           ) : (
             <ul className="plan-cards" data-reveal>
@@ -832,35 +835,37 @@ export default function TrainingView({ session }) {
         </>
       )}
 
+      {mode === 'overview' && <details className="training-tools"><summary>{t('Importer fra Garmin')}</summary><GarminImport imp={imp} /></details>}
+
       {sheetOpen && (
-        <div className="sheet-backdrop" onClick={() => setSheetOpen(false)}>
-          <div className="sheet" role="dialog" aria-label={t('Ny')} onClick={(e) => e.stopPropagation()}>
+        <Sheet className="sheet" label={t('Økter og planer')} onClose={() => setSheetOpen(false)} role="dialog">
             <span className="sheet-handle" aria-hidden="true" />
+            <div className="dialog-heading"><h2>{t('Økter og planer')}</h2><button className="icon-button" aria-label={t('Lukk')} onClick={() => setSheetOpen(false)}><Icon name="close" /></button></div>
             <p className="sheet-label">{t('Økt')}</p>
             <button className="sheet-item" onClick={() => pickNew('build')}>
-              <span className="sheet-icon">✏️</span><span className="sheet-text">{t('Bygg selv')}</span>
+              <span className="sheet-icon"><Icon name="edit" /></span><span className="sheet-text">{t('Bygg selv')}</span>
             </button>
             <button className="sheet-item" onClick={() => pickNew('muscles')}>
-              <span className="sheet-icon">💪</span><span className="sheet-text">{t('Velg muskler')}</span>
+              <span className="sheet-icon"><Icon name="training" /></span><span className="sheet-text">{t('Velg muskler')}</span>
             </button>
             <button className="sheet-item" onClick={() => pickNew('ai-workout')}>
-              <span className="sheet-icon">✨</span>
+              <span className="sheet-icon"><Icon name="spark" /></span>
               <span className="sheet-text">{t('AI-økt')}<small>{t('Én økt til i dag')}</small></span>
             </button>
             <p className="sheet-label">{t('Plan')}</p>
             <button className="sheet-item" onClick={() => pickNew('ai-plan')}>
-              <span className="sheet-icon">🗓️</span>
+              <span className="sheet-icon"><Icon name="calendar" /></span>
               <span className="sheet-text">{t('AI-treningsplan')}<small>{t('Flere økter i uka')}</small></span>
             </button>
             <p className="sheet-label">{t('Import')}</p>
             <label className="sheet-item">
-              <span className="sheet-icon">⌚</span>
+              <span className="sheet-icon"><Icon name="import" /></span>
               <span className="sheet-text">{t('Importer fra Garmin')}<small>{t('Garmin Connect → Aktiviteter → «Eksporter CSV»')}</small></span>
               <input type="file" accept=".csv,text/csv" hidden
                      onChange={(e) => { setSheetOpen(false); imp.runCsv(e.target.files[0]); e.target.value = '' }} />
             </label>
-          </div>
-        </div>
+
+        </Sheet>
       )}
 
       {mode !== 'overview' && mode !== 'live' && mode !== 'activity' && (
@@ -878,15 +883,17 @@ export default function TrainingView({ session }) {
 
       {mode === 'ai-workout' && (
         <div className="ai-panel">
-          <h2 className="detail-title">{t('AI-økt')}</h2>
+          <h1 className="detail-title">{t('AI-økt')}</h1>
+          <AiProfileSummary profile={profile} onEdit={() => setOnboarding(true)} />
           <p className="muted ai-intro">{t('Hva vil du trene i dag? Økta tilpasses historikken din.')}</p>
           <div className="ai-examples">
             {[t('Push, 45 min'), t('Bein'), t('Overkropp'), t('Fullkropp')].map((ex) => (
               <button key={ex} className="ai-example" disabled={aiwBusy} onClick={() => suggestWorkout(ex)}>{ex}</button>
             ))}
           </div>
+          <label className="ai-field-label" htmlFor="ai-workout-focus">{t('Hva vil du trene i dag?')}</label>
           <form className="ai-row" onSubmit={(e) => { e.preventDefault(); suggestWorkout() }}>
-            <input placeholder={t('F.eks. «rygg og biceps»')} value={aiwFocus} onChange={(e) => setAiwFocus(e.target.value)} />
+            <input id="ai-workout-focus" placeholder={t('F.eks. «rygg og biceps»')} value={aiwFocus} onChange={(e) => setAiwFocus(e.target.value)} />
             <button className="primary" type="submit" disabled={aiwBusy || !aiwFocus.trim()}>{t('Lag')}</button>
           </form>
           {aiwBusy && <ThinkingText />}
@@ -916,7 +923,8 @@ export default function TrainingView({ session }) {
       {mode === 'ai-plan' && (
       <div className="ai-panel">
         <div className="ai-panel-head">
-          <h2 className="detail-title">{t('AI-treningsplan')}</h2>
+          <h1 className="detail-title">{t('AI-treningsplan')}</h1>
+          <AiProfileSummary profile={profile} onEdit={() => setOnboarding(true)} />
           {aiMessages.length > 0 && (
             <button className="mini" onClick={resetChat} disabled={aiBusy || aiSaving}>{t('Ny samtale')}</button>
           )}
@@ -924,12 +932,12 @@ export default function TrainingView({ session }) {
 
         {aiMessages.length === 0 && (
           <>
-            <p className="muted ai-intro">{t('Be om et opplegg – f.eks. «lag en push pull legs split» eller «jeg vil begynne med mer cardio». Assistenten spør om det trenger mer, og bruker historikken din til progressiv overload.')}</p>
+            <p className="muted ai-intro">{t('Fortell hva du vil oppnå, hvor ofte du vil trene og hvilket utstyr du har. Assistenten spør hvis noe mangler. Du kan endre planen før du lagrer.')}</p>
             <div className="ai-examples">
               {[
-                t('Lag en push/pull/legs-split'),
-                t('Upper/lower, 4 dager i uka'),
-                t('Jeg vil begynne med mer cardio'),
+                t('Jeg er ny og vil trene hele kroppen 2 dager i uka'),
+                t('Lag en plan for trening hjemme uten utstyr'),
+                t('Jeg vil få bedre kondisjon'),
                 t('Fullkropp 3x i uka'),
               ].map((ex) => (
                 <button key={ex} className="ai-example" disabled={aiBusy} onClick={() => sendMessage(ex)}>{ex}</button>
@@ -949,8 +957,8 @@ export default function TrainingView({ session }) {
         {aiBusy && <ThinkingText />}
 
         <div className="ai-row">
-          <input placeholder={aiMessages.length === 0
-            ? t('Beskriv ønsket, f.eks. «push pull legs split»')
+          <input aria-label={t('Svar assistenten …')} placeholder={aiMessages.length === 0
+            ? t('F.eks. «jeg er ny, har manualer og vil trene 2 dager i uka»')
             : t('Svar assistenten …')}
                  value={aiFocus} onChange={(e) => setAiFocus(e.target.value)}
                  onKeyDown={(e) => { if (e.key === 'Enter') sendMessage() }} />
@@ -995,7 +1003,7 @@ export default function TrainingView({ session }) {
 
       {mode === 'builder' && (
       <>
-      <h2 className="detail-title" data-reveal>{editTarget ? t('Rediger økt') : t('Ny økt')}</h2>
+      <h1 className="detail-title" data-reveal>{editTarget ? t('Rediger økt') : t('Ny økt')}</h1>
       <p className="muted builder-intro">{t('Her lager du en økt du kan starte senere. Den lagres i «Mine økter» og regnes som gjennomført først når du starter den med ▶ Start.')}</p>
       <div className="type-select" data-reveal>
         {TYPES.map((tp) => (
@@ -1161,7 +1169,7 @@ export default function TrainingView({ session }) {
 
       {mode === 'progress' && (
         <div className="progress-page">
-          <h2 className="detail-title">{t('Progresjon')}</h2>
+          <h1 className="detail-title">{t('Progresjon')}</h1>
           {memory && <TrainingMemoryCard key={memory.notes} memory={memory} mine={myExercises} onSave={saveMemory}
                                                 profile={profile} onEditProfile={() => setOnboarding(true)} />}
           {memoryError && <p className="error">{memoryError}</p>}
@@ -1347,9 +1355,26 @@ function WorkoutGroup({ group, onDelete }) {
   )
 }
 
-const sumSets = (arr) => (arr || []).map((s) => `${s.reps}×${s.weightKg}`).join(', ')
+function AiProfileSummary({ profile, onEdit }) {
+  const { t } = useI18n()
+  const equipment = { GYM: 'Treningssenter', HOME_WEIGHTS: 'Manualer og benk', BODYWEIGHT: 'Kroppsvekt' }
+  const level = { BEGINNER: 'Helt ny', NOVICE: 'Litt erfaren', INTERMEDIATE: 'Middels erfaren', ADVANCED: 'Avansert' }
+  return <div className="ai-profile-summary">
+    <p>{t('AI bruker treningsprofilen, historikken og ønskene dine automatisk.')}</p>
+    {profile && <p>{t(level[profile.experienceLevel] ?? 'Treningsprofil')} · {t(equipment[profile.equipment] ?? 'Utstyr')} · {profile.daysPerWeek} {t('dager i uka')} · {profile.sessionMinutes} min</p>}
+    <button type="button" onClick={onEdit}>{t(profile ? 'Tilpass treningsprofil' : 'Legg til treningsprofil')}</button>
+    <small>{t('Ønskene du skriver nå går foran profilens standardvalg.')}</small>
+  </div>
+}
 
 function WorkoutBody({ workout: w }) {
+  const { t, lang } = useI18n()
+  const sumSets = (arr) => summarizeSets(arr || []).map((s) => {
+    const weight = Number(s.weightKg) > 0
+      ? `${String(s.weightKg).replace('.', lang === 'en' ? '.' : ',')} kg`
+      : t('kroppsvekt')
+    return `${t(s.count === 1 ? '1 sett' : '{n} sett', { n: s.count })} × ${s.reps} ${t('reps')} · ${weight}`
+  }).join('; ')
   const c = w.content || {}
   if (w.type === 'STYRKE') {
     return (

@@ -31,6 +31,9 @@ public class CacheConfig {
         // "foods" = hele Matvaretabellen (~2100 varer): én oppføring, hentes sjelden på nytt.
         manager.registerCustomCache("foods",
                 Caffeine.newBuilder().maximumSize(1).expireAfterWrite(Duration.ofHours(24)).build());
+        for (String name : java.util.List.of("kartverketPeaks", "kartverketAreaTrails", "kartverketNearTrails")) {
+            manager.registerCustomCache(name, Caffeine.newBuilder().maximumSize(20).expireAfterWrite(TTL).build());
+        }
         return manager;
     }
 }

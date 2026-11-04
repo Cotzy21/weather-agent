@@ -1,0 +1,91 @@
+/* Shared motion and spacing, based on the fitness-app screenshot review.
+   Durations are our design choices, not measurements of third-party apps. */
+:root {
+  --motion-open: 260ms;
+  --motion-close: 180ms;
+  --motion-ease: cubic-bezier(.22, 1, .36, 1);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+}
+@keyframes popup-reveal {
+  from { opacity: 0; transform: translateY(-12px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes overlay-reveal { from { opacity: 0; } to { opacity: 1; } }
+.sheet-backdrop { animation: overlay-reveal var(--motion-close) ease-out; }
+.sheet {
+  animation: popup-reveal var(--motion-open) var(--motion-ease);
+  transform-origin: top center;
+  max-height: calc(100svh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.sheet-item { min-height: 48px; padding: var(--space-3) var(--space-2); }
+.sheet-text { line-height: 1.4; }
+.sheet-text small { display: block; margin-top: var(--space-1); }
+/* Leaflet positions its outer popup with a transform; animate only its contents. */
+.leaflet-popup-content-wrapper,
+.leaflet-control-layers-expanded,
+.live-hint,
+.live-note,
+.habit-suggestions,
+.food-results {
+  animation: popup-reveal var(--motion-open) var(--motion-ease);
+  transform-origin: top center;
+}
+.leaflet-popup-content { font: 14px/1.5 'DM Sans Variable', system-ui, sans-serif; margin: 12px 16px; }
+details[open] > :not(summary) { animation: popup-reveal var(--motion-open) var(--motion-ease); }
+.map-status {
+  max-width: min(270px, 65vw);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--card-solid);
+  color: var(--text);
+  box-shadow: var(--elev-pop);
+  font: 13px/1.4 'DM Sans Variable', system-ui, sans-serif;
+}
+.map-status button { display: block; margin-top: 8px; min-height: 44px; color: var(--text); background: var(--card-solid); border: 1px solid var(--border-strong); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+@media (max-width: 640px) {
+  :root { --fs-base: 16px; }
+  .menu-panel {
+    display: flex;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    clip-path: inset(0 0 100% 0);
+    transform: translateY(-10px);
+    transform-origin: top center;
+    transition: clip-path var(--motion-close) var(--motion-ease),
+      transform var(--motion-close) var(--motion-ease), opacity var(--motion-close) ease,
+      visibility 0s var(--motion-close);
+  }
+  .sidebar.menu-open .menu-panel {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    clip-path: inset(0);
+    transform: none;
+    transition-duration: var(--motion-open), var(--motion-open), var(--motion-open), 0s;
+    transition-delay: 0s;
+  }
+  .menu-backdrop {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity var(--motion-close) ease, visibility 0s var(--motion-close);
+  }
+  .menu-backdrop.is-open { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
+  .sheet { padding: 8px 20px calc(24px + env(safe-area-inset-bottom, 0px)); }
+  .sheet h2, .sheet h3 { line-height: 1.25; }
+  .sheet input:not([type=checkbox]):not([type=radio]), .sheet select, .sheet textarea { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-panel, .menu-backdrop { transition: none; }
+  .sheet, .sheet-backdrop, .leaflet-popup-content-wrapper,
+  .leaflet-control-layers-expanded, .live-hint, .live-note,
+  .habit-suggestions, .food-results,
+  details[open] > :not(summary) { animation: none; }
+}

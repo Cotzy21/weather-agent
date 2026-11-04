@@ -1,3 +1,4 @@
+import Icon from './Icon.jsx'
 import { useI18n } from './i18n.jsx'
 import { strengthVolume, countSets, localIso } from './trainingStats.js'
 
@@ -115,7 +116,7 @@ export default function LifetimeStats({ workouts }) {
       <div className="medals">
         {s.earned.slice(0, 4).map((m) => (
           <div className="medal" key={`${m.kind}-${m.n}`}>
-            <span className="medal-icon">{m.icon}</span>
+            <span className="medal-icon"><Icon name="check" /></span>
             <span className="medal-text">
               <strong>{t(m.title, { n: m.kind === 'volume' ? compact(m.n) : m.n })}</strong>
               <span className="muted">{new Date(`${m.date}T12:00`).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })}</span>
@@ -124,7 +125,7 @@ export default function LifetimeStats({ workouts }) {
         ))}
         {s.next && (
           <div className="medal next">
-            <span className="medal-icon">{s.next.icon}</span>
+            <span className="medal-icon"><Icon name="trend" /></span>
             <span className="medal-text">
               <strong>{t(s.next.title, { n: s.next.n })}</strong>
               <span className="medal-progress"><span style={{ width: `${Math.min(100, (s.next.progress / s.next.n) * 100)}%` }} /></span>

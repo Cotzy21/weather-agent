@@ -196,8 +196,8 @@ h2, h3 { letter-spacing: -0.3px; }
 button { font-family: inherit; }
 
 .primary {
-  background: var(--gradient) !important;
-  color: #06251a !important;
+  background: var(--primary) !important;
+  color: var(--on-primary) !important;
   border: none !important;
   font-weight: 700 !important;
   cursor: pointer;
@@ -315,6 +315,66 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .winner { font-size: var(--fs-base); margin-bottom: 14px; line-height: 1.5; }
 .winner strong { font-size: var(--fs-lg); font-weight: 800; letter-spacing: -0.3px; }
 .winner .medal { font-size: var(--fs-lg); }
+
+/* A small landscape gives the weather search a sense of place. */
+.weather-scene {
+  width: min(100%, 320px);
+  margin: 2px auto 12px;
+  pointer-events: none;
+}
+.weather-scene svg { display: block; width: 100%; height: auto; overflow: visible; }
+.scene-sun { fill: var(--accent-3); opacity: 0.65; transform-origin: 243px 42px; animation: scene-sunrise 700ms ease-out both; }
+.scene-cloud { fill: var(--card-solid); stroke: var(--border); stroke-width: 1.5; animation: scene-cloud-arrive 800ms ease-out both; }
+.scene-ridge { stroke: var(--accent-strong); stroke-width: 1.5; stroke-linejoin: round; }
+.scene-ridge.far { fill: var(--accent-soft); opacity: 0.65; }
+.scene-ridge.near { fill: var(--bg-2); }
+.scene-snow { fill: var(--card-solid); stroke: var(--border); stroke-linejoin: round; }
+.scene-ground { stroke: var(--border-strong); stroke-width: 1.5; stroke-linecap: round; }
+.scene-trail { stroke: var(--accent-2); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 1; animation: scene-draw-trail 1100ms 100ms ease-out both; }
+.scene-waypoint { fill: var(--accent-strong); stroke: var(--card-solid); stroke-width: 2; }
+.weather-scene.compact { width: 132px; margin: 0; flex: 0 0 132px; }
+.weather-loading { display: flex; align-items: center; gap: 12px; }
+.weather-loading .typing { margin: 0; }
+.is-searching .scene-cloud { animation: scene-cloud-search 3s ease-in-out infinite alternate; }
+.scene-traveler {
+  fill: var(--accent-strong);
+  stroke: var(--card-solid);
+  stroke-width: 2;
+  offset-path: path('M114 138c57-1 99-10 69-25-35-17-22-23 14-28');
+  offset-rotate: 0deg;
+  animation: scene-follow-trail 2400ms ease-in-out infinite;
+}
+@keyframes scene-sunrise { from { opacity: 0; transform: translateY(12px) scale(0.8); } to { opacity: 0.65; transform: none; } }
+@keyframes scene-cloud-arrive { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+@keyframes scene-draw-trail { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes scene-cloud-search { from { transform: translateX(-6px); } to { transform: translateX(8px); } }
+@keyframes scene-follow-trail {
+  0% { offset-distance: 0%; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+/* A confirmed check-in gets one short, local celebration. */
+.habit-cell.toggle { position: relative; overflow: visible; }
+.habit-mark { display: inline-block; }
+.just-logged .habit-mark { animation: habit-confirm 420ms cubic-bezier(0.2, 0.8, 0.3, 1.3); }
+.habit-sparks { position: absolute; inset: 0; pointer-events: none; }
+.habit-sparks i {
+  position: absolute;
+  top: 50%; left: 50%; width: 4px; height: 4px;
+  border-radius: 50%; background: var(--accent-strong);
+  animation: habit-spark 650ms ease-out both;
+}
+@keyframes habit-confirm { 0% { transform: scale(0.55); } 65% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@keyframes habit-spark {
+  from { opacity: 0.9; transform: translate(-50%, -50%) rotate(var(--spark-angle)) translateY(-5px) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -50%) rotate(var(--spark-angle)) translateY(-23px) scale(0.25); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .weather-scene *, .just-logged .habit-mark { animation: none !important; }
+  .scene-trail { stroke-dashoffset: 0; }
+  .scene-traveler, .habit-sparks { display: none; }
+}
 
 /* «Planlegg tur hit»: hopp fra værsøket til ruteplanleggeren med stedet som mål */
 .plan-btn {
@@ -523,7 +583,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .auth-form { display: flex; flex-direction: column; gap: 10px; max-width: 320px; }
 .auth-form input {
   padding: 11px 13px; border: 1px solid var(--border); border-radius: 12px;
-  background: var(--bg-2); color: var(--text); font-size: 15px;
+  background: var(--bg-2); color: var(--text); font-size: 16px;
 }
 .auth-form input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .auth-actions { display: flex; gap: 8px; }
@@ -578,7 +638,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .ai-row { display: flex; gap: 8px; margin-top: 10px; }
 .ai-row input {
   flex: 1; padding: 10px 13px; border: 1px solid var(--border); border-radius: 12px;
-  background: var(--bg-2); color: var(--text); font-size: 15px;
+  background: var(--bg-2); color: var(--text); font-size: 16px;
 }
 .ai-row input:focus { outline: none; border-color: var(--accent-2); box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15); }
 .ai-row .primary { border-radius: 12px; padding: 9px 16px; }
@@ -846,7 +906,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
   width: 100%;
   background: var(--gradient);
   border-radius: 6px 6px 0 0;
-  transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: 50% 100%;
 }
 .week-letter { font-size: var(--fs-xs); color: var(--muted); font-weight: 600; }
 .week-day.today .week-letter { color: var(--accent-strong); font-weight: 800; }
@@ -1856,7 +1916,7 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .live-info.on { background: var(--accent-soft); color: var(--accent-strong); border-color: var(--accent); }
 .live-hint { font-size: var(--fs-sm); margin: 0 0 8px; }
 .live-grid {
-  display: grid; grid-template-columns: 32px 1fr 1fr 48px;
+  display: grid; grid-template-columns: 32px minmax(0, 1fr) minmax(0, 1fr) 48px;
   align-items: center; gap: 8px;
 }
 .live-grid-head { font-size: 12px; font-weight: 600; color: var(--muted); padding: 0 0 4px; text-transform: uppercase; letter-spacing: 0.4px; }
@@ -1876,7 +1936,12 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .live-set.current .live-check { border-color: var(--accent); color: var(--accent-strong); }
 .live-set.done .live-check { background: var(--accent); border-color: var(--accent); color: #06251a; }
 .live-set.done input { opacity: 0.6; }
+.live-set input[aria-invalid='true'] { outline: 2px solid var(--danger); outline-offset: 1px; }
+.live-set-error { grid-column: 2 / -1; margin: 2px 0 4px; font-size: var(--fs-sm); }
+.live-set { scroll-margin-top: calc(var(--app-header-h) + 80px); scroll-margin-bottom: 110px; }
 .live-ex-actions { display: flex; gap: 8px; margin-top: 8px; }
+.live-ex-actions button, .live-ex-head .del, .live-end, .live-cancel { min-height: 44px; }
+.live-ex-head .del { min-width: 44px; }
 .live-cancel {
   align-self: center; background: none; border: none; color: var(--muted);
   font-size: var(--fs-sm); text-decoration: underline; cursor: pointer; padding: 8px;
@@ -1896,7 +1961,16 @@ header .sub { margin-top: 6px; color: var(--muted); }
 .live-rest.over { background: var(--accent); color: #06251a; }
 .live-rest-time { font-size: 20px; font-weight: 800; }
 .live-rest-btns { display: flex; gap: 6px; }
-.live-rest-btns button { padding: 8px 12px; border-radius: 10px; }
+.live-rest-btns button { padding: 8px 12px; border-radius: 10px; min-height: 44px; min-width: 44px; }
+
+@media (max-width: 560px) {
+  .live-bar-row { flex-wrap: wrap; gap: 8px; }
+  .live-clock, .live-count { font-size: 15px; }
+  .live-end { padding: 9px 12px; }
+  .live-rest { flex-wrap: wrap; }
+  .live-rest-time { font-size: 18px; overflow-wrap: anywhere; }
+  .live-rest-btns { margin-left: auto; }
+}
 
 /* ---------- Trening: kompakt oversikt (ikonknapper, plankort, «Ny»-ark) ---------- */
 .train-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 4px 0 14px; }
@@ -2055,7 +2129,8 @@ header .sub { margin-top: 6px; color: var(--muted); }
   border: 1px solid var(--border); background: var(--tint); color: var(--text); cursor: pointer;
 }
 .live-action.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); }
-.live-note { width: 100%; font-family: inherit; font-size: 15px; margin: 0 0 8px; resize: vertical; }
+.live-note { width: 100%; font-family: inherit; font-size: 16px; margin: 0 0 8px; resize: vertical; }
+.live-action { min-height: 44px; }
 .live-note-preview { font-size: var(--fs-sm); margin: 0 0 8px; }
 .hist-entry { padding: 12px 4px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
 .hist-date { display: flex; justify-content: space-between; gap: 10px; font-size: 15px; }

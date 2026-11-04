@@ -5,8 +5,13 @@ import ChoiceChips from './ChoiceChips.jsx'
 import AppFooter from './AppFooter.jsx'
 import { apiUrl, readError, cachedGet, switchCacheOwner, onSlowRequest } from './api'
 import { useI18n } from './i18n.jsx'
-import { useTabTransition } from './anim'
+import { useReveal } from './anim'
+import WeatherScene from './WeatherScene.jsx'
+import AppShell from './AppShell.jsx'
+import { DESTINATIONS } from './navigation.js'
 import './App.css'
+import './interfaceMotion.css'
+import './mobileRedesign.css'
 
 // Kodedeling: de tunge fanene (og Leaflet-kartene) lastes on-demand som egne
 // chunks, så første innlasting (hjem/innlogging) blir vesentlig lettere.
@@ -40,6 +45,7 @@ function placeForMap(p) {
 
 function Answer({ result, onSelectPlace, onPlan }) {
   const { t } = useI18n()
+  const revealRef = useReveal([result])
   const region = result.region ?? '(ukjent)'
   const isTrail = result.target === 'TUR'
   const isForecast = result.target === 'VARSEL'
@@ -67,9 +73,9 @@ function Answer({ result, onSelectPlace, onPlan }) {
   const best = places[0]
 
   return (
-    <div className="answer">
+    <div className="answer" ref={revealRef}>
       {interp}
-      <p className="winner">
+      <p className="winner" data-reveal>
         <span className="medal">{isForecast ? '🌤️' : isTrail ? '🥾' : '🏔️'}</span>{' '}
         {isForecast ? 'Været i ' : isTrail ? `${t('Finest vær på turrute:')} ` : `${t('Finest vær:')} `}
         <strong>{best.name}</strong>{' '}
@@ -103,6 +109,7 @@ function Answer({ result, onSelectPlace, onPlan }) {
             <tr
               key={i}
               className={i === 0 ? 'top' : ''}
+              data-reveal
               onClick={() => onSelectPlace({ name: p.name, lat: p.lat, lon: p.lon })}
             >
               <td>{p.name}</td>
@@ -129,7 +136,7 @@ function Answer({ result, onSelectPlace, onPlan }) {
               ))}
             </ul>
           ) : (
-            <p className="muted">{t('Fant ingen merkede turer (OpenStreetMap) i nærheten.')}</p>
+            <p className="muted">{t('Fant ingen merkede turer i nærheten.')}</p>
           )}
         </div>
       )}
@@ -149,7 +156,7 @@ function VaersokView({ onPlan }) {
   const endRef = useRef(null)
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' })
+    endRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
   }, [messages, loading])
 
   function setWeight(key, value) {
@@ -180,8 +187,9 @@ function VaersokView({ onPlan }) {
 
   return (
     <>
-      <section className="weights" aria-label="Vekting av faktorer">
-        <span className="weights-title">{t('Hva betyr mest for deg?')}</span>
+      <h1 className="detail-title">{t('Værsøk')}</h1>
+      <details className="weights weather-preferences">
+        <summary className="weights-title">{t('Hva betyr mest for deg?')}</summary>
         <div className="weights-grid">
           {FACTORS.map((f) => (
             <div key={f.key} className="weight">
@@ -191,7 +199,7 @@ function VaersokView({ onPlan }) {
             </div>
           ))}
         </div>
-      </section>
+      </details>
 
       {detail ? (
         <Suspense fallback={<p className="lazy-fallback muted">…</p>}>
@@ -202,6 +210,7 @@ function VaersokView({ onPlan }) {
           <div className="chat">
             {messages.length === 0 && (
               <>
+                <WeatherScene />
                 <p className="hint">{t('Prøv: «hvor er det finest fjellvær i Møre og Romsdal i helga»')}</p>
                 <div className="ai-examples chat-examples">
                   {[
@@ -226,8 +235,9 @@ function VaersokView({ onPlan }) {
               )
             )}
             {loading && (
-              <div className="msg bot">
-                <p className="muted typing">{t('Henter vær')} <span>·</span><span>·</span><span>·</span></p>
+              <div className="msg bot weather-loading">
+                <WeatherScene busy compact />
+                <p className="muted typing" role="status">{t('Henter vær')} <span>·</span><span>·</span><span>·</span></p>
               </div>
             )}
             <div ref={endRef} />
@@ -249,17 +259,10 @@ function VaersokView({ onPlan }) {
 }
 
 // Alt unntatt værsøket krever innlogging (auth: true).
-const NAV = [
-  { id: 'hjem', icon: '🏠', label: 'Hjem', auth: true },
-  { id: 'vaersok', icon: '🔎', label: 'Værsøk', auth: false },
-  { id: 'rute', icon: '🧭', label: 'Ruteplanlegger', auth: true },
-  { id: 'trening', icon: '🏋️', label: 'Trening', auth: true },
-  { id: 'kosthold', icon: '🥗', label: 'Kosthold', auth: true },
-  { id: 'restitusjon', icon: '🧘', label: 'Restitusjon', auth: true },
-]
+const NAV = DESTINATIONS
 
 export default function App() {
-  const { t, lang, setLang } = useI18n()
+  const { t } = useI18n()
   // `/#personvern` åpner personvernerklæringen direkte: App Store Connect krever en offentlig URL til den.
   const [tab, setTab] = useState(() => (
     location.hash === '#personvern' ? 'personvern' : supabase ? 'hjem' : 'vaersok'))
@@ -267,7 +270,6 @@ export default function App() {
   // Til getSession har svart vet vi ikke om brukeren er innlogget - unngår
   // at innloggingsveggen blinker forbi ved oppstart.
   const [authReady, setAuthReady] = useState(!supabase)
-  const [menuOpen, setMenuOpen] = useState(false)
   // Gratis hosting sover; første kall kan ta ~1 minutt. Si fra i stedet for å la appen se ødelagt ut.
   const [slow, setSlow] = useState(false)
   // Engangsmelding etter kontosletting (brukeren logges ut samtidig, så meldingen må leve i App).
@@ -276,12 +278,8 @@ export default function App() {
 
   function go(id) {
     setTab(id)
-    setMenuOpen(false)
   }
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') ?? 'light')
-  // Sidemenyen har to states (som Garmin): utvidet og kollapset ikon-rail.
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === '1')
-
   // Sted valgt i værsøket som brukeren vil planlegge tur til. Ligger her (ikke
   // i planleggeren) fordi tabbene demonteres ved bytte - staten må overleve.
   const [planTarget, setPlanTarget] = useState(null)
@@ -295,10 +293,6 @@ export default function App() {
     document.documentElement.dataset.theme = theme
     try { localStorage.setItem('theme', theme) } catch { /* privat modus o.l. */ }
   }, [theme])
-
-  useEffect(() => {
-    try { localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0') } catch { /* privat modus o.l. */ }
-  }, [collapsed])
 
   useEffect(() => {
     if (!supabase) return undefined
@@ -355,78 +349,14 @@ export default function App() {
     return () => { alive = false }
   }, [session])
 
-  const mainRef = useTabTransition(tab)
   const current = NAV.find((n) => n.id === tab)
   const locked = authReady && !session && current?.auth
 
   return (
-    <div className="app">
-      {notice && (
-        <div className="wake-banner" role="status">
-          {notice} <button className="link-btn" onClick={() => setNotice(null)}>{t('Lukk')}</button>
-        </div>
-      )}
-      {slow && <div className="wake-banner" role="status">⏳ {t('Vekker serveren … første innlasting kan ta opptil ett minutt.')}</div>}
-      {menuOpen && <div className="menu-backdrop" onClick={() => setMenuOpen(false)} />}
-      <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${menuOpen ? 'menu-open' : ''}`}>
-        <button
-          className="sidebar-toggle"
-          title={collapsed ? t('Utvid menyen') : t('Minimer menyen')}
-          aria-label={collapsed ? t('Utvid menyen') : t('Minimer menyen')}
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          {collapsed ? '›' : '‹'}
-        </button>
-        <div className="brand" title="Turvær">
-          <span className="brand-icon">⛰️</span>
-          <span className="brand-name">Turvær</span>
-        </div>
-        <span className="mobile-title">{tab === 'konto' ? t(session ? 'Min konto' : 'Logg inn') : t(current?.label ?? '')}</span>
-        <button
-          className="menu-toggle"
-          aria-label={t('Meny')}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen(!menuOpen)}
-        >
-          {menuOpen ? '✕' : '☰'}
-        </button>
-        <div className="menu-panel">
-        <nav className="nav" aria-label="Moduser">
-          {NAV.map((n) => (
-            <button
-              key={n.id}
-              className={`nav-item ${tab === n.id ? 'active' : ''}`}
-              title={n.auth && !session ? `${t(n.label)} – ${t('Krever innlogging')}` : t(n.label)}
-              onClick={() => go(n.id)}
-            >
-              {n.icon} <span>{t(n.label)}{n.auth && !session && ' 🔒'}</span>
-            </button>
-          ))}
-        </nav>
-        <button
-          className="nav-item account-btn"
-          onClick={() => setLang(lang === 'nb' ? 'en' : 'nb')}
-          title={lang === 'nb' ? 'Switch to English' : 'Bytt til norsk'}
-        >
-          🌐 <span>{lang === 'nb' ? t('English') : t('Norsk')}</span>
-        </button>
-        <button
-          className="nav-item account-btn"
-          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-          title={t('Bytt mellom lys og mørk modus')}
-        >
-          {theme === 'light' ? '🌙' : '☀️'} <span>{theme === 'light' ? t('Mørk modus') : t('Lys modus')}</span>
-        </button>
-        <button
-          className={`nav-item ${tab === 'konto' ? 'active' : ''}`}
-          onClick={() => go('konto')}
-        >
-          👤 <span>{session ? t('Min konto') : t('Logg inn')}</span>
-        </button>
-        </div>
-      </aside>
-
-      <main className={`main ${tab === 'rute' && !locked ? 'wide' : ''}`} ref={mainRef}>
+    <AppShell tab={tab} onNavigate={go} session={session} theme={theme}
+      onToggleTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+      slow={slow} wide={tab === 'rute' && !locked}>
+      {notice && <div className="wake-banner" role="status">{notice} <button className="link-btn" onClick={() => setNotice(null)}>{t('Lukk')}</button></div>}
         <Suspense fallback={<p className="lazy-fallback muted">{t('Laster …')}</p>}>
           {!authReady ? (
             <p className="lazy-fallback muted">{t('Laster …')}</p>
@@ -434,7 +364,7 @@ export default function App() {
             <AuthView session={null} onOpenPrivacy={() => go('personvern')}
                       reason={t('Logg inn for å bruke {feature}. Værsøket er åpent for alle.', { feature: t(current.label) })} />
           ) : (<>
-          {tab === 'hjem' && <Dashboard session={session} onNavigate={setTab} />}
+          {tab === 'hjem' && <Dashboard session={session} onNavigate={go} />}
           {tab === 'vaersok' && <VaersokView onPlan={planTrip} />}
           {tab === 'rute' && (
             <RoutePlanner
@@ -456,7 +386,6 @@ export default function App() {
           </>)}
         </Suspense>
         <AppFooter onOpenPrivacy={() => go('personvern')} />
-      </main>
-    </div>
+    </AppShell>
   )
 }

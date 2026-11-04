@@ -34,6 +34,16 @@ export function newId() {
 // Norsk tastatur gir komma som desimaltegn.
 export const toNum = (x) => Number(String(x ?? '').replace(',', '.'))
 
+// Tom vekt betyr kroppsvekt. Reps må være et positivt heltall; desimalvekt
+// godtar både norsk komma og punktum, men ikke delvis utfylte eller ugyldige tall.
+export function liveSetError(set) {
+  const reps = String(set.reps ?? '').trim()
+  if (!/^\d+$/.test(reps) || !Number.isSafeInteger(Number(reps)) || Number(reps) < 1) return 'reps'
+  const weight = String(set.weightKg ?? '').trim()
+  if (weight && (!/^(?:\d+(?:[.,]\d+)?|[.,]\d+)$/.test(weight) || !Number.isFinite(toNum(weight)))) return 'weightKg'
+  return null
+}
+
 export function findSuggestion(name, nextSets) {
   const key = exerciseKey(name)
   return (nextSets || []).find((s) => exerciseKey(s.exercise) === key)

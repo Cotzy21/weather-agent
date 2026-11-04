@@ -1,3 +1,29 @@
+## Publiseringskandidat — 2026-11-04
+
+Integrert lokale mobil-/kartendringer oppå produksjonsversjon 7e28d85. Bevarer
+fokusmodus, aktivitetsøkter, maler, atomisk planlagring, personvern og kontosletting.
+Ny mobilnavigasjon, roligere typografi/palett, native sentrale dialoger, synlig
+AI-profiloversikt med redigering og tydeligere sett/enheter. Kartverket er primær
+kart-/turkilde i de støttede områdene, med tidligere Overpass-reserve bevart.
+iOS bruker Capacitor 8.5.3 og SceneDelegate; mobilbygg støtter både .env.native
+og .env.mobile. Ingen hemmelige .env-filer er med i commit.
+
+AI-profil, historikk, dagsform og preferanser var allerede med i modellkonteksten.
+Aktuelle utstyrsgrenser gjøres nå eksplisitte før generering. En ekte test fant
+at «dumbbells and bench only» ikke ble fanget av regelkontrollen; postfix-only
+støttes nå, med regresjonstest og kontroll av første prompt. Nybegynnerønsker
+ber om enkle forklaringer og forsiktige belastninger.
+
+Sjekker: 576 backendtester, ingen feil, 5 eksplisitt hoppet over; 298 frontendtester,
+lint uten advarsler, produksjonsbygg og iOS-simulator-kompilering bestod. Ekte
+produksjonstest før publisering: AI-økt lagret som mal og gjenfunnet etter full
+innlasting; AI-plan med BJJ rettet via samtale og lagret. Ny verifikasjon etter
+publisering gjenstår. QA-test-oppføringer er tydelig merket og ekte historikk beholdt.
+
+Driftsfeilen denne dagen skyldtes et pauset Supabase-prosjekt. Gjenopptatt i
+Supabase-dashboardet; Render fikk databasekontakt og validerte 19 migrasjoner.
+Ikke anta at «tenant/user not found» krever passordbytte. Ingen nye abonnementer.
+
 # HANDOFF — status og neste steg
 
 > Denne fila ligger i repo-rot og committes MED VILJE (den gamle lå i `docs/`

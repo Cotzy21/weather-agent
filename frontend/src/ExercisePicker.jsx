@@ -1,3 +1,4 @@
+import Sheet from './Sheet.jsx'
 import { useState } from 'react'
 import { useI18n } from './i18n.jsx'
 import { groupsFor, exerciseKey } from './exercises'
@@ -31,8 +32,7 @@ export default function ExercisePicker({ title, mine = [], liked = [], disliked 
   const exact = sections.some((s) => s.items.some((n) => n.toLowerCase() === query))
 
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet picker" role="dialog" aria-label={title} onClick={(e) => e.stopPropagation()}>
+    <Sheet className="sheet picker" label={title} onClose={onClose} role="dialog">
         <span className="sheet-handle" aria-hidden="true" />
         <div className="picker-head">
           <strong>{title}</strong>
@@ -64,7 +64,7 @@ export default function ExercisePicker({ title, mine = [], liked = [], disliked 
             </div>
           ))}
         </div>
-      </div>
-    </div>
+
+    </Sheet>
   )
 }

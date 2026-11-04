@@ -36,7 +36,7 @@ public class SecurityConfig {
             "default-src 'self'",
             "script-src 'self'",
             "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.tile.opentopomap.org https://server.arcgisonline.com",
+            "img-src 'self' data: blob: https://cache.kartverket.no https://server.arcgisonline.com",
             "font-src 'self' data:",
             "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
             "worker-src 'self'",

@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
+import { withMotion } from './anim'
 import { useI18n } from './i18n.jsx'
 
 /**
@@ -142,11 +143,10 @@ export default function MusclePicker({ onCreate }) {
   useLayoutEffect(() => {
     const el = svgRef.current
     if (!el) return undefined
-    const ctx = gsap.context(() => {
+    return withMotion(el, () => {
       gsap.fromTo(el, { opacity: 0, rotateY: 25 }, { opacity: 1, rotateY: 0, duration: 0.5, ease: 'power2.out' })
       gsap.to(el, { scale: 1.012, duration: 2.6, yoyo: true, repeat: -1, ease: 'sine.inOut', transformOrigin: '50% 45%' })
-    }, el)
-    return () => ctx.revert()
+    })
   }, [view, gender])
 
   function toggle(id) {

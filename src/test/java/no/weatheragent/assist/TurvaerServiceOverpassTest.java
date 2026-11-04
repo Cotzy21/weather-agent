@@ -41,7 +41,7 @@ class TurvaerServiceOverpassTest {
     private final BestWeatherFinder finder = mock(BestWeatherFinder.class);
     private final ResilientWeatherClient weather = mock(ResilientWeatherClient.class);
     private final OpenMeteoGeocodingClient geocoding = mock(OpenMeteoGeocodingClient.class);
-    private final TurvaerService service = new TurvaerService(interpreter, overpass, finder, weather, geocoding);
+    private final TurvaerService service = new TurvaerService(interpreter, overpass, finder, weather, geocoding, mock(no.weatheragent.hiking.KartverketClient.class));
 
     private Interpretation interpretation(Target target) {
         return new Interpretation("Oslo", "NO", TimeExpression.I_MORGEN, target, DateRange.single(DAY), TripType.UANSETT);

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
+import { addMapLayers } from './mapLayers.js'
 import 'leaflet/dist/leaflet.css'
 
 // Interaktivt kart: klikk legger til et veipunkt (via onAdd). Waypoints tegnes
@@ -27,21 +28,7 @@ export default function RouteMap({ waypoints, route = [], onAdd, focus = null })
 
       // Kartlag brukeren kan bytte mellom (som Google Maps: kart/terreng/satellitt).
       // Alle er gratis og uten nøkkel; terreng (OpenTopoMap) er fint for turplanlegging.
-      const standard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap-bidragsytere', maxZoom: 19,
-      })
-      const terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenTopoMap (CC-BY-SA)', maxZoom: 17,
-      })
-      const satellite = L.tileLayer(
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-          attribution: 'Tiles © Esri', maxZoom: 19,
-        })
-      standard.addTo(mapRef.current)
-      L.control.layers(
-        { Map: standard, Terrain: terrain, Satellite: satellite },
-        null, { position: 'topright' },
-      ).addTo(mapRef.current)
+      addMapLayers(mapRef.current, { selectable: true })
       layerRef.current = L.layerGroup().addTo(mapRef.current)
       mapRef.current.on('click', (e) => onAddRef.current(e.latlng.lat, e.latlng.lng))
     }

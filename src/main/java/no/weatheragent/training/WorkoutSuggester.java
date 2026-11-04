@@ -48,7 +48,7 @@ public class WorkoutSuggester {
         String history = recentHistory(userId);
         // Forslag krever resonnering over historikken (progressiv overload) -> smart modell, sterkest for nybegynnere.
         String system = systemPrompt();
-        String user = userPrompt(focus, type, history) + languageLine(lang);
+        String user = userPrompt(focus, type, history) + requestContext(userId, focus) + languageLine(lang);
         String raw = llm.complete(profiles.tierFor(userId), system, user);
         try {
             JsonNode json = mapper.readTree(extractJson(raw));
@@ -84,7 +84,7 @@ public class WorkoutSuggester {
     public PlanSuggestion suggestPlan(UUID userId, String request, String lang) {
         String history = recentHistory(userId);
         String system = planSystemPrompt();
-        String user = planUserPrompt(request, history) + languageLine(lang);
+        String user = planUserPrompt(request, history) + requestContext(userId, request) + languageLine(lang);
         String raw = llm.complete(profiles.tierFor(userId), system, user);
         try {
             PlanSuggestion plan = parsePlan(mapper.readTree(extractJson(raw)));
@@ -107,7 +107,7 @@ public class WorkoutSuggester {
     public AssistantReply chat(UUID userId, List<ChatTurn> messages, JsonNode currentPlan, String lang) {
         String history = recentHistory(userId);
         String system = assistantSystemPrompt();
-        String prompt = assistantUserPrompt(history, messages) + currentPlanContext(currentPlan) + languageLine(lang);
+        String prompt = assistantUserPrompt(history, messages) + currentPlanContext(currentPlan) + requestContext(userId, conversationText(messages)) + languageLine(lang);
         String raw = llm.complete(profiles.tierFor(userId), system, prompt);
         try {
             JsonNode json = mapper.readTree(extractJson(raw));
@@ -274,6 +274,25 @@ public class WorkoutSuggester {
             json = json.substring(0, 8000);
         }
         return "\n\nNåværende plan (JSON):\n" + json;
+    }
+
+    /** Make active constraints explicit rather than asking the model to infer them from old workouts. */
+    private String requestContext(UUID userId, String request) {
+        String equipment = profiles.find(userId).map(TrainingProfileData::equipment).orElse(null);
+        EquipmentNotes.Result active = EquipmentNotes.apply(request, equipment == null ? null : ExerciseCatalog.equipmentFor(equipment));
+        StringBuilder context = new StringBuilder("\nAKTUELLE RAMMER: Følg ønskene i denne samtalen foran standardverdier i profilen. "
+                + "Historikken er progresjonsgrunnlag, ikke en liste over øvelser som må gjentas.\n");
+        if (active.have() != null) {
+            context.append("Tilgjengelig utstyr for dette forslaget (uttømmende): ")
+                    .append(active.have().isEmpty() ? "bare kroppsvekt" : String.join(", ", active.have().stream().sorted().toList()))
+                    .append(". Ikke foreslå øvelser som krever annet utstyr.\n");
+        }
+        if (request != null && request.toLowerCase(Locale.ROOT).matches("(?s).*(beginner|nybegynner|helt ny|aldri trent).*")) {
+            context.append("Brukeren ber om nybegynnernivå nå: enkle bevegelser, lavt startvolum og konservative belastninger. "
+                    + "Forklar øvelsene i rationale: hva de trener og ett enkelt teknikktips per øvelse. "
+                    + "Forklar at foreslått manualvekt gjelder per manual og må justeres etter teknikk.\n");
+        }
+        return context.toString();
     }
 
     /**

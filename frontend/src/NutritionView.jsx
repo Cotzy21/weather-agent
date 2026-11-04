@@ -3,7 +3,7 @@ import gsap from 'gsap'
 import MealDiary from './MealDiary'
 import { apiUrl, readError } from './api'
 import { authHeaders } from './supabase'
-import { useReveal, pop } from './anim'
+import { useReveal, pop, withMotion } from './anim'
 import { useI18n } from './i18n.jsx'
 
 /**
@@ -197,12 +197,11 @@ export default function NutritionView({ session }) {
   useLayoutEffect(() => {
     const el = foodsRef.current
     if (!el) return undefined
-    const ctx = gsap.context(() => {
+    return withMotion(el, () => {
       gsap.fromTo(el.children,
         { opacity: 0, y: 16, scale: 0.85 },
         { opacity: 1, y: 0, scale: 1, duration: 0.4, stagger: 0.045, ease: 'back.out(1.7)', clearProps: 'all' })
-    }, el)
-    return () => ctx.revert()
+    })
   }, [open])
 
   function persistLocal(storageKey, next) {
@@ -361,7 +360,7 @@ export default function NutritionView({ session }) {
 
   return (
     <div className="nutrition" ref={rootRef}>
-      <h2 className="detail-title" data-reveal>{t('🥗 Kosthold')}</h2>
+      <h1 className="detail-title">{t('Kosthold')}</h1>
       <p className="muted disclaimer">{t('Kalorimål og næringsråd er generelle veiledninger, ikke medisinske råd.')}</p>
 
       <MealDiary session={session} />

@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import Icon from './Icon.jsx'
+import { loadLive } from './liveSession.js'
 import { BodyweightCard, BodyweightSheet } from './Bodyweight.jsx'
 import LifetimeStats from './LifetimeStats.jsx'
 import DashboardCustomizer from './DashboardCustomizer.jsx'
@@ -8,10 +10,10 @@ import { WIDGET_BY_ID, loadLayout, storeLayout, mergeLayout, hasStoredLayout } f
 import { localIso } from './trainingStats.js'
 import { authHeaders } from './supabase'
 import { cachedGet, getCached, apiUrl, readError } from './api'
-import { useReveal, useCountUp } from './anim'
+import { useReveal, useCountUp, useBarGrowth } from './anim'
 import { useI18n } from './i18n.jsx'
 
-const ICONS = { STYRKE: '🏋️', LØPING: '🏃', SVØMMING: '🏊', SYKKEL: '🚴', BULDRING: '🧗', HIKING: '🥾', KAMPSPORT: '🥋', FRISTIL: '✨' }
+const ICONS = Object.fromEntries(Object.entries({ STYRKE: 'training', LØPING: 'route', SVØMMING: 'recovery', SYKKEL: 'route', BULDRING: 'mountain', HIKING: 'mountain', KAMPSPORT: 'training', FRISTIL: 'spark' }).map(([type, icon]) => [type, <Icon key={type} name={icon} />]))
 const DAY_LETTERS = { nb: ['M', 'T', 'O', 'T', 'F', 'L', 'S'], en: ['M', 'T', 'W', 'T', 'F', 'S', 'S'] } // mandag først
 
 function startOfWeek() {
@@ -171,6 +173,7 @@ export default function Dashboard({ session, onNavigate }) {
   })
   const maxCount = Math.max(1, ...dayCounts)
   const todayIdx = (new Date().getDay() + 6) % 7
+  const barsRef = useBarGrowth(`${!!session}:${layout.find((w) => w.id === 'week')?.on}:${dayCounts.join(',')}`)
 
   const todays = workouts.filter((w) => w.date === isoToday())
   const latest = workouts[0]
@@ -193,12 +196,12 @@ export default function Dashboard({ session, onNavigate }) {
   const widgets = {
     week: (
       <div className="focus-card" data-reveal>
-        <span className="focus-head">{t('🏋️ Trening denne uka')}</span>
+        <span className="focus-head">{t('Trening denne uka')}</span>
         <div className="focus-main">
           <span className="focus-big" ref={weekRef}>{weekCount}</span>
-          <span className="focus-sub muted">{t('økter')} · {workouts.length} {t('totalt')}</span>
+          <span className="focus-sub muted">{t(weekCount === 1 ? 'økt' : 'økter')} · {workouts.length} {t('totalt')}</span>
         </div>
-        <div className="week-bars" aria-label="Økter per ukedag">
+        <div className="week-bars" ref={barsRef} aria-label="Økter per ukedag">
           {dayCounts.map((n, i) => (
             <span className={`week-day ${i === todayIdx ? 'today' : ''}`} key={i}>
               <span className="week-bar">
@@ -213,7 +216,7 @@ export default function Dashboard({ session, onNavigate }) {
     streak: <StreakCard workouts={workouts} settings={streakSettings} today={isoToday()} onChange={saveStreakSettings} />,
     nutrition: (
       <button className="focus-card clickable" data-reveal onClick={() => onNavigate('kosthold')}>
-        <span className="focus-head">{t('🥗 Kosthold i dag')}</span>
+        <span className="focus-head">{t('Kosthold i dag')}</span>
         {day == null || (day.entries.length === 0 && lows.length === 0) ? (
           <p className="muted">{t('Ingenting logget ennå – begynn kostholdsdagboka her →')}</p>
         ) : (
@@ -232,7 +235,7 @@ export default function Dashboard({ session, onNavigate }) {
             )}
             {lows.length > 0 && (
               <p className="focus-line muted">
-                {t('🧪 Lavt denne uka:')} {lows.map((n) => n.name).slice(0, 3).join(', ')}
+                {t('Lavt denne uka:')} {lows.map((n) => n.name).slice(0, 3).join(', ')}
                 {lows.length > 3 ? ` +${lows.length - 3}` : ''} →
               </p>
             )}
@@ -242,7 +245,7 @@ export default function Dashboard({ session, onNavigate }) {
     ),
     latest: (
       <div className="focus-card" data-reveal>
-        <span className="focus-head">{t('⏱️ Siste økt')}</span>
+        <span className="focus-head">{t('Siste økt')}</span>
         {latest ? (
           <>
             <div className="focus-main">
@@ -260,7 +263,7 @@ export default function Dashboard({ session, onNavigate }) {
     ),
     weather: (
       <div className="focus-card" data-reveal>
-        <span className="focus-head">{t('🌤️ Turvær')}</span>
+        <span className="focus-head">{t('Turvær')}</span>
         <p className="focus-line">{t('Hvor er det finest i helga?')}</p>
         <p className="focus-line muted">{t('Spør værsøket – rangerer topper og turruter etter vær.')}</p>
         <button className="mini" onClick={() => onNavigate('vaersok')}>{t('Finn turvær →')}</button>
@@ -314,9 +317,15 @@ export default function Dashboard({ session, onNavigate }) {
   return (
     <div className="dash garmin" ref={revealRef}>
       <div className="dash-head">
-        <h2 className="detail-title" data-reveal>{t('I fokus')}</h2>
-        <button className="dash-customize" onClick={() => setCustomizing(true)}>✎ {t('Tilpass')}</button>
+        <div><h1 className="detail-title">{t('Dagen din')}</h1><p className="dash-date">{new Intl.DateTimeFormat(lang === 'nb' ? 'nb-NO' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}</p></div>
+        <button className="dash-customize" aria-label={t('Tilpass dashboardet')} onClick={() => setCustomizing(true)}><Icon name="edit" size={18} /><span>{t('Tilpass')}</span></button>
       </div>
+
+      <section className="day-brief" aria-label={t('Dagens trening')}>
+        <div><h2>{t(loadLive(session.user.id) ? 'Fortsett der du slapp' : 'Litt bevegelse i dag?')}</h2>
+          <p>{todays.length > 0 ? t('{n} økter logget i dag.', { n: todays.length }) : t('En økt, en tur eller en rolig dag. Du velger.')}</p></div>
+        <button className="primary" onClick={() => onNavigate('trening')}>{t(loadLive(session.user.id) ? 'Fortsett økta' : 'Åpne trening')}<Icon name="arrow" size={18} /></button>
+      </section>
 
       {layout.every((w) => !w.on) && (
         <button className="plan-empty" onClick={() => setCustomizing(true)}>{t('Dashboardet er tomt – velg hva du vil se')}</button>
@@ -324,7 +333,7 @@ export default function Dashboard({ session, onNavigate }) {
 
       <div className="dash-widgets">
         {layout.filter((w) => w.on).map((w) => (
-          <div key={w.id} className={`dash-widget ${WIDGET_BY_ID[w.id].wide ? 'wide' : ''}`}>{widgets[w.id]}</div>
+          <div key={w.id} data-widget-id={w.id} className={`dash-widget ${WIDGET_BY_ID[w.id].wide ? 'wide' : ''}`}>{widgets[w.id]}</div>
         ))}
       </div>
 

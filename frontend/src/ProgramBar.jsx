@@ -53,7 +53,7 @@ export default function ProgramBar() {
     return (
       <div className="program-bar">
         {!starting ? (
-          <button className="mini" onClick={() => setStarting(true)}>📆 {t('Start et program')}</button>
+          <button className="mini" onClick={() => setStarting(true)}>{t('Start et program')}</button>
         ) : (
           <>
             <span className="muted">{t('Hvor mange uker?')}</span>

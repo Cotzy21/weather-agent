@@ -1,3 +1,4 @@
+import Sheet from './Sheet.jsx'
 import { useState } from 'react'
 import { useI18n } from './i18n.jsx'
 import ChoiceChips from './ChoiceChips.jsx'
@@ -12,8 +13,7 @@ export default function ExerciseHistory({ name, planTitle, workouts, fmtKg, onCl
   const rows = scope === 'plan' ? inPlan : all
 
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet picker" role="dialog" aria-label={name} onClick={(e) => e.stopPropagation()}>
+    <Sheet className="sheet picker" label={name} onClose={onClose} role="dialog">
         <span className="sheet-handle" aria-hidden="true" />
         <div className="picker-head">
           <strong>{name}</strong>
@@ -37,7 +37,7 @@ export default function ExerciseHistory({ name, planTitle, workouts, fmtKg, onCl
             </div>
           ))}
         </div>
-      </div>
-    </div>
+
+    </Sheet>
   )
 }

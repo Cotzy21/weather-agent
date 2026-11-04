@@ -1,3 +1,4 @@
+import Sheet from './Sheet.jsx'
 import { useI18n } from './i18n.jsx'
 import { WIDGETS } from './dashboardLayout.js'
 
@@ -15,8 +16,7 @@ export default function DashboardCustomizer({ layout, onChange, onClose }) {
   }
 
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet picker" role="dialog" aria-label={t('Tilpass dashboardet')} onClick={(e) => e.stopPropagation()}>
+    <Sheet className="sheet picker" label={t('Tilpass dashboardet')} onClose={onClose} role="dialog">
         <span className="sheet-handle" aria-hidden="true" />
         <div className="picker-head">
           <strong>{t('Tilpass dashboardet')}</strong>
@@ -40,7 +40,7 @@ export default function DashboardCustomizer({ layout, onChange, onClose }) {
             </li>
           ))}
         </ul>
-      </div>
-    </div>
+
+    </Sheet>
   )
 }

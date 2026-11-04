@@ -96,6 +96,14 @@ class EquipmentNotesTest {
         assertEquals(Set.of("dumbbell", "bench"), have("BARE MANUALER", GYM));
     }
 
+    @Test
+    void readsPostfixOnlyFromTheRealPlanRequest() {
+        assertEquals(HOME, have("strength Monday and Friday, 30 minutes each, dumbbells and bench only; BJJ Wednesday", GYM));
+        assertEquals(HOME, have("Jeg trener med manualer og benk kun; ingen maskiner", GYM));
+        assertEquals(GYM, have("Dumbbells are available. Train legs only", GYM));
+        assertEquals(GYM, have("I use dumbbells but only want one session", GYM));
+    }
+
     private static Set<String> minus(Set<String> base, String... tags) {
         Set<String> out = new java.util.HashSet<>(base);
         for (String t : tags) out.remove(t);

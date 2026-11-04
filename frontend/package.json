@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:native": "vite build --mode native",
-    "ios:sync": "vite build --mode native && cap sync ios",
+    "build:native": "node scripts/build-mobile.mjs",
+    "build:mobile": "node scripts/build-mobile.mjs",
+    "ios:sync": "npm run build:mobile && cap sync ios",
     "ios:open": "cap open ios",
     "lint": "oxlint",
     "preview": "vite preview",
@@ -15,10 +16,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@capacitor/android": "^8.4.1",
-    "@capacitor/cli": "^8.4.1",
-    "@capacitor/core": "^8.4.1",
-    "@capacitor/ios": "^8.4.1",
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
     "@fontsource-variable/dm-sans": "^5.2.8",
     "@garmin/fitsdk": "^21.217.0",
     "@supabase/supabase-js": "^2.109.0",

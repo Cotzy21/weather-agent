@@ -1,6 +1,7 @@
 import { escapeHtml } from './escapeHtml.js'
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
+import { addMapLayers } from './mapLayers.js'
 import 'leaflet/dist/leaflet.css'
 
 const NEAR_KM = 5 // turruter innenfor denne avstanden fra valgt sted "lyser opp"
@@ -32,10 +33,7 @@ export default function ResultMap({ places, trails = [], selected = null, highli
 
     if (!mapRef.current) {
       mapRef.current = L.map(elRef.current, { scrollWheelZoom: false })
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap-bidragsytere',
-        maxZoom: 17,
-      }).addTo(mapRef.current)
+      addMapLayers(mapRef.current)
       layerRef.current = L.layerGroup().addTo(mapRef.current)
     }
 

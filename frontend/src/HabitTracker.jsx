@@ -41,11 +41,18 @@ export default function HabitTracker() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ name: '', emoji: '', unit: '' })
   const [error, setError] = useState(null)
+  const [celebration, setCelebration] = useState(null)
+  const [pending, setPending] = useState(() => new Set())
 
   const days = lastDays(7, lang === 'en' ? 'en-GB' : 'nb-NO')
   const today = days[days.length - 1].iso
 
   useEffect(() => { load() }, [])
+  useEffect(() => {
+    if (!celebration) return undefined
+    const timeout = setTimeout(() => setCelebration(null), 850)
+    return () => clearTimeout(timeout)
+  }, [celebration])
 
   async function load() {
     try {
@@ -79,14 +86,31 @@ export default function HabitTracker() {
   }
 
   async function log(habitId, date, value) {
+    const key = `${habitId}:${date}`
+    if (pending.has(key)) return
+    setPending((current) => new Set(current).add(key))
+    setError(null)
     try {
-      await fetch(apiUrl(`/api/vaner/${habitId}/logg`), {
+      const res = await fetch(apiUrl(`/api/vaner/${habitId}/logg`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ date, value }),
       })
-      load()
-    } catch { /* ignorer – cellen beholder gammel verdi ved reload */ }
+      if (!res.ok) throw new Error(await readError(res))
+      await load()
+      // Only a successful boolean check-in celebrates; historical data never does.
+      if (value === 1 && !habits.find((h) => h.id === habitId)?.unit) {
+        setCelebration({ key, token: Date.now() })
+      }
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setPending((current) => {
+        const next = new Set(current)
+        next.delete(key)
+        return next
+      })
+    }
   }
 
   const valueFor = (habit, iso) => habit.logs.find((l) => l.date === iso)?.value
@@ -170,11 +194,18 @@ export default function HabitTracker() {
                 ) : (
                   <button
                     key={d.iso}
-                    className={`habit-cell toggle ${value ? 'done' : ''} ${d.iso === today ? 'today' : ''}`}
+                    className={`habit-cell toggle ${value ? 'done' : ''} ${d.iso === today ? 'today' : ''} ${celebration?.key === `${h.id}:${d.iso}` ? 'just-logged' : ''}`}
                     aria-label={`${h.name} ${d.iso}`}
+                    aria-pressed={!!value}
+                    disabled={pending.has(`${h.id}:${d.iso}`)}
                     onClick={() => log(h.id, d.iso, value ? 0 : 1)}
                   >
-                    {value ? '✓' : ''}
+                    <span className="habit-mark">{value ? '✓' : ''}</span>
+                    {celebration?.key === `${h.id}:${d.iso}` && (
+                      <span className="habit-sparks" key={celebration.token} aria-hidden="true">
+                        {[0, 1, 2, 3, 4, 5].map((i) => <i key={i} style={{ '--spark-angle': `${i * 60}deg` }} />)}
+                      </span>
+                    )}
                   </button>
                 )
               })}

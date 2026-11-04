@@ -21,7 +21,7 @@ export default function AuthView({ session, reason, onOpenPrivacy, onDeleted }) 
   if (!supabase) {
     return (
       <div className="account">
-        <h2 className="detail-title">{t('Konto')}</h2>
+        <h1 className="detail-title">{t('Konto')}</h1>
         <p className="muted">
           {t('Supabase er ikke konfigurert ennå (mangler VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).')}
         </p>
@@ -49,7 +49,7 @@ export default function AuthView({ session, reason, onOpenPrivacy, onDeleted }) 
   if (session) {
     return (
       <div className="account">
-        <h2 className="detail-title">{t('Konto')}</h2>
+        <h1 className="detail-title">{t('Konto')}</h1>
         <p>{t('Innlogget som')} <strong>{session.user.email}</strong></p>
         <button className="primary" onClick={() => supabase.auth.signOut()}>{t('Logg ut')}</button>
 
@@ -92,11 +92,11 @@ export default function AuthView({ session, reason, onOpenPrivacy, onDeleted }) 
 
   return (
     <div className="account">
-      <h2 className="detail-title">{t('Logg inn')}</h2>
+      <h1 className="detail-title">{t('Logg inn')}</h1>
       {reason && <p className="muted auth-reason">{reason}</p>}
       <div className="auth-form">
-        <input type="email" placeholder={t('E-post')} value={email} onChange={(e) => setEmail(e.target.value)} />
-        <input type="password" placeholder={t('Passord')} value={password} onChange={(e) => setPassword(e.target.value)} />
+        <label className="auth-field" htmlFor="auth-email">{t('E-post')}<input id="auth-email" type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+        <label className="auth-field" htmlFor="auth-password">{t('Passord')}<input id="auth-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
         <label className="consent">
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
           <span>

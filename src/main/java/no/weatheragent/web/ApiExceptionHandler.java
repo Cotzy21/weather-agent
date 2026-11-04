@@ -42,9 +42,8 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ApiError(message));
     }
 
-    /** Ingen Overpass-instans svarte i tide -> 503 med en vennlig melding (i stedet for at kallet henger til vertens tidsgrense). */
-    @ExceptionHandler(no.weatheragent.hiking.OverpassUnavailableException.class)
-    public ResponseEntity<ApiError> handleOverpassUnavailable(no.weatheragent.hiking.OverpassUnavailableException e) {
+    @ExceptionHandler({no.weatheragent.hiking.KartverketUnavailableException.class, no.weatheragent.hiking.OverpassUnavailableException.class})
+    public ResponseEntity<ApiError> handleMapUnavailable(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).header("Retry-After", "30").body(new ApiError(e.getMessage()));
     }
 

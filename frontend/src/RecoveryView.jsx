@@ -43,7 +43,7 @@ export default function RecoveryView({ session }) {
   if (!session) {
     return (
       <div className="recovery" ref={revealRef}>
-        <h2 className="detail-title" data-reveal>{t('🧘 Restitusjon')}</h2>
+        <h1 className="detail-title">{t('Restitusjon')}</h1>
         <p className="muted" data-reveal>
           {t('Logg inn og før treningsdagbok – så får du restitusjonsråd og beskjed når treningsmengden øker raskere enn kroppen liker.')}
         </p>
@@ -56,7 +56,7 @@ export default function RecoveryView({ session }) {
 
   return (
     <div className="recovery" ref={revealRef}>
-      <h2 className="detail-title" data-reveal>{t('🧘 Restitusjon')}</h2>
+      <h1 className="detail-title">{t('Restitusjon')}</h1>
 
       {!report && <p className="muted" data-reveal>{t('Henter rapporten …')}</p>}
 

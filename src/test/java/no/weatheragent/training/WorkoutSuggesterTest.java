@@ -309,6 +309,24 @@ class WorkoutSuggesterTest {
 
         org.mockito.Mockito.verify(llm, org.mockito.Mockito.times(1)).complete(any(), any(), any());
     }
+    @Test
+    void postfixEquipmentRequestOverridesGymProfileAndIsExplicitInThePrompt() {
+        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(profiles.find(user)).thenReturn(java.util.Optional.of(new TrainingProfileData(
+                "INTERMEDIATE", 24, 3, "MUSCLE", "GYM", 3, 45, "MEDIUM", "BRIEF", "", "", "", "")));
+        when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn(PLAN_WITH_FACE_PULLS);
+        when(llm.complete(eq(LlmTier.PRO), any(), any())).thenReturn(PLAN_WITHOUT_FACE_PULLS);
+
+        PlanSuggestion plan = suggester.suggestPlan(user, "Beginner plan, dumbbells and bench only; BJJ Wednesday", "en");
+
+        assertTrue(!plan.workouts().getFirst().content().toString().contains("Face Pulls"));
+        var prompt = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(llm).complete(eq(LlmTier.SMART), any(), prompt.capture());
+        assertTrue(prompt.getValue().contains("bench, dumbbell"));
+        assertTrue(prompt.getValue().contains("nybegynnernivå nå"));
+        org.mockito.Mockito.verify(llm).complete(eq(LlmTier.PRO), any(), any());
+    }
+
     private static final String SINGLE_BAD = """
             {"title":"Pull","type":"STYRKE","content":{"blocks":[
             {"kind":"exercise","name":"Face Pulls","sets":[{"reps":12,"weightKg":10}]},

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useI18n } from './i18n.jsx'
-import { saveLive, liveExercise, findSuggestion, toContent } from './liveSession.js'
+import { saveLive, liveExercise, findSuggestion, toContent, liveSetError } from './liveSession.js'
 import ExercisePicker from './ExercisePicker.jsx'
 import ExerciseHistory from './ExerciseHistory.jsx'
 import { sameGroup, exerciseKey } from './exercises'
@@ -46,6 +46,8 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
   const [panel, setPanel] = useState(null) // { ei, kind: 'tip' | 'note' }
   const [sheet, setSheet] = useState(null) // { ei, kind: 'history' | 'swap' }
   const [scrollTick, setScrollTick] = useState(0)
+  const [invalidSet, setInvalidSet] = useState(null)
+  const liveRoot = useRef(null)
   const audio = useRef(null)
   const alerted = useRef(null)
   // Rekorder mens økta pågår: sammenlignet med historikken (uten denne økta) får det beste avhukede settet en 🏆.
@@ -92,6 +94,7 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
   }, [restLeft, s.restEnd])
 
   function edit(fn) {
+    if (busy) return
     setNow(Date.now()) // klokka og nedtellingen skal stemme med en gang, ikke vente på neste sekund-tikk
     setS((prev) => { const c = structuredClone(prev); fn(c); return c })
   }
@@ -107,6 +110,11 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
   // Fullfør et sett: huk av, finn neste sett, og start hvilen (supersett: ingen hvile mellom øvelsene i en runde, full hvile etter runden).
   // Neste sett i samme øvelse arver kg/reps fra dette hvis det er tomt. Ingen hvile etter det siste settet.
   function completeSet(ei, si) {
+    if (busy) return
+    const field = liveSetError(s.exercises[ei].sets[si])
+    if (field) { showSetError(ei, si, field); return }
+    setInvalidSet(null)
+    setError(null)
     unlockAudio()
     navigator.vibrate?.(30)
     setScrollTick((n) => n + 1)
@@ -156,8 +164,20 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
   // Etter avhuking: rull neste sett inn i midten, så tommelen alltid treffer riktig rad.
   useEffect(() => {
     if (!scrollTick) return
-    document.querySelector('.live-set.current')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+    liveRoot.current?.querySelector('.live-set.current')?.scrollIntoView({ behavior, block: 'center' })
   }, [scrollTick])
+
+  function showSetError(ei, si, field) {
+    setError(t(field === 'reps' ? 'Skriv inn et gyldig antall repetisjoner.' : 'Skriv inn en gyldig vekt.'))
+    setInvalidSet({ ei, si, field })
+    liveRoot.current?.querySelector(`[data-set="${ei}-${si}"] [data-field="${field}"]`)?.focus()
+  }
+
+  function changeSet(ei, si, field, value) {
+    if (invalidSet?.ei === ei && invalidSet.si === si) setInvalidSet(null)
+    edit((c) => { c.exercises[ei].sets[si][field] = value })
+  }
 
   // Pågår en hvile, justeres den (±sekunder). Ellers (listevisningens «Pause»-felt) justeres standardhvilen for økta.
   function adjustRest(delta) {
@@ -189,6 +209,16 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
   }
 
   async function finish() {
+    if (busy) return
+    // Et ferdig sett kan være endret etter avhuking, eller gjenopprettet fra
+    // en eldre økt. Stopp lagring før ugyldige tall blir sendt eller mistet.
+    for (let ei = 0; ei < s.exercises.length; ei++) {
+      const sets = s.exercises[ei].sets
+      for (let si = 0; si < sets.length; si++) {
+        const field = sets[si].done && liveSetError(sets[si])
+        if (field) { showSetError(ei, si, field); return }
+      }
+    }
     const content = toContent(s.exercises, s.startedAt)
     if (!content.blocks.length) { setError(t('Huk av minst ett sett før du fullfører.')); return }
     setBusy(true)
@@ -290,7 +320,7 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
 
 
   return (
-    <div className="live">
+    <div className="live" ref={liveRoot}>
       <div className="live-bar">
         <div className="live-bar-row">
           <button className="live-end" onClick={() => setView('focus')}>🎯 {t('Fokus')}</button>
@@ -301,7 +331,8 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
             {busy ? t('Lagrer …') : t('Avslutt økt')}
           </button>
         </div>
-        <div className="live-progress" aria-hidden="true">
+        <div className="live-progress" role="progressbar" aria-label={t('Fullførte sett')}
+             aria-valuemin={0} aria-valuemax={Math.max(1, allSets.length)} aria-valuenow={doneCount}>
           <span style={{ width: `${allSets.length ? (doneCount / allSets.length) * 100 : 0}%` }} />
         </div>
         {error && <p className="error live-error">{error}</p>}
@@ -309,10 +340,15 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
 
       <input
         className="live-title"
+        aria-label={t('Navn på økt')}
         value={s.title}
         placeholder={t('Styrkeøkt')}
         onChange={(e) => { const v = e.target.value; edit((c) => { c.title = v }) }}
       />
+
+      {s.exercises.length === 0 && <p className="muted">
+        {t('Legg til en øvelse for å begynne. Fyll inn vekt og reps, og trykk ✓ etter hvert sett.')}
+      </p>}
 
       {s.exercises.map((ex, ei) => {
         const sug = ex.kind === 'dropset' ? null : findSuggestion(ex.name, nextSets)
@@ -330,7 +366,7 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
                 <span className="muted live-target">{target}</span>
               </span>
               <button className="del" aria-label={t('Fjern øvelse')}
-                      onClick={() => edit((c) => { c.exercises = removeExercise(c.exercises, ei); c.cursor = null })}>✕</button>
+                      onClick={() => { setInvalidSet(null); edit((c) => { c.exercises = removeExercise(c.exercises, ei); c.cursor = null }) }}>✕</button>
             </div>
             <div className="live-actions-bar">
               {sug && (
@@ -358,33 +394,71 @@ export default function LiveSession({ userId, initial, nextSets, memory, workout
             <div className="live-grid live-grid-head" aria-hidden="true">
               <span>{t('Sett')}</span><span>kg</span><span>{t('Reps')}</span><span>✓</span>
             </div>
-            {ex.sets.map((set, si) => (
-              <div className={`live-grid live-set ${set.done ? 'done' : ''} ${current === `${ei}-${si}` ? 'current' : ''}`} key={si}>
-                {prSets.has(`${ei}-${si}`)
+            {ex.sets.map((set, si) => {
+              const invalid = invalidSet?.ei === ei && invalidSet.si === si
+              const errorId = `live-set-error-${ei}-${si}`
+              const label = (field) => t('{name}, sett {n}: {field}', { name: ex.name, n: si + 1, field })
+              return (
+              <div className={`live-grid live-set ${set.done ? 'done' : ''} ${current === `${ei}-${si}` ? 'current' : ''}`} key={si} data-set={`${ei}-${si}`}>
+                                {prSets.has(`${ei}-${si}`)
                   ? <span className="live-set-no live-pr" role="img" aria-label={t('Ny rekord')}>🏆</span>
                   : <span className="live-set-no">{si + 1}</span>}
+
                 <input
                   inputMode="decimal"
-                  aria-label={t('Vekt (kg)')}
+                  enterKeyHint="next"
+                  data-field="weightKg"
+                  aria-label={label(t('Vekt (kg)'))}
+                  aria-invalid={invalid && invalidSet.field === 'weightKg' ? true : undefined}
+                  aria-describedby={invalid ? errorId : undefined}
                   placeholder="–"
                   value={set.weightKg}
-                  onChange={(e) => { const v = e.target.value; edit((c) => { c.exercises[ei].sets[si].weightKg = v }) }}
+                  disabled={busy}
+                  onChange={(e) => changeSet(ei, si, 'weightKg', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      e.currentTarget.closest('.live-set').querySelector('[data-field="reps"]')?.focus()
+                    }
+                  }}
                 />
                 <input
                   inputMode="numeric"
-                  aria-label={t('Reps')}
+                  enterKeyHint="done"
+                  data-field="reps"
+                  aria-label={label(t('Reps'))}
+                  aria-invalid={invalid && invalidSet.field === 'reps' ? true : undefined}
+                  aria-describedby={invalid ? errorId : undefined}
                   placeholder="–"
                   value={set.reps}
-                  onChange={(e) => { const v = e.target.value; edit((c) => { c.exercises[ei].sets[si].reps = v }) }}
+                  disabled={busy}
+                  onChange={(e) => changeSet(ei, si, 'reps', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter') return
+                    e.preventDefault()
+                    if (!set.done) toggleSet(ei, si)
+                    else {
+                      const field = liveSetError(set)
+                      if (field) showSetError(ei, si, field)
+                      else e.currentTarget.blur()
+                    }
+                  }}
                 />
                 <button
                   className="live-check"
-                  aria-label={set.done ? t('Angre sett') : t('Fullfør sett')}
+                  aria-label={label(set.done ? t('Angre sett') : t('Fullfør sett'))}
                   aria-pressed={set.done}
+                  disabled={busy}
                   onClick={() => toggleSet(ei, si)}
                 >✓</button>
+                {invalid && <p id={errorId} className="error live-set-error" role="alert">
+                  {invalidSet.field === 'reps'
+                    ? t('Skriv inn et helt antall reps større enn 0.')
+                    : t('Skriv inn en gyldig vekt på 0 kg eller mer. Tomt felt betyr kroppsvekt.')}
+                </p>}
               </div>
-            ))}
+              )
+            })}
             <div className="live-ex-actions">
               <button
                 className="mini"

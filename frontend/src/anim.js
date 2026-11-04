@@ -1,34 +1,23 @@
 import { useLayoutEffect, useRef } from 'react'
 import gsap from 'gsap'
 
+// matchMedia also responds when the user changes the OS preference mid-session.
+export function withMotion(scope, animate, immediate = () => {}) {
+  const media = gsap.matchMedia()
+  media.add({ motion: '(prefers-reduced-motion: no-preference)', reduced: '(prefers-reduced-motion: reduce)' }, (ctx) => {
+    return ctx.conditions.reduced ? immediate() : animate()
+  }, scope)
+  return () => media.revert()
+}
+
 /**
- * Staggered inntoning av alle [data-reveal]-elementer under ref-en.
- * Kjøres på mount (og når deps endres) – gir "siden bygger seg opp"-følelsen.
+ * Stabil referanse for eksisterende [data-reveal]-områder.
+ * Innhold vises umiddelbart; bevegelse brukes ved brukerhandlinger.
  */
 export function useReveal(deps = []) {
   const ref = useRef(null)
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return undefined
-    const targets = el.querySelectorAll('[data-reveal]')
-    if (!targets.length) return undefined
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        targets,
-        { opacity: 0, y: 22 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          stagger: 0.08,
-          ease: 'power3.out',
-          clearProps: 'opacity,transform',
-        },
-      )
-    }, el)
-    return () => ctx.revert()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps)
+  // App screens stay readable immediately. Motion is reserved for user feedback.
+  void deps
   return ref
 }
 
@@ -38,36 +27,33 @@ export function useTabTransition(key) {
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return undefined
-    const tween = gsap.fromTo(
+    return withMotion(el, () => { gsap.fromTo(
       el,
       { opacity: 0, y: 14, scale: 0.995 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: 'power2.out', clearProps: 'all' },
-    )
-    return () => tween.kill()
+      { opacity: 1, y: 0, scale: 1, duration: 0.32, ease: 'power2.out', clearProps: 'opacity,transform' },
+    ) })
   }, [key])
   return ref
 }
 
-/** Teller et tall opp fra 0 – for dashboard-statistikk. */
+/** Viser den faktiske dashboard-verdien uten en kunstig opptelling fra null. */
 export function useCountUp(value) {
   const ref = useRef(null)
   useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return undefined
-    const state = { n: 0 }
-    const tween = gsap.to(state, {
-      n: value,
-      duration: 1.1,
-      ease: 'power2.out',
-      onUpdate: () => { el.textContent = Math.round(state.n) },
-    })
-    return () => tween.kill()
+    if (ref.current) ref.current.textContent = Math.round(value)
   }, [value])
   return ref
 }
 
 /** Liten "pop" på et element – f.eks. når noe legges til favoritter. */
 export function pop(el) {
-  if (!el) return
-  gsap.fromTo(el, { scale: 0.6 }, { scale: 1, duration: 0.45, ease: 'back.out(2.5)' })
+  if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  gsap.fromTo(el, { scale: 0.85 }, { scale: 1, duration: 0.38, ease: 'back.out(1.8)', overwrite: true, clearProps: 'transform' })
+}
+
+/** Bars grow from their baseline; their real heights stay in React/CSS. */
+export function useBarGrowth(key) {
+  const ref = useRef(null)
+  void key
+  return ref
 }
