@@ -65,6 +65,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 rule("ai", List.of("/api/trening/forslag", "/api/trening/plan-forslag", "/api/trening/assistent", "/api/trening/ovelser/koble",
                                 "/api/ruter/fortelling"),
                         "POST", 10, 60, 3000, clock),
+                rule("garmin", List.of("/api/trening/garmin/aktiviteter"), "POST", 4, 20, 300, clock),
                 // Alt annet: bred grense mot skripting og passord-/token-gjetting. Romslig, siden
                 // søk-mens-du-skriver og innlasting av faner gir mange kall fra ett nettsted/nettverk.
                 rule("api", List.of("/api/**"), null, 600, 20_000, 200_000, clock)) : List.of();

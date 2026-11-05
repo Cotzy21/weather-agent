@@ -17,7 +17,7 @@ import java.io.InputStream;
  * (med {@code ExitOnOutOfMemoryError} tar en OOM hele tjenesten ned). Sjekker {@code Content-Length} først, og teller
  * ellers byte for byte for svar uten lengde (chunked).
  */
-final class ResponseSizeLimit implements ClientHttpRequestInterceptor {
+public final class ResponseSizeLimit implements ClientHttpRequestInterceptor {
 
     /** Kastes (som IOException, så RestClient behandler det som en nettverksfeil) når svaret er for stort. */
     static final class TooLargeException extends IOException {
@@ -28,7 +28,7 @@ final class ResponseSizeLimit implements ClientHttpRequestInterceptor {
 
     private final long maxBytes;
 
-    ResponseSizeLimit(long maxBytes) {
+    public ResponseSizeLimit(long maxBytes) {
         this.maxBytes = maxBytes;
     }
 

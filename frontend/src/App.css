@@ -2312,6 +2312,19 @@ header .sub { margin-top: 6px; color: var(--muted); }
 /* ---------- Garmin-import og utvikling per øvelse ---------- */
 .garmin-import { margin: 12px 0; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border-strong); background: var(--card-solid); }
 .gi-head { margin-bottom: 8px; }
+
+.gi-personal { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border-strong); }
+.gi-personal h3 { margin: 0; font-size: 1rem; }
+.gi-personal form { margin-top: 12px; }
+.gi-personal label { display: block; margin-bottom: 6px; }
+.gi-key { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.gi-key input { width: 100%; min-width: 0; min-height: 44px; font-size: 16px; }
+.gi-personal button { min-height: 44px; }
+.gi-personal-actions { align-items: center; margin-top: 10px; }
+.gi-personal-actions a { display: inline-flex; align-items: center; min-height: 44px; }
+.gi-activities { list-style: none; margin: 8px 0 0; padding: 0; }
+.gi-activities li { display: grid; gap: 2px; padding: 8px 0; border-top: 1px solid var(--border-strong); overflow-wrap: anywhere; }
+
 .gi-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 .gi-btn { cursor: pointer; }
 .gi-btn.disabled { opacity: .5; pointer-events: none; }

@@ -1,3 +1,4 @@
+import GarminPersonal from './GarminPersonal.jsx'
 import { useI18n } from './i18n.jsx'
 
 // Garmin-import på Trening-siden. CSV gir alle aktiviteter i historikken (bare totaler); FIT/ZIP gir øvelser og
@@ -35,6 +36,7 @@ export default function GarminImport({ imp }) {
 
   return (
     <section className="garmin-import" data-reveal aria-label={t('Garmin-import')}>
+      <GarminPersonal />
       <div className="gi-head">
         <strong>⌚ {t('Importer fra Garmin')}</strong>
       </div>
