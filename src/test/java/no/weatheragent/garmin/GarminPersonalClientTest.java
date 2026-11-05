@@ -33,7 +33,7 @@ class GarminPersonalClientTest {
                         """, MediaType.APPLICATION_JSON));
 
         assertEquals(new GarminPersonalClient.Activity("7654321", "Morning run", "2026-11-05 08:00:00",
-                null, 1800.0, 5000.0, null), client.recentActivities("test-key").getFirst());
+                null, 1800.0, 5000.0, null, null, null, null, null, null, null), client.recentActivities("test-key").getFirst());
         server.verify();
     }
 }

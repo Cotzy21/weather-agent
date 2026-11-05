@@ -29,9 +29,9 @@ public record FitSession(
         @DecimalMin("0") @DecimalMax("20000") Double kcal,
         @Min(0) @Max(260) Integer avgHr,
         @Min(0) @Max(260) Integer maxHr,
-        @NotEmpty @Size(max = 60) List<@Valid Block> blocks) {
+        @NotEmpty @Size(max = 60) List<@NotNull @Valid Block> blocks) {
 
-    public record Block(@NotBlank @Size(max = 80) String name, @NotEmpty @Size(max = 100) List<@Valid SetEntry> sets) {
+    public record Block(@NotBlank @Size(max = 80) String name, @NotEmpty @Size(max = 100) List<@NotNull @Valid SetEntry> sets) {
     }
 
     public record SetEntry(@Min(1) @Max(1000) int reps, @DecimalMin("0") @DecimalMax("1000") double weightKg) {

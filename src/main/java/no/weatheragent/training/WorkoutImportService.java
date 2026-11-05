@@ -104,6 +104,71 @@ public class WorkoutImportService {
         return new ImportResult(imported, skipped, merged);
     }
 
+    @Transactional
+    public ImportResult importGarminActivities(UUID userId, List<GarminLogEntry> entries) {
+        int imported = 0;
+        int skipped = 0;
+        int merged = 0;
+        Set<Long> seen = new HashSet<>();
+        int setCount = entries.stream().filter(entry -> entry.strength() != null)
+                .flatMap(entry -> entry.strength().blocks().stream()).mapToInt(block -> block.sets().size()).sum();
+        if (setCount > MAX_SETS_PER_REQUEST) throw new IllegalArgumentException("For mange sett i én forespørsel.");
+        for (GarminLogEntry entry : entries) {
+            if (!seen.add(entry.activityId())) {
+                skipped++;
+                continue;
+            }
+            GarminActivity activity = entry.activity();
+            no.weatheragent.support.Limits.requireRecentDate(activity.date(), 30, "økta");
+            FitSession fit = "STYRKE".equals(activity.type()) ? entry.strength() : null;
+            UUID activityKey = UUID.nameUUIDFromBytes(("garmin:" + entry.activityId()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            List<Workout> sameDay = repository.findByUserIdAndDate(userId, activity.date());
+            Workout existing = repository.findByUserIdAndClientId(userId, activityKey).orElse(null);
+            if (existing == null && fit != null) {
+                existing = repository.findByUserIdAndClientId(userId, fit.clientId())
+                        .filter(w -> "STYRKE".equals(w.getType()))
+                        .filter(w -> w.getContent().path("garminActivityId").asLong(entry.activityId()) == entry.activityId())
+                        .orElse(null);
+            }
+            if (existing == null) {
+                existing = sameDay.stream().filter(w -> w.getContent().path("garminActivityId").asLong() == entry.activityId()
+                        || (w.getClientId() == null && "Importert fra Garmin".equals(w.getNotes())
+                            && w.getType().equals(activity.type()) && w.getTitle().equalsIgnoreCase(activity.title())))
+                        .findFirst().orElse(null);
+            }
+
+            ObjectNode summary = content(activity).put("garminActivityId", entry.activityId());
+            if (existing != null) {
+                if (existing.getContent().path("garminActivityId").asLong() == entry.activityId()
+                        && (fit == null || !existing.getContent().path("blocks").isEmpty())) {
+                    skipped++;
+                    continue;
+                }
+                ObjectNode enriched = existing.getContent().isObject()
+                        ? ((ObjectNode) existing.getContent()).deepCopy() : JsonNodeFactory.instance.objectNode();
+                summary.fields().forEachRemaining(field -> {
+                    if (!enriched.has(field.getKey())) enriched.set(field.getKey(), field.getValue());
+                });
+                existing.mergeDetails(withFit(fit, enriched), existing.getClientId() != null
+                        ? existing.getClientId() : fit != null ? fit.clientId() : activityKey);
+                repository.save(existing);
+                merged++;
+            } else {
+                repository.save(new Workout(userId, activity.date(), activity.title(), activity.type(),
+                        withFit(fit, summary), "Importert fra Garmin Connect")
+                        .withOrigin(activityKey, null));
+                imported++;
+            }
+        }
+        return new ImportResult(imported, skipped, merged);
+    }
+
+    private static com.fasterxml.jackson.databind.JsonNode withFit(FitSession fit, ObjectNode base) {
+        if (fit == null) return base;
+        base.put("garminFitClientId", fit.clientId().toString());
+        return base.path("blocks").isEmpty() ? ExerciseCatalog.annotate(detailed(fit, base)) : base;
+    }
+
     /** Nærmeste FIT-økt samme dag (og fjerner den fra listen, så to CSV-rader ikke deler én økt). Null om ingen passer. */
     private static Workout takeMatchingFit(List<Workout> candidates, GarminActivity a) {
         if (candidates == null || candidates.isEmpty()) {
@@ -175,7 +240,9 @@ public class WorkoutImportService {
         int skipped = 0;
         for (FitSession s : sessions) {
             no.weatheragent.support.Limits.requireRecentDate(s.date(), 30, "økta");
-            if (repository.findByUserIdAndClientId(userId, s.clientId()).isPresent()) {
+            if (repository.findByUserIdAndClientId(userId, s.clientId()).isPresent()
+                    || repository.findByUserIdAndDate(userId, s.date()).stream().anyMatch(w ->
+                            s.clientId().toString().equals(w.getContent().path("garminFitClientId").asText()))) {
                 skipped++;
                 continue;
             }

@@ -36,7 +36,7 @@ export default function GarminImport({ imp }) {
 
   return (
     <section className="garmin-import" data-reveal aria-label={t('Garmin-import')}>
-      <GarminPersonal />
+      <GarminPersonal onSaved={imp.refresh} />
       <div className="gi-head">
         <strong>⌚ {t('Importer fra Garmin')}</strong>
       </div>

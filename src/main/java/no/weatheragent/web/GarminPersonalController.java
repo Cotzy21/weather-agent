@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.util.List;
+import java.util.function.Supplier;
+
 @RestController
 public class GarminPersonalController {
     private static final Logger log = LoggerFactory.getLogger(GarminPersonalController.class);
@@ -24,14 +27,38 @@ public class GarminPersonalController {
 
     @PostMapping("/api/trening/garmin/aktiviteter")
     public ResponseEntity<?> activities(@RequestBody JsonNode body) {
+        String key = key(body);
+        return key == null ? error(HttpStatus.BAD_REQUEST, "Ugyldig Garmin-nøkkel.")
+                : fetch(() -> garmin.recentActivities(key));
+    }
+
+    @PostMapping("/api/trening/garmin/filer")
+    public ResponseEntity<?> files(@RequestBody JsonNode body) {
+        String key = key(body);
+        if (key == null) return error(HttpStatus.BAD_REQUEST, "Ugyldig Garmin-nøkkel.");
+        JsonNode ids = body.path("ids");
+        if (!ids.isArray() || ids.isEmpty() || ids.size() > 5) {
+            return error(HttpStatus.BAD_REQUEST, "Velg mellom 1 og 5 Garmin-økter.");
+        }
+        List<Long> selected = new java.util.ArrayList<>();
+        for (JsonNode id : ids) {
+            if (!id.isIntegralNumber() || !id.canConvertToLong() || id.longValue() <= 0) {
+                return error(HttpStatus.BAD_REQUEST, "Ugyldig Garmin-aktivitet.");
+            }
+            selected.add(id.longValue());
+        }
+        return fetch(() -> garmin.activityFiles(key, selected.stream().distinct().toList()));
+    }
+
+    private static String key(JsonNode body) {
         String supplied = body.path("apiKey").textValue();
         String key = supplied == null ? "" : supplied.strip();
-        if (key.length() > 1024 || !key.matches("[!-~]+")) {
-            return error(HttpStatus.BAD_REQUEST, "Ugyldig Garmin-nøkkel.");
-        }
+        return key.length() <= 1024 && key.matches("[!-~]+") ? key : null;
+    }
 
+    private static ResponseEntity<?> fetch(Supplier<?> call) {
         try {
-            return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(garmin.recentActivities(key));
+            return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(call.get());
         } catch (RestClientResponseException e) {
             // Never relay Garmin's response body or log errors containing credentials or activity data.
             return switch (e.getStatusCode().value()) {

@@ -3,6 +3,10 @@ package no.weatheragent.web;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import no.weatheragent.training.GarminLogEntry;
 import no.weatheragent.training.ChatTurn;
 import no.weatheragent.training.ReadinessService;
 import no.weatheragent.training.Suggestion;
@@ -143,6 +147,16 @@ public class TrainingController {
         }
         return ResponseEntity.ok(ImportResultDto.from(
                 importer.importGarmin(UUID.fromString(jwt.getSubject()), csv)));
+    }
+
+    public record GarminLogRequest(
+            @NotEmpty @Size(max = 5) List<@NotNull @Valid GarminLogEntry> activities) {}
+
+    @PostMapping("/api/trening/import/garmin-api")
+    public ImportResultDto importGarminActivities(@AuthenticationPrincipal Jwt jwt,
+                                                  @Valid @RequestBody GarminLogRequest request) {
+        return ImportResultDto.from(importer.importGarminActivities(
+                UUID.fromString(jwt.getSubject()), request.activities()));
     }
 
     /**

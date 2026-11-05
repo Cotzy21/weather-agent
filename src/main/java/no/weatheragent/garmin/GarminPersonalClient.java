@@ -39,7 +39,7 @@ public class GarminPersonalClient {
         this.http = http;
     }
 
-    public List<Activity> recentActivities(String key) {
+    private String accessToken(String key) {
         String response = http.post().uri(TOKEN_PATH)
                 .header(HttpHeaders.AUTHORIZATION, "ApiKey " + key)
                 .accept(MediaType.ALL)
@@ -49,6 +49,11 @@ public class GarminPersonalClient {
             throw new RestClientException("Invalid Garmin token response");
         }
 
+        return token;
+    }
+
+    public List<Activity> recentActivities(String key) {
+        String token = accessToken(key);
         JsonNode data = http.get().uri(uri -> uri.path(ACTIVITY_PATH)
                         .queryParam("start", 0).queryParam("limit", LIMIT).build())
                 .headers(headers -> headers.setBearerAuth(token))
@@ -65,11 +70,35 @@ public class GarminPersonalClient {
             result.add(new Activity(id.asText(), field(item, "activityName", 150),
                     field(item, "startTimeLocal", 32), field(item.path("activityType"), "typeKey", 50),
                     metric(item.path("duration")), metric(item.path("distance")),
-                    field(item, "deviceName", 100)));
+                    field(item, "deviceName", 100), metric(item.path("elevationGain")),
+                    metric(item.path("calories")), whole(item.path("totalSets")), whole(item.path("totalReps")),
+                    whole(item.path("averageHR")), whole(item.path("maxHR"))));
             if (result.size() == LIMIT) break;
         }
         if (result.isEmpty() && !items.isEmpty()) throw new RestClientException("Invalid Garmin activity records");
         return result;
+    }
+
+    public List<ActivityFile> activityFiles(String key, List<Long> ids) {
+        String token = accessToken(key);
+        List<ActivityFile> files = new ArrayList<>();
+        for (long id : ids) {
+            try {
+                byte[] zip = http.get().uri("/download-service/files/activity/{id}", id)
+                        .headers(headers -> headers.setBearerAuth(token))
+                        .accept(MediaType.APPLICATION_OCTET_STREAM, MediaType.parseMediaType("application/zip"))
+                        .retrieve().body(byte[].class);
+                if (zip != null && zip.length > 0) files.add(new ActivityFile(Long.toString(id), zip));
+            } catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
+                // Some manually logged activities have no original FIT file.
+            }
+        }
+        return files;
+    }
+
+    private static Integer whole(JsonNode value) {
+        Double number = metric(value);
+        return number == null || number > Integer.MAX_VALUE ? null : (int) Math.round(number);
     }
 
     private static String field(JsonNode item, String name, int maxLength) {
@@ -84,5 +113,8 @@ public class GarminPersonalClient {
     }
 
     public record Activity(String id, String name, String startLocal, String type,
-                           Double durationSeconds, Double distanceMeters, String deviceName) {}
+                           Double durationSeconds, Double distanceMeters, String deviceName,
+                           Double ascentM, Double kcal, Integer totalSets, Integer totalReps, Integer avgHr, Integer maxHr) {}
+
+    public record ActivityFile(String id, byte[] zip) {}
 }

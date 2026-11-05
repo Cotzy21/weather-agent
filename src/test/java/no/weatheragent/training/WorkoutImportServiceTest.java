@@ -73,6 +73,27 @@ class WorkoutImportServiceTest {
         assertEquals("Importert fra Garmin", run.getNotes());
     }
 
+    @Test
+    void garminApiImportsOneActivityOnceAndPreservesCompletedFitSets() {
+        LocalDate date = LocalDate.now().minusDays(1);
+        FitSession strength = fit(UUID.randomUUID(), date, 40.0, "Benkpress");
+        GarminLogEntry entry = new GarminLogEntry(1234L, date, "Styrke", "strength_training",
+                null, 40.0, null, 300.0, 2, 16, 118, 151, strength);
+        ArgumentCaptor<Workout> saved = ArgumentCaptor.forClass(Workout.class);
+
+        assertEquals(new WorkoutImportService.ImportResult(1, 1, 0),
+                service.importGarminActivities(user, List.of(entry, entry)));
+        verify(repo).save(saved.capture());
+        Workout row = saved.getValue();
+        assertEquals(1234L, row.getContent().path("garminActivityId").asLong());
+        assertEquals(62.5, row.getContent().path("blocks").get(0).path("sets").get(1).path("weightKg").asDouble());
+        when(repo.findByUserIdAndClientId(user, row.getClientId())).thenReturn(java.util.Optional.of(row));
+        assertEquals(new WorkoutImportService.ImportResult(0, 1, 0),
+                service.importGarminActivities(user, List.of(entry)));
+        when(repo.findByUserIdAndDate(user, date)).thenReturn(List.of(row));
+        assertEquals(new WorkoutImportService.FitImportResult(0, 0, 1), service.importFit(user, List.of(strength)));
+    }
+
     // --- FIT-import (øvelser og vekter) ---
 
     private static FitSession fit(UUID clientId, LocalDate date, Double durationMin, String... exercises) {

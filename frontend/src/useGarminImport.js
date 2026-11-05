@@ -72,5 +72,5 @@ export function useGarminImport({ onDone, lang = 'en' }) {
     }))
   }, [run, lang])
 
-  return { ...state, runCsv, runFit }
+  return { ...state, runCsv, runFit, refresh: onDone }
 }

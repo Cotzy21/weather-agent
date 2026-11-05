@@ -18,7 +18,7 @@ function concat(chunks) {
  * så kalleren kan tolke og sende videre i sitt eget tempo uten at filene hoper seg opp.
  * `onSkip(name)` kalles for filer som ikke kan leses (ødelagt zip o.l.).
  */
-export async function forEachFit(file, onFit, { onSkip = () => {} } = {}) {
+export async function forEachFit(file, onFit, { onSkip = () => {}, maxFitBytes = Infinity } = {}) {
   const name = file.name ?? ''
   if (isFit(name)) {
     await onFit(new Uint8Array(await file.arrayBuffer()), name)
@@ -35,8 +35,15 @@ export async function forEachFit(file, onFit, { onSkip = () => {} } = {}) {
     uz.onfile = (entry) => {
       if (isFit(entry.name)) {
         const chunks = []
+        let length = 0
         entry.ondata = (err, chunk, final) => {
           if (err) { onSkip(entry.name); return }
+          length += chunk.length
+          if (length > maxFitBytes) {
+            entry.terminate()
+            onSkip(entry.name)
+            return
+          }
           chunks.push(chunk)
           if (final) ready.push({ bytes: concat(chunks), name: entry.name })
         }
