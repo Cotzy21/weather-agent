@@ -2,6 +2,7 @@ package no.weatheragent.web;
 
 import jakarta.validation.Valid;
 import no.weatheragent.route.RouteStoryService;
+import no.weatheragent.security.AiScopeGuard;
 import no.weatheragent.training.AiRateLimiter;
 import no.weatheragent.web.dto.RouteStoryRequest;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,6 +27,10 @@ public class RouteStoryController {
 
     @PostMapping("/api/ruter/fortelling")
     public RouteStoryRequest.Reply story(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody RouteStoryRequest request) {
+        AiScopeGuard.data(request.name(), AiScopeGuard.Scope.ROUTE_STORY, request.lang());
+        AiScopeGuard.data(request.difficulty(), AiScopeGuard.Scope.ROUTE_STORY, request.lang());
+        if (request.challenges() != null) request.challenges().forEach(text -> AiScopeGuard.data(text, AiScopeGuard.Scope.ROUTE_STORY, request.lang()));
+        if (request.snacks() != null) request.snacks().forEach(text -> AiScopeGuard.data(text, AiScopeGuard.Scope.ROUTE_STORY, request.lang()));
         aiLimit.check(UUID.fromString(jwt.getSubject()));
         return new RouteStoryRequest.Reply(stories.tell(request.toFacts(), request.lang()));
     }

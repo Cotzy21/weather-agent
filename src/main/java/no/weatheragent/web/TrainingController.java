@@ -7,6 +7,7 @@ import no.weatheragent.training.ChatTurn;
 import no.weatheragent.training.ReadinessService;
 import no.weatheragent.training.Suggestion;
 import no.weatheragent.training.AiRateLimiter;
+import no.weatheragent.security.AiScopeGuard;
 import no.weatheragent.training.TrainingMemoryService;
 import no.weatheragent.training.TrainingProfileData;
 import no.weatheragent.training.TrainingProfileService;
@@ -220,6 +221,8 @@ public class TrainingController {
     /** AI-forslag til en økt ut fra fokus + brukerens historikk. */
     @PostMapping("/api/trening/forslag")
     public SuggestionDto suggest(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SuggestionRequest request) {
+        AiScopeGuard.training(request.focus(), request.lang(), false);
+        AiScopeGuard.data(request.type(), AiScopeGuard.Scope.TRAINING, request.lang());
         aiLimit.check(UUID.fromString(jwt.getSubject()));
         Suggestion s = suggester.suggest(UUID.fromString(jwt.getSubject()), request.focus(), request.type(), request.lang());
         return SuggestionDto.from(s);
@@ -232,6 +235,8 @@ public class TrainingController {
      */
     @PostMapping("/api/trening/plan-forslag")
     public PlanSuggestionDto suggestPlan(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SuggestionRequest request) {
+        AiScopeGuard.training(request.focus(), request.lang(), false);
+        AiScopeGuard.data(request.type(), AiScopeGuard.Scope.TRAINING, request.lang());
         aiLimit.check(UUID.fromString(jwt.getSubject()));
         return PlanSuggestionDto.from(
                 suggester.suggestPlan(UUID.fromString(jwt.getSubject()), request.focus(), request.lang()));
@@ -243,6 +248,19 @@ public class TrainingController {
      */
     @PostMapping("/api/trening/assistent")
     public AssistantReplyDto assistant(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody AssistantRequest request) {
+        boolean hasTrainingTurn = false;
+        for (AssistantRequest.Message message : request.messages()) {
+            if ("user".equals(message.role())) {
+                AiScopeGuard.training(message.content(), request.lang(), hasTrainingTurn);
+                hasTrainingTurn = true;
+            } else {
+                AiScopeGuard.data(message.content(), AiScopeGuard.Scope.TRAINING, request.lang());
+            }
+        }
+        if (!hasTrainingTurn || !"user".equals(request.messages().getLast().role())) {
+            throw new IllegalArgumentException("Samtalen må ende med en melding fra brukeren.");
+        }
+        AiScopeGuard.planData(request.currentPlan(), request.lang());
         aiLimit.check(UUID.fromString(jwt.getSubject()));
         List<ChatTurn> turns = request.messages().stream()
                 .map(m -> new ChatTurn(m.role(), m.content()))

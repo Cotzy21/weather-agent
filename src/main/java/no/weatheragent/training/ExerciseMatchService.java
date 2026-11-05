@@ -1,5 +1,7 @@
 package no.weatheragent.training;
 
+import no.weatheragent.security.AiScopeGuard;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.weatheragent.interpret.LlmTier;
@@ -98,6 +100,7 @@ public class ExerciseMatchService {
                 .map(Map.Entry::getValue)
                 .toList();
         if (!toAsk.isEmpty()) {
+            toAsk.forEach(name -> AiScopeGuard.data(name, AiScopeGuard.Scope.EXERCISE_MATCH, null));
             aiLimit.check(userId); // teller som ett AI-kall, uansett antall biter
             for (int i = 0; i < toAsk.size(); i += LLM_BATCH) {
                 List<String> batch = toAsk.subList(i, Math.min(toAsk.size(), i + LLM_BATCH));

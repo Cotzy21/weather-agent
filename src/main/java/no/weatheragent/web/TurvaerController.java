@@ -1,6 +1,7 @@
 package no.weatheragent.web;
 
 import no.weatheragent.assist.TurvaerService;
+import no.weatheragent.security.AiScopeGuard;
 import no.weatheragent.ranking.Impact;
 import no.weatheragent.ranking.ScoreWeights;
 import no.weatheragent.route.RoutePlannerService;
@@ -51,6 +52,8 @@ public class TurvaerController {
         if (query == null || query.isBlank() || query.length() > MAX_QUERY_CHARS) {
             throw new IllegalArgumentException("Spørsmålet må være mellom 1 og " + MAX_QUERY_CHARS + " tegn.");
         }
+
+        AiScopeGuard.weather(query);
 
         ScoreWeights weights = ScoreWeights.of(
                 Impact.fromString(temp),
