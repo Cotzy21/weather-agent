@@ -2,6 +2,8 @@ package no.weatheragent.web;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import no.weatheragent.garmin.GarminPersonalClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +15,7 @@ import org.springframework.web.client.RestClientResponseException;
 
 @RestController
 public class GarminPersonalController {
+    private static final Logger log = LoggerFactory.getLogger(GarminPersonalController.class);
     private final GarminPersonalClient garmin;
 
     public GarminPersonalController(GarminPersonalClient garmin) {
@@ -34,9 +37,14 @@ public class GarminPersonalController {
             return switch (e.getStatusCode().value()) {
                 case 400, 401, 403 -> error(HttpStatus.UNPROCESSABLE_ENTITY, "Garmin avviste nøkkelen. Sjekk at den er gyldig og ikke har utløpt.");
                 case 429 -> error(HttpStatus.TOO_MANY_REQUESTS, "Garmin ber deg vente litt før du prøver igjen.");
-                default -> unavailable();
+                default -> {
+                    log.warn("Garmin Personal API returned HTTP {}", e.getStatusCode().value());
+                    yield unavailable();
+                }
             };
         } catch (RestClientException e) {
+            Throwable cause = e.getMostSpecificCause();
+            log.warn("Garmin Personal API request failed ({})", cause.getClass().getSimpleName());
             return unavailable();
         }
     }

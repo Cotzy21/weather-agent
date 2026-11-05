@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import Icon from './Icon.jsx'
+import TerrainMasthead from './TerrainMasthead.jsx'
 import { loadLive } from './liveSession.js'
 import { BodyweightCard, BodyweightSheet } from './Bodyweight.jsx'
 import LifetimeStats from './LifetimeStats.jsx'
@@ -316,16 +317,19 @@ export default function Dashboard({ session, onNavigate }) {
 
   return (
     <div className="dash garmin" ref={revealRef}>
-      <div className="dash-head">
-        <div><h1 className="detail-title">{t('Dagen din')}</h1><p className="dash-date">{new Intl.DateTimeFormat(lang === 'nb' ? 'nb-NO' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}</p></div>
-        <button className="dash-customize" aria-label={t('Tilpass dashboardet')} onClick={() => setCustomizing(true)}><Icon name="edit" size={18} /><span>{t('Tilpass')}</span></button>
-      </div>
-
-      <section className="day-brief" aria-label={t('Dagens trening')}>
-        <div><h2>{t(loadLive(session.user.id) ? 'Fortsett der du slapp' : 'Litt bevegelse i dag?')}</h2>
-          <p>{todays.length > 0 ? t('{n} økter logget i dag.', { n: todays.length }) : t('En økt, en tur eller en rolig dag. Du velger.')}</p></div>
-        <button className="primary" onClick={() => onNavigate('trening')}>{t(loadLive(session.user.id) ? 'Fortsett økta' : 'Åpne trening')}<Icon name="arrow" size={18} /></button>
-      </section>
+      <TerrainMasthead
+        title={t('Dagen din')}
+        description={new Intl.DateTimeFormat(lang === 'nb' ? 'nb-NO' : 'en-GB', {
+          weekday: 'long', day: 'numeric', month: 'long',
+        }).format(new Date())}
+        action={<button className="dash-customize" aria-label={t('Tilpass dashboardet')} onClick={() => setCustomizing(true)}><Icon name="edit" size={18} /><span>{t('Tilpass')}</span></button>}
+      >
+        <div className="terrain-actions">
+          <button className="primary" onClick={() => onNavigate('trening')}>{t(loadLive(session.user.id) ? 'Fortsett økta' : 'Åpne trening')}<Icon name="arrow" size={18} /></button>
+          <button className="terrain-secondary" onClick={() => onNavigate('vaersok')}>{t('Finn turvær')}</button>
+        </div>
+        {todays.length > 0 && <p className="terrain-today">{t('{n} økter logget i dag.', { n: todays.length })}</p>}
+      </TerrainMasthead>
 
       {layout.every((w) => !w.on) && (
         <button className="plan-empty" onClick={() => setCustomizing(true)}>{t('Dashboardet er tomt – velg hva du vil se')}</button>

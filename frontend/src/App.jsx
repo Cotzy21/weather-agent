@@ -7,11 +7,13 @@ import { apiUrl, readError, cachedGet, switchCacheOwner, onSlowRequest } from '.
 import { useI18n } from './i18n.jsx'
 import { useReveal } from './anim'
 import WeatherScene from './WeatherScene.jsx'
+import TerrainMasthead from './TerrainMasthead.jsx'
 import AppShell from './AppShell.jsx'
 import { DESTINATIONS } from './navigation.js'
 import './App.css'
 import './interfaceMotion.css'
 import './mobileRedesign.css'
+import './terrainTheme.css'
 
 // Kodedeling: de tunge fanene (og Leaflet-kartene) lastes on-demand som egne
 // chunks, så første innlasting (hjem/innlogging) blir vesentlig lettere.
@@ -156,6 +158,7 @@ function VaersokView({ onPlan }) {
   const endRef = useRef(null)
 
   useEffect(() => {
+    if (messages.length === 0) return
     endRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
   }, [messages, loading])
 
@@ -187,42 +190,14 @@ function VaersokView({ onPlan }) {
 
   return (
     <>
-      <h1 className="detail-title">{t('Værsøk')}</h1>
-      <details className="weights weather-preferences">
-        <summary className="weights-title">{t('Hva betyr mest for deg?')}</summary>
-        <div className="weights-grid">
-          {FACTORS.map((f) => (
-            <div key={f.key} className="weight">
-              <span className="weight-label">{f.icon} {t(f.label)}</span>
-              <ChoiceChips label={t(f.label)} value={weights[f.key]} onChange={(v) => setWeight(f.key, v)}
-                           options={LEVELS.map((l) => ({ v: l.v, t: t(l.t) }))} />
-            </div>
-          ))}
-        </div>
-      </details>
-
+      <TerrainMasthead title={t('Værsøk')} description={t('Sjekk været der du vil gå, eller finn en tur med bedre forhold.')} />
       {detail ? (
         <Suspense fallback={<p className="lazy-fallback muted">…</p>}>
           <PlaceDetail place={detail} onBack={() => setDetail(null)} onPlan={onPlan} />
         </Suspense>
       ) : (
         <>
-          <div className="chat">
-            {messages.length === 0 && (
-              <>
-                <WeatherScene />
-                <p className="hint">{t('Prøv: «hvor er det finest fjellvær i Møre og Romsdal i helga»')}</p>
-                <div className="ai-examples chat-examples">
-                  {[
-                    t('Finest fjellvær i Rogaland i helga'),
-                    t('Hvordan blir været i Oslo i morgen'),
-                    t('Beste turvær på Sunnmøre neste uke'),
-                  ].map((ex) => (
-                    <button key={ex} className="ai-example" disabled={loading} onClick={() => ask(null, ex)}>{ex}</button>
-                  ))}
-                </div>
-              </>
-            )}
+          {messages.length > 0 && <div className="chat">
             {messages.map((m, i) =>
               m.role === 'user' ? (
                 <div key={i} className="msg user">{m.text}</div>
@@ -241,17 +216,43 @@ function VaersokView({ onPlan }) {
               </div>
             )}
             <div ref={endRef} />
-          </div>
+          </div>}
 
           <form className="composer" onSubmit={ask}>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={t('Skriv et spørsmål …')}
-              autoFocus
+              aria-label={t('Skriv et spørsmål …')}
             />
             <button type="submit" disabled={loading || !input.trim()}>{t('Send')}</button>
           </form>
+          {messages.length === 0 && (
+            <div className="weather-examples">
+              <p>{t('Prøv et søk')}</p>
+              <div className="ai-examples chat-examples">
+                {[
+                  t('Finest fjellvær i Rogaland i helga'),
+                  t('Hvordan blir været i Oslo i morgen'),
+                  t('Beste turvær på Sunnmøre neste uke'),
+                ].map((example) => (
+                  <button key={example} className="ai-example" onClick={() => ask(null, example)}>{example}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          <details className="weights weather-preferences">
+            <summary className="weights-title">{t('Hva betyr mest for deg?')}</summary>
+            <div className="weights-grid">
+              {FACTORS.map((f) => (
+                <div key={f.key} className="weight">
+                  <span className="weight-label">{f.icon} {t(f.label)}</span>
+                  <ChoiceChips label={t(f.label)} value={weights[f.key]} onChange={(v) => setWeight(f.key, v)}
+                               options={LEVELS.map((l) => ({ v: l.v, t: t(l.t) }))} />
+                </div>
+              ))}
+            </div>
+          </details>
         </>
       )}
     </>
@@ -279,7 +280,10 @@ export default function App() {
   function go(id) {
     setTab(id)
   }
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') ?? 'light')
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem('terrain-theme') === 'light' ? 'light' : 'dark' }
+    catch { return 'dark' }
+  })
   // Sted valgt i værsøket som brukeren vil planlegge tur til. Ligger her (ikke
   // i planleggeren) fordi tabbene demonteres ved bytte - staten må overleve.
   const [planTarget, setPlanTarget] = useState(null)
@@ -291,7 +295,8 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
-    try { localStorage.setItem('theme', theme) } catch { /* privat modus o.l. */ }
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#101410' : '#f4f5f1')
+    try { localStorage.setItem('terrain-theme', theme) } catch { /* privat modus o.l. */ }
   }, [theme])
 
   useEffect(() => {

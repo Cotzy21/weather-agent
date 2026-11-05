@@ -1,0 +1,170 @@
+/* Flat surfaces take their tones from slate and moss. Colour marks actions and the trail. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #101410;
+  --bg-2: #181e18;
+  --card: #191f19;
+  --card-solid: #222a21;
+  --border: #353f33;
+  --border-strong: #71806e;
+  --text: #eff2e9;
+  --muted: #b9c3b3;
+  --accent: #add1a6;
+  --accent-2: var(--accent);
+  --accent-3: #d8c28b;
+  --accent-strong: #c4e2bc;
+  --accent-soft: #283728;
+  --primary: #e1ead9;
+  --on-primary: #192318;
+  --tint: #252e24;
+  --tint-strong: #364635;
+  --card-hover: #293429;
+  --elev-pop: 0 16px 48px #080b08aa;
+}
+
+.terrain-masthead {
+  --contour: #6c896f;
+  --track: #3f6850;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  min-height: 154px;
+  padding: clamp(20px, 4vw, 38px);
+  margin-bottom: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--bg-2);
+}
+:root[data-theme='dark'] .terrain-masthead {
+  --contour: #516951;
+  --track: #dec58b;
+}
+
+.terrain-art {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: min(62%, 610px);
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
+.terrain-contours { stroke: var(--contour); stroke-width: 1; opacity: .65; }
+.terrain-track {
+  fill: none;
+  stroke: var(--track);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+}
+.terrain-marker { fill: var(--track); stroke: var(--bg-2); stroke-width: 2; }
+.terrain-copy { min-width: 0; }
+.terrain-copy h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(1.75rem, 3.8vw, 2.375rem);
+  line-height: 1.08;
+  font-weight: 600;
+  letter-spacing: -.045em;
+}
+.terrain-copy p { max-width: 37ch; margin: 8px 0 0; color: var(--muted); }
+.terrain-toolbar { flex: none; }
+.terrain-toolbar .dash-customize { color: var(--text); background: var(--bg-2); }
+.terrain-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.terrain-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: .875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.terrain-secondary { color: var(--text); background: var(--bg-2); border: 1px solid var(--border-strong); }
+.terrain-secondary:hover { background: var(--tint); }
+.terrain-copy .terrain-today { margin-top: 12px; font-size: .875rem; }
+.shell-nav-item.active .ui-icon { color: var(--accent); }
+:root[data-theme='dark'] .app-sidebar { border-right: 1px solid var(--border); }
+:root[data-theme='dark'] .navigation-dialog::backdrop { background: #080b08aa; }
+
+@keyframes terrain-track-in { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes terrain-art-in {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes terrain-marker-in { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .terrain-art { animation: terrain-art-in 420ms var(--motion-ease) both; }
+  .terrain-track { animation: terrain-track-in 840ms 100ms var(--motion-ease) both; }
+  .terrain-marker { animation: terrain-marker-in 220ms 680ms ease-out both; }
+  .terrain-actions button .ui-icon { transition: transform 160ms var(--motion-ease); }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .terrain-actions button:hover .ui-icon { transform: translateX(3px); }
+}
+@media (max-width: 560px) {
+  .terrain-masthead { margin-bottom: 16px; min-height: 134px; }
+  .terrain-art { width: 78%; height: 86%; inset: auto -12% 0 auto; opacity: .58; }
+  .terrain-copy p { font-size: .875rem; }
+  .terrain-toolbar { position: absolute; top: 14px; right: 14px; }
+  .terrain-masthead:has(.terrain-toolbar) h1 { padding-right: 42px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .terrain-art { animation-name: terrain-mobile-art-in; }
+  }
+}
+@keyframes terrain-mobile-art-in {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: .58; transform: none; }
+}
+
+.app-shell[data-tab='vaersok'] .composer {
+  position: static;
+  padding: 0;
+  background: none;
+}
+.app-shell[data-tab='vaersok'] .composer input {
+  min-width: 0;
+  min-height: 50px;
+}
+.app-shell[data-tab='vaersok'] .composer input:focus {
+  box-shadow: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.app-shell[data-tab='vaersok'] .composer button {
+  padding-inline: 18px;
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: none;
+  transform: none;
+}
+.weather-examples { margin: 18px 0 0; }
+.weather-examples p { margin: 0 0 8px; font-size: .875rem; color: var(--muted); }
+.weather-examples .chat-examples { justify-content: flex-start; }
+.weather-examples .ai-example { text-align: left; }
+.weather-preferences.weights {
+  padding: 0 14px;
+  margin-top: 22px;
+  backdrop-filter: none;
+}
+.weather-preferences > summary.weights-title {
+  display: list-item;
+  align-content: center;
+  margin: 0;
+  color: var(--text);
+  font-size: .875rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.weather-preferences[open] { padding-bottom: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  .app-shell[data-tab='vaersok'] .msg { animation: none; }
+}

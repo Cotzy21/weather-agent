@@ -61,6 +61,7 @@ const EN = {
   // Sidemeny / chrome
   'Hjem': 'Home',
   'Værsøk': 'Weather search',
+  'Sjekk været der du vil gå, eller finn en tur med bedre forhold.': 'Check the forecast for your destination or find a trail with better conditions.',
   'Ruteplanlegger': 'Route planner',
   'Trening': 'Training',
   'Kosthold': 'Nutrition',
@@ -521,6 +522,7 @@ const EN = {
       'Try: “where is the best mountain weather in Møre og Romsdal this weekend”',
   'Skriv et spørsmål …': 'Ask a question …',
   'Send': 'Send',
+  'Prøv et søk': 'Try a search',
   'Henter vær': 'Fetching weather',
   'Beklager –': 'Sorry –',
   'Finest vær:': 'Best weather:',

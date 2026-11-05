@@ -26,10 +26,11 @@ public class GarminPersonalClient {
     @Autowired
     public GarminPersonalClient(RestClient.Builder builder) {
         var factory = new JdkClientHttpRequestFactory(HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(4))
+                .connectTimeout(Duration.ofSeconds(6))
+                .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .build());
-        factory.setReadTimeout(Duration.ofSeconds(8));
+        factory.setReadTimeout(Duration.ofSeconds(12));
         http = builder.clone().baseUrl(BASE_URL).requestFactory(factory)
                 .requestInterceptor(new ResponseSizeLimit(512_000)).build();
     }
