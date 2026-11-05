@@ -246,3 +246,6 @@ body:has(dialog[open]) { overflow: hidden; }
 .ai-profile-summary small { display: block; margin-top: 8px; color: var(--muted); font-size: var(--fs-xs); }
 .ai-profile-summary button { min-height: 44px; color: var(--text); background: var(--card-solid); border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px; }
 .train-shortcuts { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+
+/* Preserve readable figures when the previous gradient is disabled. */
+.sc-value, .stat-value, .hero-title .grad { color: var(--text); background: none; }

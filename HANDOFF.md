@@ -1,3 +1,13 @@
+## Verifisert i produksjon — 2026-11-05
+
+6bd41bb leverer ny mobil-UI og ny AI-kontekst. Ekte test av «dumbbells and bench only»
+ga styrke mandag/fredag og BJJ onsdag kveld, uten kabeløvelser, med teknikktips.
+Planens tre QA-test v2-økter ble lagret og lest tilbake etter full innlasting.
+Ekte AI-enkeltøkt med to øvelser og to sett hver ble lagret som mal og gjennomført
+med hviletimer. Alle fire sett og malen ble funnet etter reload. Testoppføringer
+er merket QA-test; ekte historikk og profil ble ikke endret. Fant usynlig
+ukesvolum fra gammel gradientregel. Fargeregel rettet i samme CSS-oppfølging.
+
 ## Publiseringskandidat — 2026-11-04
 
 Integrert lokale mobil-/kartendringer oppå produksjonsversjon 7e28d85. Bevarer
