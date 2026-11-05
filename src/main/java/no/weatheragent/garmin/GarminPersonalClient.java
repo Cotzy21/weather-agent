@@ -39,7 +39,7 @@ public class GarminPersonalClient {
         this.http = http;
     }
 
-    private String accessToken(String key) {
+    String accessToken(String key) {
         String response = http.post().uri(TOKEN_PATH)
                 .header(HttpHeaders.AUTHORIZATION, "ApiKey " + key)
                 .accept(MediaType.ALL)
@@ -50,6 +50,17 @@ public class GarminPersonalClient {
         }
 
         return token;
+    }
+
+    JsonNode wellnessData(String token, String path, java.util.Map<String, ?> query) {
+        return http.get().uri(uri -> {
+                    uri.path(path);
+                    query.forEach(uri::queryParam);
+                    return uri.build();
+                })
+                .headers(headers -> headers.setBearerAuth(token))
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve().body(JsonNode.class);
     }
 
     public List<Activity> recentActivities(String key) {

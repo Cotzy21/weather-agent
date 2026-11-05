@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Icon from './Icon.jsx'
 import TerrainMasthead from './TerrainMasthead.jsx'
+import { GarminHomeSummary } from './GarminInsights.jsx'
 import { loadLive } from './liveSession.js'
 import { BodyweightCard, BodyweightSheet } from './Bodyweight.jsx'
 import LifetimeStats from './LifetimeStats.jsx'
@@ -330,6 +331,8 @@ export default function Dashboard({ session, onNavigate }) {
         </div>
         {todays.length > 0 && <p className="terrain-today">{t('{n} økter logget i dag.', { n: todays.length })}</p>}
       </TerrainMasthead>
+
+      <GarminHomeSummary onOpen={() => onNavigate('restitusjon')} />
 
       {layout.every((w) => !w.on) && (
         <button className="plan-empty" onClick={() => setCustomizing(true)}>{t('Dashboardet er tomt – velg hva du vil se')}</button>

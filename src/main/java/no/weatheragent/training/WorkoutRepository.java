@@ -15,6 +15,8 @@ public interface WorkoutRepository extends JpaRepository<Workout, UUID> {
 
     List<Workout> findByUserIdAndDate(UUID userId, LocalDate date);
 
+    List<Workout> findByUserIdAndDateBetween(UUID userId, LocalDate from, LocalDate to);
+
     List<Workout> findByUserIdAndTypeOrderByDateAsc(UUID userId, String type);
 
     /** Bare nøklene som trengs for å oppdage duplikater ved import (unngår å laste all JSON-innhold). */

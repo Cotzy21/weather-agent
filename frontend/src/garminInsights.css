@@ -1,0 +1,34 @@
+.garmin-insights { margin: 0 0 24px; padding: clamp(16px, 3vw, 28px); background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-panel); }
+.garmin-insights :is(h2, h3) { margin: 0; line-height: 1.25; }
+.garmin-insights h2 { font-size: 1.25rem; font-weight: 600; }
+.garmin-insights h3 { font-size: 1.0625rem; font-weight: 600; }
+.garmin-insights summary { min-height: 44px; align-content: center; cursor: pointer; }
+.garmin-insights :is(select, input, button) { min-height: 44px; }
+.garmin-insights :is(select, input) { min-width: 0; width: 100%; font-size: 1rem; padding: 8px; border: 1px solid var(--border-strong); border-radius: 8px; }
+.garmin-insights .primary { padding-inline: 16px; align-self: end; }
+.garmin-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.garmin-heading label { display: flex; align-items: center; gap: 8px; font-size: .875rem; }
+.garmin-heading select { width: auto; max-width: 100%; }
+.garmin-sync, .garmin-trends, .garmin-correlations { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+.garmin-sync-fields, .garmin-comparisons { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 12px; border: 0; padding: 0; margin: 12px 0; min-width: 0; }
+.garmin-sync-fields label, .garmin-comparisons label { display: grid; gap: 4px; color: var(--muted); font-size: .875rem; min-width: 0; }
+.garmin-delete button + button { margin-inline-start: 8px; }
+.garmin-latest { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+.garmin-latest strong { font-size: 1.6rem; font-weight: 550; font-variant-numeric: tabular-nums; }
+.garmin-plot { position: relative; margin: 12px 0; padding-inline-start: 70px; }
+.garmin-plot svg { display: block; width: 100%; height: auto; }
+.garmin-axis { position: absolute; inset: 5px auto 25px 0; display: flex; flex-direction: column; justify-content: space-between; }
+.garmin-axis, .garmin-plot figcaption { color: var(--muted); font-size: .75rem; font-variant-numeric: tabular-nums; }
+.garmin-plot figcaption { display: flex; justify-content: space-between; gap: 8px; padding: 0 3%; }
+.garmin-gridline { stroke: var(--border-strong); opacity: .45; }
+.garmin-plot-line { stroke: var(--accent); stroke-width: 1.8; }
+.garmin-dot { fill: var(--accent); }
+.garmin-day-list { list-style: none; margin: 0; padding: 0; }
+.garmin-day-list li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.garmin-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; margin: 0; }
+.garmin-metrics dt { color: var(--muted); font-size: .875rem; }
+.garmin-metrics dd { margin: 0; font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) {
+  .garmin-plot { padding-inline-start: 54px; }
+  .garmin-heading label { flex-wrap: wrap; }
+}

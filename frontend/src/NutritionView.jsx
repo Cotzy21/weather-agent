@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { GarminNutritionSummary } from './GarminInsights.jsx'
 import gsap from 'gsap'
 import MealDiary from './MealDiary'
 import { apiUrl, readError } from './api'
@@ -364,6 +365,7 @@ export default function NutritionView({ session }) {
       <p className="muted disclaimer">{t('Kalorimål og næringsråd er generelle veiledninger, ikke medisinske råd.')}</p>
 
       <MealDiary session={session} />
+      {session && <GarminNutritionSummary />}
 
       <p className="muted" data-reveal>
         {t('Utforsk matfamiliene, merk favorittene dine, og sett dem sammen til egne måltider.')}

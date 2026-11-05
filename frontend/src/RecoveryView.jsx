@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import HabitTracker from './HabitTracker'
+import GarminInsights from './GarminInsights.jsx'
 import { authHeaders } from './supabase'
 import { cachedGet, getCached } from './api'
 import { useReveal } from './anim'
@@ -57,6 +58,7 @@ export default function RecoveryView({ session }) {
   return (
     <div className="recovery" ref={revealRef}>
       <h1 className="detail-title">{t('Restitusjon')}</h1>
+      <GarminInsights />
 
       {!report && <p className="muted" data-reveal>{t('Henter rapporten …')}</p>}
 
