@@ -132,6 +132,11 @@ public final class RecoveryAdvisor {
             trainingDays.add(w.getDate());
         }
 
+        return trainingStreakFromDates(trainingDays, today);
+    }
+
+    static int trainingStreakFromDates(java.util.Collection<LocalDate> dates, LocalDate today) {
+        Set<LocalDate> trainingDays = new java.util.HashSet<>(dates);
         LocalDate day = trainingDays.contains(today) ? today : today.minusDays(1);
         int streak = 0;
         while (trainingDays.contains(day)) {

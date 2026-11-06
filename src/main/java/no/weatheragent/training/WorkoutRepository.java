@@ -10,6 +10,15 @@ public interface WorkoutRepository extends JpaRepository<Workout, UUID> {
 
     List<Workout> findByUserIdOrderByDateDescCreatedAtDesc(UUID userId);
 
+    List<Workout> findTop8ByUserIdOrderByDateDescCreatedAtDesc(UUID userId);
+
+    List<Workout> findByUserIdAndDateBetweenOrderByDateDescCreatedAtDesc(UUID userId, LocalDate from, LocalDate to);
+
+    @org.springframework.data.jpa.repository.Query("select distinct w.date from Workout w where w.userId = :userId and w.date <= :today")
+    List<LocalDate> findTrainingDates(@org.springframework.data.repository.query.Param("userId") UUID userId,
+                                      @org.springframework.data.repository.query.Param("today") LocalDate today);
+
+
     /** Kun økter på/etter en dato - for «siste uke først»-lasting på fremsiden. */
     List<Workout> findByUserIdAndDateGreaterThanEqualOrderByDateDescCreatedAtDesc(UUID userId, LocalDate since);
 

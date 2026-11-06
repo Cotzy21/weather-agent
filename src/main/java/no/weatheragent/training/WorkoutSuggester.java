@@ -22,7 +22,6 @@ import no.weatheragent.interpret.LlmTier;
 @Service
 public class WorkoutSuggester {
 
-    private static final int HISTORY_LIMIT = 8;
     /** Tak på antall økter i en generert plan (mot både uhell og misbruk av tokens). */
     private static final int MAX_PLAN_WORKOUTS = 7;
 
@@ -303,12 +302,12 @@ public class WorkoutSuggester {
         String sleep = readiness.promptContext(userId)
                 + profiles.promptContext(userId)
                 + memory.promptContext(userId, LocalDate.now(ZoneId.of("Europe/Oslo")));
-        List<Workout> recent = repository.findByUserIdOrderByDateDescCreatedAtDesc(userId);
+        List<Workout> recent = repository.findTop8ByUserIdOrderByDateDescCreatedAtDesc(userId);
         if (recent.isEmpty()) {
             return "Ingen tidligere økter logget." + sleep;
         }
         StringBuilder sb = new StringBuilder();
-        recent.stream().limit(HISTORY_LIMIT).forEach(w -> sb
+        recent.forEach(w -> sb
                 .append("- ").append(w.getDate()).append(' ').append(w.getType())
                 .append(" \"").append(w.getTitle()).append("\": ").append(summarize(w)).append('\n'));
         return sb.append(sleep).toString();

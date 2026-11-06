@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect, lazy, Suspense } from 'react'
-import { localIso } from './trainingStats.js'
-import { supabase, authHeaders } from './supabase'
+import { supabase } from './supabase'
 import ChoiceChips from './ChoiceChips.jsx'
 import AppFooter from './AppFooter.jsx'
-import { apiUrl, readError, cachedGet, switchCacheOwner, onSlowRequest } from './api'
+import { apiUrl, readError, switchCacheOwner, onSlowRequest } from './api'
 import { useI18n } from './i18n.jsx'
 import { useReveal } from './anim'
 import WeatherScene from './WeatherScene.jsx'
@@ -316,43 +315,6 @@ export default function App() {
     })
     return () => sub.subscription.unsubscribe()
   }, [])
-
-  // Forhåndshent all fane-data ÉN gang når brukeren logger inn, så hver fane
-  // tegnes umiddelbart fra cachen (getCached) i stedet for å hente ved besøk.
-  // Rekkefølge: siste uke med økter FØRST (rask, liten), så resten i bakgrunnen.
-  useEffect(() => {
-    if (!session) return
-    let alive = true
-    ;(async () => {
-      try {
-        const headers = await authHeaders()
-        if (!alive) return
-        const iso = localIso(new Date())
-        const weekAgo = localIso(new Date(Date.now() - 7 * 86400000))
-        const lang = localStorage.getItem('lang') ?? 'en' // recovery-tekst genereres på språket
-        // Rask først: siste ukes økter (fremsiden blir klar raskt).
-        await cachedGet(`/api/treningsokter?siden=${weekAgo}`, headers).catch(() => {})
-        if (!alive) return
-        // Så resten i bakgrunnen (rekkefølgen er ikke kritisk).
-        const rest = [
-          '/api/treningsokter',
-          `/api/kosthold/dag?dato=${iso}&lang=${lang}`,
-          `/api/kosthold/uke?til=${iso}&lang=${lang}`,
-          `/api/recovery?lang=${lang}`,
-          '/api/trening/planer',
-          '/api/kosthold/favoritter',
-          '/api/kosthold/maaltider',
-          '/api/trening/minne',
-          '/api/kropp/vekt',
-        ]
-        for (const path of rest) {
-          if (!alive) return
-          cachedGet(path, headers).catch(() => {})
-        }
-      } catch { /* prefetch er best-effort */ }
-    })()
-    return () => { alive = false }
-  }, [session])
 
   const current = NAV.find((n) => n.id === tab)
   const locked = authReady && !session && current?.auth

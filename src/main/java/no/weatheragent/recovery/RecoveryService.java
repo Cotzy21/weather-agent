@@ -40,13 +40,14 @@ public class RecoveryService {
     /** {@code english=true} gir råd/varsler på engelsk (ellers norsk). */
     @Transactional(readOnly = true)
     public RecoveryReport report(UUID userId, boolean english) {
-        List<Workout> all = workouts.findByUserIdOrderByDateDescCreatedAtDesc(userId);
         LocalDate today = LocalDate.now(OSLO);
+        List<Workout> recent = workouts.findByUserIdAndDateBetweenOrderByDateDescCreatedAtDesc(
+                userId, InjuryRiskAnalyzer.earliestRequiredDate(today), today);
 
-        int streak = RecoveryAdvisor.trainingStreak(all, today);
+        int streak = RecoveryAdvisor.trainingStreakFromDates(workouts.findTrainingDates(userId, today), today);
         return new RecoveryReport(
-                RecoveryAdvisor.advise(all, today, english),
-                InjuryRiskAnalyzer.analyze(all, today, english),
+                RecoveryAdvisor.advise(recent, today, english),
+                InjuryRiskAnalyzer.analyze(recent, today, english),
                 streak,
                 streak >= RecoveryAdvisor.REST_DAY_STREAK);
     }

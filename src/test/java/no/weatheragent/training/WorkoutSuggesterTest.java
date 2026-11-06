@@ -39,7 +39,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void sleepContextIsSentToTheModel() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(readiness.promptContext(user)).thenReturn("\nSøvn siste netter: 2026-09-29 5.0 t\nDagsform i dag (fra søvn): LAV");
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn(
                 "{\"title\":\"Rolig\",\"type\":\"STYRKE\",\"content\":{\"blocks\":[{\"kind\":\"exercise\",\"name\":\"Push-ups\",\"sets\":[{\"reps\":8,\"weightKg\":0}]}]},\"rationale\":\"\"}");
@@ -54,7 +54,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void trainingMemoryIsSentToTheModel() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(memory.promptContext(eq(user), any())).thenReturn("\nBrukerminne:\n- Liker IKKE (ikke foreslå): Burpees");
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn(
                 "{\"title\":\"Økt\",\"type\":\"STYRKE\",\"content\":{\"blocks\":[{\"kind\":\"exercise\",\"name\":\"Push-ups\",\"sets\":[{\"reps\":8,\"weightKg\":0}]}]},\"rationale\":\"\"}");
@@ -70,7 +70,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void parsesModelJsonIntoSuggestion() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("""
                 Her er forslaget:
                 {"title":"Beinøkt","type":"styrke",
@@ -89,7 +89,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void throwsWhenModelReturnsNonJson() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("beklager, jeg klarte ikke");
 
         assertThrows(AiSuggestionException.class, () -> suggester.suggest(user, "fokus", null, null));
@@ -97,7 +97,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void planParsesMultipleWorkouts() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("""
                 {"title":"Push/Pull/Legs","summary":"3-dagers split.",
                  "workouts":[
@@ -119,7 +119,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void planCapsNumberOfWorkouts() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         StringBuilder ws = new StringBuilder();
         for (int i = 0; i < 12; i++) {
             ws.append(i > 0 ? "," : "").append("{\"title\":\"Økt ").append(i).append("\",\"type\":\"STYRKE\",\"content\":{\"blocks\":[{\"name\":\"Push-ups\",\"sets\":[{\"reps\":8}]}]}}");
@@ -134,7 +134,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void planThrowsWhenNoWorkouts() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(llm.complete(eq(LlmTier.SMART), any(), any()))
                 .thenReturn("{\"title\":\"Tom\",\"summary\":\"\",\"workouts\":[]}");
 
@@ -143,7 +143,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void chatReturnsFollowUpQuestionsWhenModelAsks() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("""
                 {"reply":"Så klart! Et par spørsmål først.",
                  "questions":["Hvor mange dager i uka?","Har du tilgang til vektstang?"],
@@ -159,7 +159,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void chatReturnsPlanWithSuggestedDay() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("""
                 {"reply":"Her er et opplegg.","questions":[],
                  "plan":{"title":"Upper/Lower","summary":"2-dagers.","workouts":[
@@ -181,7 +181,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void chatThrowsWhenModelReturnsNonJson() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("???");
 
         assertThrows(AiSuggestionException.class,
@@ -190,7 +190,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void singleSetExercisesAreExpandedToThreeSets() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("""
                 {"title":"Pull","type":"STYRKE","rationale":"",
                  "content":{"blocks":[
@@ -211,7 +211,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void planKeepsTimeOfDaySoTwoSessionsCanShareADay() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("""
                 {"reply":"Ok.","questions":[],
                  "plan":{"title":"Upper/Lower + BJJ","summary":"","workouts":[
@@ -230,7 +230,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void currentPlanAndLanguageAreSentToTheModel() throws Exception {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn("{\"reply\":\"Ok.\",\"questions\":[\"?\"]}");
         var current = mapper.readTree("{\"title\":\"PPL\",\"workouts\":[{\"title\":\"Push\",\"day\":\"monday\"}]}");
 
@@ -248,7 +248,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void profileIsSentToTheModelAndPicksTheTier() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(profiles.promptContext(user)).thenReturn("\nTreningsprofil (fra onboarding):\n- Erfaringsnivå: nybegynner");
         when(profiles.tierFor(user)).thenReturn(LlmTier.PRO);
         when(llm.complete(eq(LlmTier.PRO), any(), any())).thenReturn(
@@ -272,7 +272,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void planThatBreaksEquipmentRulesIsRetriedWithTheViolations() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(profiles.find(user)).thenReturn(java.util.Optional.of(new TrainingProfileData(
                 "INTERMEDIATE", 24, 3, "MUSCLE", "HOME_WEIGHTS", 3, 45, "MEDIUM", "BRIEF", "", "", "", "")));
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn(PLAN_WITH_FACE_PULLS);
@@ -288,7 +288,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void offendingExercisesAreRemovedWhenTheRetryFailsToFixThem() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(profiles.find(user)).thenReturn(java.util.Optional.of(new TrainingProfileData(
                 "INTERMEDIATE", 24, 3, "MUSCLE", "HOME_WEIGHTS", 3, 45, "MEDIUM", "BRIEF", "", "", "", "")));
         when(llm.complete(any(), any(), any())).thenReturn(PLAN_WITH_FACE_PULLS);
@@ -302,7 +302,7 @@ class WorkoutSuggesterTest {
 
     @Test
     void cleanPlanCostsNoExtraCall() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn(PLAN_WITH_FACE_PULLS);
 
         suggester.suggestPlan(user, "pull-dag", null);
@@ -311,7 +311,7 @@ class WorkoutSuggesterTest {
     }
     @Test
     void postfixEquipmentRequestOverridesGymProfileAndIsExplicitInThePrompt() {
-        when(repo.findByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
+        when(repo.findTop8ByUserIdOrderByDateDescCreatedAtDesc(user)).thenReturn(List.of());
         when(profiles.find(user)).thenReturn(java.util.Optional.of(new TrainingProfileData(
                 "INTERMEDIATE", 24, 3, "MUSCLE", "GYM", 3, 45, "MEDIUM", "BRIEF", "", "", "", "")));
         when(llm.complete(eq(LlmTier.SMART), any(), any())).thenReturn(PLAN_WITH_FACE_PULLS);

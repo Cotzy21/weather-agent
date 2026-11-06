@@ -32,6 +32,10 @@ public final class InjuryRiskAnalyzer {
     private static final double NOMINAL_WEIGHT_KG = 75;
 
     private static final int ACUTE_DAYS = 7;
+
+    static LocalDate earliestRequiredDate(LocalDate today) {
+        return today.minusDays(ACUTE_DAYS - 1).minusWeeks(CHRONIC_WEEKS);
+    }
     private static final int CHRONIC_WEEKS = 4;
 
     /** Under denne akutt-belastningen (kcal/uke) bryr vi oss ikke. */
@@ -99,7 +103,7 @@ public final class InjuryRiskAnalyzer {
         // Belastning per type, delt i akutt (siste 7 dager) og kronisk (4 uker før).
         Map<String, double[]> loads = new HashMap<>(); // [akutt, kronisk-total]
         LocalDate acuteFrom = today.minusDays(ACUTE_DAYS - 1);
-        LocalDate chronicFrom = acuteFrom.minusWeeks(CHRONIC_WEEKS);
+        LocalDate chronicFrom = earliestRequiredDate(today);
 
         for (Workout w : workouts) {
             LocalDate date = w.getDate();
