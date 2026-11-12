@@ -39,11 +39,11 @@ class AuthUserRemoverTest {
     }
 
     @Test
-    void reportsFalseWhenNoLoginRowWasFound() {
+    void anAlreadyRemovedLoginMakesRetriesIdempotent() {
         when(jdbc.queryForObject(anyString(), eq(Boolean.class))).thenReturn(true);
         when(jdbc.update("delete from auth.users where id = ?", USER)).thenReturn(0);
 
-        assertFalse(remover.remove(USER));
+        assertTrue(remover.remove(USER));
     }
 
     @Test

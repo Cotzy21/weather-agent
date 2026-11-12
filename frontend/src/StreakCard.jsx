@@ -44,7 +44,7 @@ export default function StreakCard({ workouts, settings, today, onChange }) {
 
   return (
     <div className="focus-card streak-card" data-reveal>
-      <span className="focus-head">{t('🔥 Ukeserie')}</span>
+      <span className="focus-head">{t('Ukeserie')}</span>
       <div className="focus-main">
         <span className="focus-big">{r.streak}</span>
         <span className="focus-sub muted">{r.streak === 1 ? t('uke på rad') : t('uker på rad')}</span>

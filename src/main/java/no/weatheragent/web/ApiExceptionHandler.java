@@ -30,6 +30,11 @@ public class ApiExceptionHandler {
     public record ApiError(String error) {
     }
 
+    @ExceptionHandler(no.weatheragent.account.TrainingAiPermission.ConsentRequired.class)
+    public ResponseEntity<ApiError> handleAiPermission(RuntimeException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiError(e.getMessage()));
+    }
+
     @ExceptionHandler({RestClientResponseException.class, ResourceAccessException.class})
     public ResponseEntity<ApiError> handleUpstream(Exception e) {
         boolean rateLimited = e instanceof RestClientResponseException r
@@ -94,7 +99,7 @@ public class ApiExceptionHandler {
 
     /**
      * Alt uventet -> generisk 500. Detaljer (SQL, stier, klassenavn, hemmeligheter i feilmeldinger)
-     * havner i loggen, aldri i svaret. Spring sine egne feil (404, 405, 415 ...) beholder sin statuskode,
+     * utelates både fra loggen og svaret. Spring sine egne feil (404, 405, 415 ...) beholder sin statuskode,
      * og sikkerhetsfeil slippes videre til Spring Security.
      */
     @ExceptionHandler(Exception.class)
@@ -105,7 +110,7 @@ public class ApiExceptionHandler {
         if (e instanceof ErrorResponse er) {
             return ResponseEntity.status(er.getStatusCode()).body(new ApiError("Ugyldig forespørsel."));
         }
-        log.error("Uventet feil", e);
+        log.error("Uventet feil ({})", e.getClass().getSimpleName());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiError("Noe gikk galt hos oss. Prøv igjen om litt."));
     }

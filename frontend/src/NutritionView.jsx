@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { GarminNutritionSummary } from './GarminInsights.jsx'
 import gsap from 'gsap'
 import MealDiary from './MealDiary'
+import ObservatoryHeading from './ObservatoryHeading.jsx'
+import Icon from './Icon.jsx'
 import { apiUrl, readError } from './api'
 import { authHeaders } from './supabase'
 import { useReveal, pop, withMotion } from './anim'
@@ -20,7 +22,7 @@ import { useI18n } from './i18n.jsx'
 /* m = gram per 100 g: { p: protein, k: karbo, f: fett } */
 const FAMILIES = [
   {
-    id: 'kjott', name: 'Kjøtt', icon: '🥩', hue: '#fb7185',
+    id: 'kjott', name: 'Kjøtt', icon: '🥩', hue: 'var(--accent)',
     foods: [
       { n: 'Kyllingfilet', e: '🍗', m: { p: 23, k: 0, f: 2 } },
       { n: 'Karbonadedeig', e: '🥩', m: { p: 18, k: 0, f: 14 } },
@@ -33,7 +35,7 @@ const FAMILIES = [
     ],
   },
   {
-    id: 'fisk', name: 'Fisk & sjømat', icon: '🐟', hue: '#38bdf8',
+    id: 'fisk', name: 'Fisk & sjømat', icon: '🐟', hue: 'var(--accent)',
     foods: [
       { n: 'Laks', e: '🐟', m: { p: 20, k: 0, f: 13 } },
       { n: 'Torsk', e: '🐟', m: { p: 18, k: 0, f: 1 } },
@@ -46,7 +48,7 @@ const FAMILIES = [
     ],
   },
   {
-    id: 'gronnsaker', name: 'Grønnsaker', icon: '🥦', hue: '#4ade80',
+    id: 'gronnsaker', name: 'Grønnsaker', icon: '🥦', hue: 'var(--accent)',
     foods: [
       { n: 'Brokkoli', e: '🥦', m: { p: 3, k: 4, f: 0 } },
       { n: 'Spinat', e: '🥬', m: { p: 3, k: 1, f: 0 } },
@@ -61,7 +63,7 @@ const FAMILIES = [
     ],
   },
   {
-    id: 'frukt', name: 'Frukt & bær', icon: '🍎', hue: '#facc15',
+    id: 'frukt', name: 'Frukt & bær', icon: '🍎', hue: 'var(--accent)',
     foods: [
       { n: 'Eple', e: '🍎', m: { p: 0, k: 12, f: 0 } },
       { n: 'Banan', e: '🍌', m: { p: 1, k: 20, f: 0 } },
@@ -74,7 +76,7 @@ const FAMILIES = [
     ],
   },
   {
-    id: 'korn', name: 'Korn & karbo', icon: '🌾', hue: '#fb923c',
+    id: 'korn', name: 'Korn & karbo', icon: '🌾', hue: 'var(--accent)',
     foods: [
       { n: 'Havregryn', e: '🥣', m: { p: 13, k: 58, f: 7 } },
       { n: 'Ris (kokt)', e: '🍚', m: { p: 3, k: 28, f: 0 } },
@@ -87,7 +89,7 @@ const FAMILIES = [
     ],
   },
   {
-    id: 'meieri', name: 'Meieri', icon: '🥛', hue: '#c4b5fd',
+    id: 'meieri', name: 'Meieri', icon: '🥛', hue: 'var(--accent)',
     foods: [
       { n: 'Melk', e: '🥛', m: { p: 3, k: 5, f: 1 } },
       { n: 'Gresk yoghurt', e: '🥛', m: { p: 9, k: 4, f: 8 } },
@@ -98,7 +100,7 @@ const FAMILIES = [
     ],
   },
   {
-    id: 'notter', name: 'Nøtter & frø', icon: '🥜', hue: '#a3e635',
+    id: 'notter', name: 'Nøtter & frø', icon: '🥜', hue: 'var(--accent)',
     foods: [
       { n: 'Mandler', e: '🌰', m: { p: 21, k: 7, f: 50 } },
       { n: 'Valnøtter', e: '🌰', m: { p: 15, k: 7, f: 65 } },
@@ -111,9 +113,9 @@ const FAMILIES = [
 ]
 
 const MACROS = [
-  { key: 'p', label: 'Protein', color: '#34d399' },
-  { key: 'k', label: 'Karbo', color: '#fbbf24' },
-  { key: 'f', label: 'Fett', color: '#f472b6' },
+  { key: 'p', label: 'Protein', color: 'var(--macro-protein)' },
+  { key: 'k', label: 'Karbo', color: 'var(--macro-carb)' },
+  { key: 'f', label: 'Fett', color: 'var(--macro-fat)' },
 ]
 
 /** Oppslag "familie:navn" -> matvare, bl.a. for å oppgradere gamle favoritter. */
@@ -361,7 +363,7 @@ export default function NutritionView({ session }) {
 
   return (
     <div className="nutrition" ref={rootRef}>
-      <h1 className="detail-title">{t('Kosthold')}</h1>
+      <ObservatoryHeading title={t('Kosthold')} />
       <p className="muted disclaimer">{t('Kalorimål og næringsråd er generelle veiledninger, ikke medisinske råd.')}</p>
 
       <MealDiary session={session} />
@@ -467,7 +469,7 @@ export default function NutritionView({ session }) {
                   className={`family-card ${open === f.id ? 'open' : ''}`}
                   style={{ '--family-hue': f.hue }}
                   onClick={() => setOpen(open === f.id ? null : f.id)}>
-            <span className="family-icon">{f.icon}</span>
+            <span className="family-icon"><Icon name="food" size={24} /></span>
             <span className="family-name">{t(f.name)}</span>
             <span className="family-count muted">
               {f.foods.filter((x) => isFav(f.id, x)).length > 0

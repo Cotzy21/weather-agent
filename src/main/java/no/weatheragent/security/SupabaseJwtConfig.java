@@ -19,6 +19,8 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.net.URI;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * Validerer Supabase-tokens. Supabase kan signere brukertokens med HS256 (delt
@@ -40,7 +42,15 @@ public class SupabaseJwtConfig {
     @Bean
     public JwtDecoder jwtDecoder(
             @Value("${supabase.jwt-secret:}") String secret,
-            @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:}") String jwkSetUri) {
+            @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:}") String jwkSetUri,
+            @Value("${supabase.issuer:}") String configuredIssuer,
+            JdbcTemplate jdbc) {
+
+        String issuer = expectedIssuer(configuredIssuer, jwkSetUri);
+        if (issuer.isBlank()) {
+            log.warn("Supabase issuer mangler; autentiserte kall avvises.");
+            return token -> { throw new BadJwtException("Innlogging er ikke konfigurert."); };
+        }
 
         JwtDecoder hs256 = null;
         JwtDecoder jwks = null;
@@ -48,7 +58,7 @@ public class SupabaseJwtConfig {
         if (secret != null && !secret.isBlank()) {
             SecretKeySpec key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
             NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
-            decoder.setJwtValidator(validators());
+            decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(validators(issuer), new AccountRevocationValidator(jdbc)));
             hs256 = decoder;
         }
         if (jwkSetUri != null && !jwkSetUri.isBlank()) {
@@ -61,7 +71,7 @@ public class SupabaseJwtConfig {
                         algs.add(SignatureAlgorithm.ES256);
                     })
                     .build();
-            decoder.setJwtValidator(validators());
+            decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(validators(issuer), new AccountRevocationValidator(jdbc)));
             jwks = decoder;
         }
 
@@ -77,7 +87,7 @@ public class SupabaseJwtConfig {
                     return chosen.decode(token);
                 } catch (RuntimeException e) {
                     // 401 uten spor er umulig å feilsøke - si hvorfor i loggen.
-                    log.warn("JWT-validering feilet (alg={}): {}", alg, e.getMessage());
+                    log.warn("JWT-validering feilet ({})", e.getClass().getSimpleName());
                     throw e;
                 }
             };
@@ -96,8 +106,23 @@ public class SupabaseJwtConfig {
     }
 
     /** Standardvalidering (utløp osv.) pluss at tokenet tilhører en innlogget bruker. */
-    private static OAuth2TokenValidator<Jwt> validators() {
-        return new DelegatingOAuth2TokenValidator<>(JwtValidators.createDefault(), new SupabaseClaimsValidator());
+    static OAuth2TokenValidator<Jwt> validators(String issuer) {
+        return new DelegatingOAuth2TokenValidator<>(JwtValidators.createDefaultWithIssuer(issuer), new SupabaseClaimsValidator());
+    }
+
+    static String expectedIssuer(String configured, String jwks) {
+        String suffix = "/.well-known/jwks.json";
+        String value = configured == null ? "" : configured.trim();
+        if (value.isBlank() && jwks != null && jwks.endsWith(suffix)) {
+            value = jwks.substring(0, jwks.length() - suffix.length());
+        }
+        if (value.isBlank()) return "";
+        URI uri = URI.create(value);
+        if (!"https".equals(uri.getScheme()) || uri.getHost() == null || uri.getUserInfo() != null
+                || uri.getQuery() != null || uri.getFragment() != null) {
+            throw new IllegalArgumentException("Supabase issuer må være en HTTPS-adresse uten brukerinformasjon, query eller fragment.");
+        }
+        return value;
     }
 
     /** Leser {@code alg} fra JWT-headeren (første segment) uten å validere. */

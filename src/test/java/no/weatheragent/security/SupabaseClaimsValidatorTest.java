@@ -55,9 +55,27 @@ class SupabaseClaimsValidatorTest {
     }
 
     @Test
-    void audienceAloneIsEnoughWhenTheRoleClaimIsMissing() {
-        assertTrue(validator.validate(jwt(c -> {
+    void audienceAloneCannotReplaceTheUserRole() {
+        assertFalse(validator.validate(jwt(c -> {
             c.put("sub", UUID.randomUUID().toString());
+            c.put("aud", List.of("authenticated"));
+        })).getErrors().isEmpty());
+    }
+
+    @Test
+    void roleAloneCannotReplaceTheAudience() {
+        assertFalse(validator.validate(jwt(c -> {
+            c.put("sub", UUID.randomUUID().toString());
+            c.put("role", "authenticated");
+            c.put("aud", List.of("another-app"));
+        })).getErrors().isEmpty());
+    }
+
+    @Test
+    void rejectsAbbreviatedUuid() {
+        assertFalse(validator.validate(jwt(c -> {
+            c.put("sub", "1-1-1-1-1");
+            c.put("role", "authenticated");
             c.put("aud", List.of("authenticated"));
         })).getErrors().isEmpty());
     }

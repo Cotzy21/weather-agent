@@ -32,3 +32,12 @@
   .garmin-plot { padding-inline-start: 54px; }
   .garmin-heading label { flex-wrap: wrap; }
 }
+
+.garmin-privacy h2 { margin: 8px 0 0; }
+.garmin-privacy p { margin: 0; }
+.garmin-privacy dl { margin: 0; }
+.garmin-privacy dl > div { padding: 12px 0; border-top: 1px solid var(--border); }
+.garmin-privacy dt { font-weight: 650; }
+.garmin-privacy dd { margin: 4px 0 0; color: var(--muted); line-height: 1.5; }
+.garmin-privacy button { min-height: 44px; align-self: flex-end; }
+.garmin-privacy button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }

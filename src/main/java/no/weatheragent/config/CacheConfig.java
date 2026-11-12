@@ -34,6 +34,8 @@ public class CacheConfig {
         for (String name : java.util.List.of("kartverketPeaks", "kartverketAreaTrails", "kartverketNearTrails", "trailGeometry")) {
             manager.registerCustomCache(name, Caffeine.newBuilder().maximumSize(20).expireAfterWrite(TTL).build());
         }
+        manager.registerCustomCache("forecastComparison",
+                Caffeine.newBuilder().maximumSize(4).expireAfterWrite(Duration.ofMinutes(15)).build());
         return manager;
     }
 }

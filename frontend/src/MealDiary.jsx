@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { localIso } from './trainingStats.js'
 import { apiUrl, readError } from './api'
 import ChoiceChips from './ChoiceChips.jsx'
+import Icon from './Icon.jsx'
 import ReportFood from './ReportFood.jsx'
 import BarcodeScanner from './BarcodeScanner.jsx'
 import { lookupBarcode } from './barcode.js'
@@ -476,7 +477,7 @@ export default function MealDiary({ session }) {
           onChange={(e) => { setQuery(e.target.value); setPicked(null) }}
         />
         <button className="mini" onClick={() => setShowScanner(!showScanner)} aria-expanded={showScanner}
-                title={t('Skann strekkode')} aria-label={t('Skann strekkode')}>📷</button>
+                title={t('Skann strekkode')} aria-label={t('Skann strekkode')}><Icon name="scan" /></button>
         <button className="mini" onClick={toggleFoodForm}>
           {showFoodForm ? t('Lukk') : t('+ Egen matvare')}
         </button>
@@ -646,7 +647,7 @@ export default function MealDiary({ session }) {
                     <span className="macro-bar">
                       <span style={{
                         width: `${Math.min(100, n.percent)}%`,
-                        background: n.percent < 75 ? '#fbbf24' : '#34d399',
+                        background: n.percent < 75 ? 'var(--warning)' : 'var(--positive)',
                       }} />
                     </span>
                     <span className="macro-count">

@@ -149,7 +149,7 @@ public class ExerciseMatchService {
             }
             return answers;
         } catch (RuntimeException | java.io.IOException e) {
-            log.warn("Øvelseskobling med LLM feilet: {}", e.getMessage());
+            log.warn("Øvelseskobling med LLM feilet ({})", e.getClass().getSimpleName());
             return null;
         }
     }

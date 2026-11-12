@@ -23,7 +23,7 @@ public class SupabaseClaimsValidator implements OAuth2TokenValidator<Jwt> {
     public OAuth2TokenValidatorResult validate(Jwt jwt) {
         String role = jwt.getClaimAsString("role");
         List<String> audience = jwt.getAudience() == null ? List.of() : jwt.getAudience();
-        boolean authenticated = "authenticated".equals(role) || audience.contains("authenticated");
+        boolean authenticated = "authenticated".equals(role) && audience.contains("authenticated");
         boolean serviceOrAnon = "anon".equals(role) || "service_role".equals(role);
         if (!authenticated || serviceOrAnon || !isUuid(jwt.getSubject())) {
             return OAuth2TokenValidatorResult.failure(NOT_A_USER);
@@ -34,8 +34,7 @@ public class SupabaseClaimsValidator implements OAuth2TokenValidator<Jwt> {
     private static boolean isUuid(String s) {
         if (s == null) return false;
         try {
-            UUID.fromString(s);
-            return true;
+            return UUID.fromString(s).toString().equalsIgnoreCase(s);
         } catch (IllegalArgumentException e) {
             return false;
         }

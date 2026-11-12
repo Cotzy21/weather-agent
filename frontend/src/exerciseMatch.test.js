@@ -19,35 +19,22 @@ describe('matchExerciseNames', () => {
     expect(r.map.get('Barbell Bench Press')).toBe('Benkpress')
   })
 
-  it('asks the server only about the names it does not recognise, and uses its answers', async () => {
-    const p = post([{ name: 'Cable Bench Thing', id: 'bench-press', nb: 'Benkpress', en: 'Bench Press' }, { name: 'Zercher Something', id: null }])
-    const r = await matchExerciseNames(['Barbell Bench Press', 'Cable Bench Thing', 'Zercher Something'], { lang: 'en', post: p })
-    expect(JSON.parse(p.mock.calls[0][1]).names).toEqual(['Cable Bench Thing', 'Zercher Something'])
-    expect(p.mock.calls[0][0]).toBe('/api/trening/ovelser/koble')
-    expect(r.map.get('Cable Bench Thing')).toBe('Bench Press')
-    expect(r.map.has('Zercher Something')).toBe(false)
-    expect(r).toMatchObject({ matched: 2, unmatched: 1, viaAi: 1 })
+  it('keeps unknown imported names on the device, even when a server callback is supplied', async () => {
+    const p = post([{ name: 'Private activity exercise', id: 'bench-press' }])
+    const r = await matchExerciseNames(['Barbell Bench Press', 'Private activity exercise'], { lang: 'en', post: p })
+    expect(p).not.toHaveBeenCalled()
+    expect(r.map.has('Private activity exercise')).toBe(false)
+    expect(r).toMatchObject({ matched: 1, unmatched: 1, viaAi: 0 })
   })
 
-  it('ignores answers about names it did not ask for and ids the app does not know', async () => {
-    const p = post([{ name: 'Noe annet', id: 'squat' }, { name: 'Mystery', id: 'finnes-ikke' }])
-    const r = await matchExerciseNames(['Mystery'], { lang: 'en', post: p })
-    expect(r.map.size).toBe(0)
-  })
-
-  it('keeps the original names when the server cannot help (quota, offline, no AI key)', async () => {
-    const p = vi.fn(async () => { throw new Error('For mange forespørsler') })
-    const r = await matchExerciseNames(['Barbell Bench Press', 'Mystery'], { lang: 'en', post: p })
-    expect(r.map.get('Barbell Bench Press')).toBe('Bench Press')
-    expect(r).toMatchObject({ matched: 1, unmatched: 1 })
-  })
-
-  it('splits long lists so each call stays under the server limit', async () => {
+  it('does not send unknown names in bulk', async () => {
     const names = Array.from({ length: 320 }, (_, i) => `Ukjent ${i}`)
     const p = post([])
-    await matchExerciseNames(names, { lang: 'en', post: p })
-    expect(p.mock.calls.map((c) => JSON.parse(c[1]).names.length)).toEqual([150, 150, 20])
+    const r = await matchExerciseNames(names, { lang: 'en', post: p })
+    expect(p).not.toHaveBeenCalled()
+    expect(r).toMatchObject({ matched: 0, unmatched: 320, viaAi: 0 })
   })
+
 })
 
 describe('applyExerciseNames', () => {

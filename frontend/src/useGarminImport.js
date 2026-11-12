@@ -68,7 +68,7 @@ export function useGarminImport({ onDone, lang = 'en' }) {
     return list.length && run('fit', (onProgress) => importFit(list, {
       post: postWithRetry,
       onProgress,
-      matchNames: (names) => matchExerciseNames(names, { lang, post: postWithRetry }),
+      matchNames: (names) => matchExerciseNames(names, { lang }),
     }))
   }, [run, lang])
 

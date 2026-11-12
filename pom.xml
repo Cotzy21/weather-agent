@@ -19,6 +19,11 @@
 
     <properties>
         <java.version>23</java.version>
+        <!-- Security patches within the existing compatible release lines. -->
+        <jackson-bom.version>2.21.7</jackson-bom.version>
+        <tomcat.version>10.1.59</tomcat.version>
+        <log4j2.version>2.25.5</log4j2.version>
+        <postgresql.version>42.7.12</postgresql.version>
     </properties>
 
     <dependencies>

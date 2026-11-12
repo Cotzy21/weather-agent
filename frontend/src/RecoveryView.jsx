@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import HabitTracker from './HabitTracker'
 import GarminInsights from './GarminInsights.jsx'
+import ObservatoryHeading from './ObservatoryHeading.jsx'
 import { authHeaders } from './supabase'
 import { cachedGet, getCached } from './api'
 import { useReveal } from './anim'
@@ -44,7 +45,7 @@ export default function RecoveryView({ session }) {
   if (!session) {
     return (
       <div className="recovery" ref={revealRef}>
-        <h1 className="detail-title">{t('Restitusjon')}</h1>
+        <ObservatoryHeading title={t('Restitusjon')} />
         <p className="muted" data-reveal>
           {t('Logg inn og før treningsdagbok – så får du restitusjonsråd og beskjed når treningsmengden øker raskere enn kroppen liker.')}
         </p>
@@ -57,7 +58,7 @@ export default function RecoveryView({ session }) {
 
   return (
     <div className="recovery" ref={revealRef}>
-      <h1 className="detail-title">{t('Restitusjon')}</h1>
+      <ObservatoryHeading title={t('Restitusjon')} />
       <GarminInsights />
 
       {!report && <p className="muted" data-reveal>{t('Henter rapporten …')}</p>}

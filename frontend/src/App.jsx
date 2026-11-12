@@ -13,6 +13,7 @@ import './App.css'
 import './interfaceMotion.css'
 import './mobileRedesign.css'
 import './terrainTheme.css'
+import './observatoryApp.css'
 
 // Kodedeling: de tunge fanene (og Leaflet-kartene) lastes on-demand som egne
 // chunks, så første innlasting (hjem/innlogging) blir vesentlig lettere.
@@ -294,7 +295,8 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#101410' : '#f4f5f1')
+    document.title = 'Weather Agent'
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#08151f' : '#edf1f2')
     try { localStorage.setItem('terrain-theme', theme) } catch { /* privat modus o.l. */ }
   }, [theme])
 
@@ -302,7 +304,7 @@ export default function App() {
     if (!supabase) return undefined
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
-      if (!data.session) setTab('vaersok')
+      if (!data.session && location.hash !== '#personvern') setTab('vaersok')
       setAuthReady(true)
     })
     // Tøm data-cachen når brukeren endres (inn/ut-logging), så ingen ser
@@ -340,14 +342,15 @@ export default function App() {
               onClearTarget={() => setPlanTarget(null)}
             />
           )}
-          {tab === 'trening' && <TrainingView session={session} />}
+          {tab === 'trening' && <TrainingView key={session?.user?.id ?? 'signed-out'} session={session} />}
           {tab === 'kosthold' && <NutritionView session={session} />}
           {tab === 'restitusjon' && <RecoveryView session={session} />}
           {tab === 'konto' && (
-            <AuthView session={session} onOpenPrivacy={() => go('personvern')}
-                      onDeleted={(r) => setNotice(r.loginRemoved
+            <AuthView key={session?.user?.id ?? 'signed-out'} session={session} onOpenPrivacy={() => go('personvern')}
+                      onDeleted={(r) => setNotice((r.loginRemoved
                         ? t('Kontoen din er slettet.')
-                        : t('Dataene dine er slettet, men innloggingen (e-postadressen) ble ikke fjernet automatisk. Kontakt oss for å få den fjernet.'))} />
+                        : t('Dataene dine er slettet og kontoen er sperret. Sletting av innloggingen forsøkes igjen automatisk.'))
+                        + (r.localCleanupFailed ? ' ' + t('Noen lokale økter kunne ikke slettes. Tøm nettstedets lagring på denne enheten.') : ''))} />
           )}
           {tab === 'personvern' && <PrivacyView onBack={() => go(session ? 'konto' : 'vaersok')} />}
           </>)}

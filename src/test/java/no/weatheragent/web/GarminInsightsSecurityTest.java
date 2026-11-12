@@ -14,7 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.Mockito.verify;
@@ -25,7 +25,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(GarminInsightsController.class)
@@ -46,22 +45,21 @@ class GarminInsightsSecurityTest {
     }
 
     @Test
-    void savesAndDeletesOnlyForTheAuthenticatedSubject() throws Exception {
+    void blocksImportButAllowsTheAuthenticatedSubjectToReadAndDelete() throws Exception {
         UUID user = UUID.randomUUID();
-        LocalDate day = LocalDate.now(ZoneId.of("Europe/Oslo")).minusDays(2);
-        var measurements = Map.of(day, Map.of("sleepMin", 420.0));
-        when(reader.read("test-key", GarminWellnessReader.Group.WELLNESS, day, day)).thenReturn(measurements);
-        when(store.save(user, measurements)).thenReturn(1);
-        String request = """
-                {"apiKey":"test-key","group":"WELLNESS","from":"%s","to":"%s","userId":"00000000-0000-0000-0000-000000000000"}
-                """.formatted(day, day);
-        mvc.perform(post(PATH).with(jwt().jwt(j -> j.subject(user.toString())))
-                        .contentType(MediaType.APPLICATION_JSON).content(request))
-                .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"))
-                .andExpect(jsonPath("$.days").value(1));
+        LocalDate today = LocalDate.now(ZoneId.of("Europe/Oslo"));
+        var signedIn = jwt().jwt(j -> j.subject(user.toString()));
+        when(store.list(user, today.minusDays(13), today)).thenReturn(List.of());
 
-        mvc.perform(delete(PATH).with(jwt().jwt(j -> j.subject(user.toString())))).andExpect(status().isNoContent());
-        verify(store).save(user, measurements);
+        mvc.perform(post(PATH).with(signedIn).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"apiKey\":\"test-key\"}"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(reader, store);
+
+        mvc.perform(get(PATH).with(signedIn).param("days", "14"))
+                .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"));
+        mvc.perform(delete(PATH).with(signedIn)).andExpect(status().isNoContent());
+        verify(store).list(user, today.minusDays(13), today);
         verify(store).delete(user);
     }
 }

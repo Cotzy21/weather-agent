@@ -10,6 +10,10 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.http.server.PathContainer;
+import org.springframework.http.server.RequestPath;
+import org.springframework.web.util.pattern.PathPattern;
+import org.springframework.web.util.pattern.PathPatternParser;
 
 import java.io.IOException;
 import java.time.Clock;
@@ -34,13 +38,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final Pattern IP_LIKE = Pattern.compile("^[0-9a-fA-F:.]{2,45}$");
 
     /** En regel: hvilke kall den gjelder, og grenser per IP (minutt/time) og globalt (time). */
-    private record Rule(String name, List<String> paths, String method, SlidingWindowLimiter perMinute,
+    private record Rule(String name, List<PathPattern> paths, String method, SlidingWindowLimiter perMinute,
                         SlidingWindowLimiter perHour, SlidingWindowLimiter global) {
-        boolean matches(HttpServletRequest r) {
-            String uri = r.getRequestURI();
-            boolean pathHit = paths.stream().anyMatch(path -> path.endsWith("/**")
-                    ? uri.startsWith(path.substring(0, path.length() - 2)) : uri.equals(path));
-            return pathHit && (method == null || method.equals(r.getMethod()));
+        boolean matches(PathContainer path, String requestMethod) {
+            // Spring MVC serves HEAD through GET handlers as well.
+            return (method == null || method.equals(requestMethod) || ("GET".equals(method) && "HEAD".equals(requestMethod)))
+                    && paths.stream().anyMatch(pattern -> pattern.matches(path));
         }
     }
 
@@ -58,7 +61,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         this.rules = enabled ? List.of(
                 // Værsøket kaller LLM + Overpass + MET: dyrest.
                 rule("turvaer", List.of("/api/turvaer"), "GET", 10, 80, 600, clock),
-                rule("sted", List.of("/api/sted"), "GET", 30, 300, 3000, clock),
+                rule("sted", List.of("/api/sted", "/api/vaer/sammenlign"), "GET", 30, 300, 3000, clock),
                 rule("rute", List.of("/api/rute"), "POST", 30, 300, 3000, clock),
                 // AI-treningsforslag (betalt LLM). I tillegg til kvoten per bruker: alle kontoer fra én IP
                 // deler denne grensen, og den globale grensen stopper masseregistrering av kontoer.
@@ -75,7 +78,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private static Rule rule(String name, List<String> paths, String method, int perMinute, int perHour, int global, Clock clock) {
-        return new Rule(name, paths, method,
+        return new Rule(name, paths.stream().map(PathPatternParser.defaultInstance::parse).toList(), method,
                 new SlidingWindowLimiter(perMinute, MINUTE, clock),
                 new SlidingWindowLimiter(perHour, HOUR, clock),
                 new SlidingWindowLimiter(global, HOUR, clock));
@@ -84,10 +87,17 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        if (!"OPTIONS".equals(request.getMethod())) { // CORS preflight teller ikke
+        if (!rules.isEmpty() && !"OPTIONS".equals(request.getMethod())) { // CORS preflight teller ikke
+            PathContainer path;
+            try {
+                path = RequestPath.parse(request.getRequestURI(), request.getContextPath()).pathWithinApplication();
+            } catch (IllegalArgumentException malformedPath) {
+                response.setStatus(400);
+                return;
+            }
             String ip = clientIp(request);
             for (Rule rule : rules) {
-                if (!rule.matches(request)) continue;
+                if (!rule.matches(path, request.getMethod())) continue;
                 long wait = Math.max(rule.perMinute.tryAcquire(ip),
                         Math.max(rule.perHour.tryAcquire(ip), rule.global.tryAcquire("*")));
                 if (wait > 0) {

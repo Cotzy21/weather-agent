@@ -123,7 +123,7 @@ export default function HabitTracker() {
   return (
     <div className="habits" data-reveal>
       <div className="habits-head">
-        <h3 className="detail-h3">{t('📅 Vaner')}</h3>
+        <h3 className="detail-h3">{t('Vaner')}</h3>
         <button className="mini" onClick={() => setShowForm(!showForm)}>
           {showForm ? t('Lukk') : t('+ Ny vane')}
         </button>

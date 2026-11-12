@@ -35,7 +35,11 @@ public class AuthUserRemover {
             if (!Boolean.TRUE.equals(hasAuthTable)) {
                 return false;
             }
-            return jdbc.update("delete from auth.users where id = ?", userId) > 0;
+            jdbc.update("delete from auth.users where id = ?", userId);
+            // Zero rows means an earlier attempt already removed the identity.
+            jdbc.update("update revoked_accounts set auth_deleted_at = current_timestamp "
+                    + "where user_id = ? and revoked_at is not null", userId);
+            return true;
         } catch (DataAccessException e) {
             log.warn("Kunne ikke slette innloggingen i Supabase ({}). Brukerdataene er slettet.", e.getClass().getSimpleName());
             return false;

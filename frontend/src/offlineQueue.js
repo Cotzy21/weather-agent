@@ -103,6 +103,7 @@ export function createQueue({ store, send, owner = () => null, onChange = () => 
       // Økter uten eier (fra før eier ble lagret) kan ikke knyttes til noen og slettes.
       for (const orphan of (await store.all()).filter((i) => !i.owner)) await store.remove(orphan.clientId)
       for (const item of await pending()) {
+        if (owner() !== item.owner) break
         try {
           const res = await send(item)
           const permanent = !res.ok && res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429
@@ -127,7 +128,11 @@ export function createQueue({ store, send, owner = () => null, onChange = () => 
    * dataene som nettopp ble slettet. Andre brukeres køede økter røres ikke. Returnerer antall kastede.
    */
   async function discardMine() {
-    const me = owner()
+    return discardForOwner(owner())
+  }
+
+  /** Account deletion may finish after another account signs in; retain the original owner. */
+  async function discardForOwner(me) {
     if (!me) return 0
     const mine = (await store.all()).filter((i) => i.owner === me)
     for (const i of mine) await store.remove(i.clientId)
@@ -135,7 +140,7 @@ export function createQueue({ store, send, owner = () => null, onChange = () => 
     return mine.length
   }
 
-  return { submit, flush, pending, discardMine, count: async () => (await pending()).length }
+  return { submit, flush, pending, discardMine, discardForOwner, count: async () => (await pending()).length }
 }
 
 // --- Bruk i appen ---
@@ -164,9 +169,12 @@ export function workoutQueue(getHeaders) {
       owner: () => currentOwner,
       onChange: (n) => listeners.forEach((fn) => fn(n)),
       send: async (item) => {
+        if (currentOwner !== item.owner) throw new Error('Innloggingen ble endret.')
+        const headers = await getHeaders()
+        if (currentOwner !== item.owner) throw new Error('Innloggingen ble endret.')
         const res = await fetch(apiUrl('/api/treningsokter'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(await getHeaders()) },
+          headers: { 'Content-Type': 'application/json', ...headers },
           body: JSON.stringify(item.body),
         })
         let message

@@ -171,13 +171,15 @@ export default function RoutePlanner({ session, target, onClearTarget }) {
       {/* Flytende panel til venstre (à la AllTrails' «Explore trails»). */}
       <div className={`map-panel ${panelOpen ? '' : 'closed'}`}>
         <div className="map-panel-head">
-          <strong>{t('🧭 Planlegg rute')}</strong>
+          <h1>{t('Ruteplanlegger')}</h1>
           <button className="sidebar-toggle" title={panelOpen ? t('Minimer panelet') : t('Utvid panelet')}
+                  aria-label={panelOpen ? t('Minimer panelet') : t('Utvid panelet')}
+                  aria-expanded={panelOpen} aria-controls="route-planner-panel"
                   onClick={() => setPanelOpen(!panelOpen)}>{panelOpen ? '▾' : '▴'}</button>
         </div>
 
         {panelOpen && (
-        <div className="map-panel-body">
+        <div className="map-panel-body" id="route-planner-panel">
           {target && (
             <div className="plan-target">
               {t('🎯 Mål fra værsøket:')} <strong>{target.name}</strong> {t('– klikk i kartet for å tegne ruta di fram til målet.')}

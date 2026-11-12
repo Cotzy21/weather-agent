@@ -19,6 +19,7 @@ export default function AppFooter({ onOpenPrivacy }) {
         {t('Næringsdata')}: <Ext href="https://www.matvaretabellen.no/">Matvaretabellen</Ext> · <Ext href="https://world.openfoodfacts.org/">Open Food Facts</Ext> (ODbL)
       </p>
       <p>
+        <a href="/" className="observatory-return">Weather Agent</a>{' · '}
         <button className="link-btn" onClick={onOpenPrivacy}>{t('Personvern')}</button>
       </p>
     </footer>

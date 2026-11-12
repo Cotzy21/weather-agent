@@ -35,6 +35,35 @@ class OpenEndpointsSecurityTest {
     private JwtDecoder jwtDecoder;
 
     @Test
+    void browserCookiesCannotAuthorizeAccountDeletionOrExport() throws Exception {
+        for (String name : java.util.List.of("access_token", "sb-access-token", "JSESSIONID")) {
+            var cookie = new jakarta.servlet.http.Cookie(name, "not-a-bearer-header");
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/konto").cookie(cookie))
+                    .andExpect(status().isUnauthorized());
+            mvc.perform(get("/api/konto/eksport").cookie(cookie)).andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Test
+    void foreignOriginsCannotPreflightPrivateApiCalls() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/api/konto")
+                        .header("Origin", "https://attacker.example")
+                        .header("Access-Control-Request-Method", "DELETE")
+                        .header("Access-Control-Request-Headers", "authorization"))
+                .andExpect(status().isForbidden())
+                .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+        org.mockito.Mockito.verifyNoInteractions(service, routePlanner);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"/api/me", "/api/ruter", "/api/treningsokter",
+            "/api/ovelser/neste", "/api/trening/profil", "/api/recovery", "/api/vaner", "/api/kropp/vekt",
+            "/api/innstillinger/dashboard", "/api/konto/eksport", "/api/admin/matvarer", "/api/kosthold/logg"})
+    void everyPrivateApiFamilyRejectsAnonymousRequests(String path) throws Exception {
+        mvc.perform(get(path)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void rejectsCodeRequestsDisguisedAsWeatherBeforeTheyReachTheService() throws Exception {
         mvc.perform(get("/api/turvaer")
                         .with(request -> { request.setRemoteAddr("192.0.2.17"); return request; }).param("q",
@@ -115,7 +144,9 @@ class OpenEndpointsSecurityTest {
 
     @Test
     void springsOwnClientErrorsKeepTheirStatusCode() throws Exception {
-        mvc.perform(get("/api/finnes-ikke")).andExpect(status().isNotFound());
+        mvc.perform(get("/api/finnes-ikke")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/finnes-ikke").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()))
+                .andExpect(status().isForbidden());
         mvc.perform(post("/api/turvaer")).andExpect(status().isMethodNotAllowed());
         mvc.perform(get("/api/sted").param("name", "x").param("lat", "abc").param("lon", "1"))
                 .andExpect(status().isBadRequest());

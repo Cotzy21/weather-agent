@@ -98,7 +98,7 @@ public class WorkoutImportService {
                 continue;
             }
             repository.save(new Workout(userId, a.date(), a.title(), a.type(),
-                    content(a), "Importert fra Garmin"));
+                    content(a), "Importert fra Garmin").importedFromGarmin());
             imported++;
         }
         return new ImportResult(imported, skipped, merged);
@@ -156,7 +156,7 @@ public class WorkoutImportService {
             } else {
                 repository.save(new Workout(userId, activity.date(), activity.title(), activity.type(),
                         withFit(fit, summary), "Importert fra Garmin Connect")
-                        .withOrigin(activityKey, null));
+                        .withOrigin(activityKey, null).importedFromGarmin());
                 imported++;
             }
         }
@@ -255,7 +255,7 @@ public class WorkoutImportService {
                 String title = s.title() == null || s.title().isBlank() ? "Styrkeøkt" : s.title().trim();
                 repository.save(new Workout(userId, s.date(), title, "STYRKE",
                         ExerciseCatalog.annotate(detailed(s, JsonNodeFactory.instance.objectNode())),
-                        "Importert fra Garmin (FIT)").withOrigin(s.clientId(), null));
+                        "Importert fra Garmin (FIT)").withOrigin(s.clientId(), null).importedFromGarmin());
                 imported++;
             }
         }

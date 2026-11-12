@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import { addMapLayers } from './mapLayers.js'
+import { escapeHtml } from './escapeHtml.js'
 import 'leaflet/dist/leaflet.css'
 
 // Interaktivt kart: klikk legger til et veipunkt (via onAdd). Waypoints tegnes
@@ -63,7 +64,7 @@ export default function RouteMap({ waypoints, route = [], onAdd, focus = null })
         fillOpacity: 0.95,
         weight: 2,
       })
-        .bindTooltip(`🎯 ${focus.name}`, { direction: 'top' })
+        .bindTooltip(`🎯 ${escapeHtml(focus.name)}`, { direction: 'top' })
         .addTo(layer)
     }
 

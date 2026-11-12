@@ -12,6 +12,7 @@ export function apiUrl(path) {
 // hentes alt fra serveren igjen (tomt/lastende glimt på treg host). Med cachen
 // viser vi FORRIGE data straks (getCached), og cachedGet oppdaterer i bakgrunnen.
 // Nøkkelen er hele API-stien (inkl. query), så f.eks. hver dato caches for seg.
+let cacheGeneration = 0
 const cache = new Map()
 const inFlight = new Map() // pågående hentinger, så samtidige kall deler forespørsel
 
@@ -75,10 +76,12 @@ function trackSlow(promise) {
  */
 export async function cachedGet(key, headers = {}) {
   if (inFlight.has(key)) return inFlight.get(key)
+  const generation = cacheGeneration
   const promise = (async () => {
     const res = await fetch(apiUrl(key), { headers })
     if (!res.ok) throw new Error(await readError(res))
     const data = await res.json()
+    if (generation !== cacheGeneration) throw new Error('Innloggingen ble endret. Prøv igjen.')
     cache.set(key, data)
     writePersisted(key, data)
     return data
@@ -88,7 +91,7 @@ export async function cachedGet(key, headers = {}) {
   try {
     return await promise
   } finally {
-    inFlight.delete(key)
+    if (inFlight.get(key) === promise) inFlight.delete(key)
   }
 }
 
@@ -99,6 +102,8 @@ const OWNER_KEY = 'api-cache-owner'
  * kopien (for offline) beholdes når det er samme bruker som sist, og slettes ellers.
  */
 export function switchCacheOwner(uid) {
+  cacheGeneration++
+  inFlight.clear()
   cache.clear()
   try {
     if (localStorage.getItem(OWNER_KEY) !== (uid ?? '')) {
@@ -113,6 +118,8 @@ export function switchCacheOwner(uid) {
 
 /** Tøm cachen (alt, eller nøkler som starter med prefix). Ved bytte av bruker. */
 export function clearCache(prefix = '') {
+  cacheGeneration++
+  inFlight.clear()
   if (!prefix) cache.clear()
   else for (const k of cache.keys()) if (k.startsWith(prefix)) cache.delete(k)
   try {

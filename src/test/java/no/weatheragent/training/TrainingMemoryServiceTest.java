@@ -31,6 +31,26 @@ class TrainingMemoryServiceTest {
     private final TrainingMemoryService service = new TrainingMemoryService(memories, workouts);
     private final ObjectMapper mapper = new ObjectMapper();
 
+    @Test
+    void importedActivityIsVisibleInTheLogButNotInDerivedAiContext() {
+        when(memories.findById(USER)).thenReturn(Optional.empty());
+        when(workouts.findByUserIdAndDateGreaterThanEqualOrderByDateDescCreatedAtDesc(eq(USER), any()))
+                .thenReturn(List.of(strength(TODAY.minusDays(1), "Private imported exercise").importedFromGarmin()));
+        assertEquals(1, service.profile(USER, TODAY).workoutsLast28Days());
+        assertEquals("", service.promptContext(USER, TODAY));
+    }
+
+    @Test
+    void mergingFitDetailsIntoAManualWorkoutRemovesItFromAiContext() {
+        Workout merged = strength(TODAY.minusDays(1), "Original exercise");
+        merged.mergeDetails(strength(TODAY, "Private merged exercise").getContent(), UUID.randomUUID());
+        when(memories.findById(USER)).thenReturn(Optional.empty());
+        when(workouts.findByUserIdAndDateGreaterThanEqualOrderByDateDescCreatedAtDesc(eq(USER), any()))
+                .thenReturn(List.of(merged));
+        assertEquals("GARMIN", merged.getSource());
+        assertEquals("", service.promptContext(USER, TODAY));
+    }
+
     private Workout strength(LocalDate date, String... exercises) {
         StringBuilder blocks = new StringBuilder();
         for (String e : exercises) {

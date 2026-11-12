@@ -51,6 +51,16 @@ class RateLimitFilterTest {
     }
 
     @Test
+    void encodedPathsAndHeadRequestsShareTheWeatherBudget() throws Exception {
+        for (int i = 0; i < 5; i++) {
+            assertEquals(200, call("GET", "/api/%74urvaer", "1.2.3.4").getStatus());
+            assertEquals(200, call("HEAD", "/api/turvaer", "1.2.3.4").getStatus());
+        }
+        assertEquals(429, call("GET", "/api/turvaer", "1.2.3.4").getStatus());
+        assertEquals(429, call("HEAD", "/api/%74urvaer", "1.2.3.4").getStatus());
+    }
+
+    @Test
     void windowSlidesSoTheIpCanTryAgainLater() throws Exception {
         for (int i = 0; i < 11; i++) call("GET", "/api/turvaer", "1.2.3.4");
         now.addAndGet(61_000);

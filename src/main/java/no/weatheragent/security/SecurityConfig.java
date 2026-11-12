@@ -3,6 +3,7 @@ package no.weatheragent.security;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -65,6 +66,14 @@ public class SecurityConfig {
                         .frameOptions(f -> f.deny())
                         .permissionsPolicyHeader(p -> p.policy("geolocation=(self), camera=(self), microphone=()")))
                 .authorizeHttpRequests(auth -> auth
+                        // Pause server-side Garmin ingestion, including requests from older clients.
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/recovery/garmin",
+                                "/api/trening/garmin/**",
+                                "/api/trening/ovelser/koble",
+                                "/api/trening/import/garmin",
+                                "/api/trening/import/garmin-api",
+                                "/api/trening/import/fit").denyAll()
                         .requestMatchers(
                                 "/api/me",
                                 "/api/ruter", "/api/ruter/**",
@@ -78,6 +87,9 @@ public class SecurityConfig {
                                 "/api/konto", "/api/konto/**",
                                 "/api/admin/**",
                                 "/api/kosthold/**").authenticated()
+                        .requestMatchers("/api/health", "/api/turvaer", "/api/sted", "/api/rute", "/api/vaer/sammenlign").permitAll()
+                        // A newly added API must deliberately opt into a policy above.
+                        .requestMatchers("/api/**").denyAll()
                         .anyRequest().permitAll())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
         return http.build();

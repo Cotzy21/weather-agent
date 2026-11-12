@@ -22,8 +22,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(TrainingController.class)
-@Import(SecurityConfig.class)
+@WebMvcTest({TrainingController.class, TrainingAiPermissionController.class})
+@Import({SecurityConfig.class, no.weatheragent.account.TrainingAiPermission.class})
 class TrainingControllerSecurityTest {
 
     @Autowired
@@ -61,6 +61,9 @@ class TrainingControllerSecurityTest {
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
+
+    @MockitoBean
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @Test
     void listRequiresAuthentication() throws Exception {
@@ -129,6 +132,8 @@ class TrainingControllerSecurityTest {
 
     @Test
     void aiEndpointReturns429WhenTheUserIsOverTheLimit() throws Exception {
+        when(jdbc.queryForObject(any(String.class), org.mockito.ArgumentMatchers.eq(Boolean.class), any(), any(), any()))
+                .thenReturn(true);
         org.mockito.Mockito.doThrow(new no.weatheragent.training.AiRateLimiter.LimitExceededException("For mange kall", 120))
                 .when(aiLimit).check(any());
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trening/forslag")
@@ -139,54 +144,57 @@ class TrainingControllerSecurityTest {
     }
 
     @Test
-    void fitImportRequiresAuthAndValidatesTheBody() throws Exception {
-        String valid = "{\"sessions\":[{\"clientId\":\"11111111-2222-3333-4444-555555555555\",\"date\":\"2026-06-30\","
-                + "\"blocks\":[{\"name\":\"Squat\",\"sets\":[{\"reps\":5,\"weightKg\":100}]}]}]}";
-        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trening/import/fit")
-                        .contentType("application/json").content(valid))
-                .andExpect(status().isUnauthorized());
-
-        when(importer.importFit(any(), any())).thenReturn(new no.weatheragent.training.WorkoutImportService.FitImportResult(1, 0, 0));
-        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trening/import/fit")
-                        .contentType("application/json").content(valid)
-                        .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
-                .andExpect(status().isOk())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.imported").value(1));
-
-        String absurd = valid.replace("\"weightKg\":100", "\"weightKg\":100000");
-        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trening/import/fit")
-                        .contentType("application/json").content(absurd)
-                        .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
-                .andExpect(status().isBadRequest());
-        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trening/import/fit")
-                        .contentType("application/json").content("{\"sessions\":[]}")
-                        .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
-                .andExpect(status().isBadRequest());
+    void noneOfTheTrainingAiEndpointsCanRunWithoutPermission() throws Exception {
+        var session = jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"));
+        for (String endpoint : List.of("forslag", "plan-forslag", "assistent")) {
+            String body = endpoint.equals("assistent")
+                    ? "{\"messages\":[{\"role\":\"user\",\"content\":\"Lag en styrkeøkt\"}]}"
+                    : "{\"focus\":\"Lag en styrkeøkt\"}";
+            mvc.perform(post("/api/trening/" + endpoint).with(session).contentType("application/json").content(body))
+                    .andExpect(status().isForbidden());
+        }
+        org.mockito.Mockito.verifyNoInteractions(suggester, aiLimit);
     }
 
     @Test
-    void exerciseMatchRequiresAuthAndValidatesTheNames() throws Exception {
-        String body = "{\"names\":[\"Barbell Bench Press\"]}";
-        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trening/ovelser/koble")
-                        .contentType("application/json").content(body))
-                .andExpect(status().isUnauthorized());
-
-        when(exerciseMatch.match(any(), any())).thenReturn(
-                List.of(new no.weatheragent.training.ExerciseMatchService.Match("Barbell Bench Press", "bench-press")));
-        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trening/ovelser/koble")
-                        .contentType("application/json").content(body)
-                        .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
-                .andExpect(status().isOk())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.matches[0].id").value("bench-press"))
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.matches[0].nb").value("Benkpress"))
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.matches[0].en").value("Bench Press"));
-
-        for (String bad : new String[]{"{\"names\":[]}", "{\"names\":[\"\"]}", "{\"names\":[\"" + "x".repeat(81) + "\"]}"}) {
-            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trening/ovelser/koble")
-                            .contentType("application/json").content(bad)
-                            .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
-                    .andExpect(status().isBadRequest());
+    void consentRequiresLoginAnExplicitChoiceAndTheCurrentNoticeVersion() throws Exception {
+        String path = "/api/konto/trenings-ai";
+        var session = jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"));
+        mvc.perform(get(path)).andExpect(status().isUnauthorized());
+        mvc.perform(get(path).with(session)).andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.allowed").value(false));
+        for (String body : List.of("{\"version\":1}", "{\"allowed\":true}")) {
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(path).with(session)
+                            .contentType("application/json").content(body)).andExpect(status().isBadRequest());
         }
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(path).with(session)
+                        .contentType("application/json").content("{\"version\":0,\"allowed\":true}"))
+                .andExpect(status().isConflict());
+        org.mockito.Mockito.verify(jdbc, org.mockito.Mockito.never()).update(any(String.class), any(Object[].class));
+    }
+
+    @Test
+    void blocksAllGarminImportsFromAuthenticatedOlderClients() throws Exception {
+        for (String route : List.of("fit", "garmin-api", "garmin")) {
+            boolean csv = route.equals("garmin");
+            mvc.perform(post("/api/trening/import/" + route)
+                            .contentType(csv ? "text/plain" : "application/json")
+                            .content(csv ? "a,b" : "{}")
+                            .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
+                    .andExpect(status().isForbidden());
+        }
+        org.mockito.Mockito.verifyNoInteractions(importer);
+    }
+
+    @Test
+    void oldImportClientsCannotSendExerciseNamesToTheLanguageModel() throws Exception {
+        String body = "{\"names\":[\"Barbell Bench Press\"]}";
+        mvc.perform(post("/api/trening/ovelser/koble").contentType("application/json").content(body))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/trening/ovelser/koble").contentType("application/json").content(body)
+                        .with(jwt().jwt(j -> j.subject("11111111-1111-1111-1111-111111111111"))))
+                .andExpect(status().isForbidden());
+        org.mockito.Mockito.verifyNoInteractions(exerciseMatch);
     }
 
     @Test

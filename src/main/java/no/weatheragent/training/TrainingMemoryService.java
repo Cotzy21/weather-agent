@@ -46,9 +46,14 @@ public class TrainingMemoryService {
 
     @Transactional(readOnly = true)
     public TrainingMemoryProfile profile(UUID userId, LocalDate today) {
+        return profile(userId, today, false);
+    }
+
+    private TrainingMemoryProfile profile(UUID userId, LocalDate today, boolean forAi) {
         TrainingMemory memory = memories.findById(userId).orElse(null);
         List<Workout> recent = workouts.findByUserIdAndDateGreaterThanEqualOrderByDateDescCreatedAtDesc(
                 userId, today.minusDays(89));
+        if (forAi) recent = recent.stream().filter(Workout::mayUseForAi).toList();
 
         int last28 = (int) recent.stream().filter(w -> !w.getDate().isBefore(today.minusDays(27))).count();
         double avgPerWeek = Math.round(last28 / 4.0 * 10) / 10.0;
@@ -84,7 +89,7 @@ public class TrainingMemoryService {
     /** Tekst til AI-prompten, tom når det ikke er noe å si. */
     @Transactional(readOnly = true)
     public String promptContext(UUID userId, LocalDate today) {
-        TrainingMemoryProfile p = profile(userId, today);
+        TrainingMemoryProfile p = profile(userId, today, true);
         List<String> lines = new ArrayList<>();
         if (!p.liked().isEmpty()) lines.add("- Liker: " + String.join(", ", p.liked()));
         if (!p.disliked().isEmpty()) lines.add("- Liker IKKE (ikke foreslå): " + String.join(", ", p.disliked()));

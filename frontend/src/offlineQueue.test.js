@@ -124,4 +124,14 @@ describe('offline queue', () => {
     expect(await loggedOut.discardMine()).toBe(0)
     expect((await store.all()).length).toBe(1)
   })
+
+  it('cleans the deleted account after the active account changes', async () => {
+    const { queue, store } = setup(['offline'])
+    await queue.submit(item('a'))
+    const deletedOwner = (await store.all())[0].owner
+    const switched = createQueue({ store, send: async () => ({ ok: false, status: 503 }), owner: () => 'new-account' })
+    await switched.submit(item('b'))
+    expect(await switched.discardForOwner(deletedOwner)).toBe(1)
+    expect((await store.all()).map((i) => i.clientId)).toEqual(['b'])
+  })
 })

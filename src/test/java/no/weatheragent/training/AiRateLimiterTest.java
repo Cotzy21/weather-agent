@@ -81,4 +81,16 @@ class AiRateLimiterTest {
         assertThrows(AiRateLimiter.LimitExceededException.class, () -> limiter.check(a)); // over egen timegrense
         assertDoesNotThrow(() -> limiter.check(UUID.randomUUID())); // det globale budsjettet har fortsatt plass
     }
+
+    @Test
+    void rotatingAccountsAfterGlobalExhaustionDoesNotGrowTheLimiterState() throws Exception {
+        AiRateLimiter limiter = new AiRateLimiter(10, 10, 1, clock);
+        limiter.check(UUID.randomUUID());
+        for (int i = 0; i < 10_000; i++) {
+            assertThrows(AiRateLimiter.LimitExceededException.class, () -> limiter.check(UUID.randomUUID()));
+        }
+        var field = AiRateLimiter.class.getDeclaredField("calls");
+        field.setAccessible(true);
+        assertEquals(1, ((java.util.Map<?, ?>) field.get(limiter)).size());
+    }
 }

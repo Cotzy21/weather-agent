@@ -1,8 +1,8 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { authHeaders } from './supabase'
 import { apiUrl, readError } from './api'
 import { useI18n } from './i18n.jsx'
-import { localIso } from './trainingStats.js'
+import GarminImport from './GarminImport.jsx'
 import { pairDays, spearman } from './garminAnalysis.js'
 import './garminInsights.css'
 
@@ -167,41 +167,11 @@ export default function GarminInsights() {
 
 function GarminSync({ onChange }) {
   const { t } = useI18n()
-  const keyId = useId()
-  const today = localIso(new Date())
-  const [group, setGroup] = useState('WELLNESS')
-  const [to, setTo] = useState(today)
-  const [length, setLength] = useState(14)
+  const [noticeOpen, setNoticeOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [saved, setSaved] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleted, setDeleted] = useState(false)
-
-  async function sync(event) {
-    event.preventDefault()
-    const input = event.currentTarget.elements.namedItem('key')
-    const apiKey = input.value.trim()
-    if (!apiKey || busy) return
-    input.value = ''
-    setBusy(true)
-    setError('')
-    setSaved(null)
-    setDeleted(false)
-    try {
-      const start = new Date(`${to}T12:00:00Z`)
-      start.setUTCDate(start.getUTCDate() - length + 1)
-      const result = await request(PATH, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey, group, from: start.toISOString().slice(0, 10), to }),
-      })
-      setSaved(result.days)
-      onChange()
-    } catch (e) {
-      setError(e instanceof TypeError ? 'Kunne ikke hente Garmin-data. Prøv igjen om litt.' : e.message)
-    } finally {
-      setBusy(false)
-    }
-  }
 
   async function erase() {
     setBusy(true)
@@ -209,7 +179,6 @@ function GarminSync({ onChange }) {
     try {
       await request(PATH, { method: 'DELETE' })
       setConfirmDelete(false)
-      setSaved(null)
       setDeleted(true)
       onChange()
     } catch (e) {
@@ -222,26 +191,9 @@ function GarminSync({ onChange }) {
   return (
     <details className="garmin-sync">
       <summary>{t('Importer eller slett Garmin-målinger')}</summary>
-      <p className="muted">{t('Velg hvilke data du vil lagre. Nøkkelen lagres ikke. Du kan slette de importerte målingene her.')}</p>
-      <form method="post" onSubmit={sync} autoComplete="off" aria-busy={busy}>
-        <fieldset disabled={busy} className="garmin-sync-fields">
-          <label>{t('Datasett')}<select value={group} onChange={(event) => { setGroup(event.target.value); setLength(event.target.value === 'FOOD' ? 7 : event.target.value === 'DETAIL' ? 1 : 14) }}>
-            <option value="WELLNESS">{t('Søvn, HRV og daglig velvære')}</option>
-            <option value="BODY">{t('Vekt og væske')}</option>
-            <option value="FOOD">{t('Mat og makroer fra Garmin')}</option>
-            <option value="DETAIL">{t('Puls, SpO₂ og kondisjonsalder · én dag')}</option>
-          </select></label>
-          <label>{t('Til og med')}<input type="date" value={to} max={today} required onChange={(event) => setTo(event.target.value)} /></label>
-          <label>{t('Antall dager')}<select value={length} onChange={(event) => setLength(Number(event.target.value))}>
-            {(group === 'FOOD' ? [1, 3, 7] : group === 'DETAIL' ? [1] : [1, 7, 14, 28]).map((days) => <option key={days}>{days}</option>)}
-          </select></label>
-          <label htmlFor={keyId} className="garmin-sync-key">{t('Personlig Garmin API-nøkkel')}
-            <input id={keyId} name="key" type="password" required maxLength={1024} autoComplete="off" autoCapitalize="none" spellCheck={false} />
-          </label>
-          <button type="submit" className="primary">{t(busy ? 'Henter fra Garmin …' : 'Importer målinger')}</button>
-        </fieldset>
-      </form>
-      {saved !== null && <p role="status">{t(saved ? '{n} dager lagret eller oppdatert.' : 'Garmin hadde ingen målinger i perioden.', { n: saved })}</p>}
+      <p className="muted">{t('Du kan fortsatt se eller slette målinger fra tidligere Garmin-importer.')}</p>
+      <button type="button" className="train-action" disabled={busy} onClick={() => setNoticeOpen(true)}>{t('Importer målinger')}</button>
+      {noticeOpen && <GarminImport onClose={() => setNoticeOpen(false)} />}
       {deleted && <p role="status">{t('Garmin-målingene er slettet.')}</p>}
       {error && <p className="error" role="alert">{t(error)}</p>}
       {!confirmDelete && <button type="button" className="train-action" disabled={busy} onClick={() => setConfirmDelete(true)}>{t('Slett importerte målinger')}</button>}

@@ -32,6 +32,9 @@ class AccountControllerSecurityTest {
     private MockMvc mvc;
 
     @MockitoBean
+    private no.weatheragent.account.UserDataExporter exporter;
+
+    @MockitoBean
     private UserDataEraser eraser;
 
     @MockitoBean
@@ -39,6 +42,18 @@ class AccountControllerSecurityTest {
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
+
+    @Test
+    void exportRequiresLoginAndIgnoresClientSuppliedUserId() throws Exception {
+        mvc.perform(get("/api/konto/eksport")).andExpect(status().isUnauthorized());
+        verifyNoInteractions(exporter);
+        mvc.perform(get("/api/konto/eksport").param("userId", UUID.randomUUID().toString())
+                        .with(jwt().jwt(j -> j.subject(SUB).claim("email", "test@example.test"))))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control", "no-store"));
+        verify(exporter).write(org.mockito.ArgumentMatchers.eq(UUID.fromString(SUB)),
+                org.mockito.ArgumentMatchers.eq("test@example.test"), org.mockito.ArgumentMatchers.any());
+    }
 
     @Test
     void deletingAnAccountRequiresLogin() throws Exception {

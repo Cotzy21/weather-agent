@@ -7,9 +7,9 @@ import org.springframework.stereotype.Component;
 import java.time.Clock;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Tak på AI-kall per bruker (glidende vindu per time og per døgn), så én bruker ikke kan brenne
@@ -41,7 +41,7 @@ public class AiRateLimiter {
     private final int globalPerDay;
     private final Clock clock;
     private final Deque<Long> globalCalls = new ArrayDeque<>();
-    private final Map<UUID, Deque<Long>> calls = new ConcurrentHashMap<>();
+    private final Map<UUID, Deque<Long>> calls = new HashMap<>();
 
     @Autowired
     public AiRateLimiter(@Value("${ai.limit.per-hour:20}") int perHour, @Value("${ai.limit.per-day:60}") int perDay,
@@ -61,38 +61,35 @@ public class AiRateLimiter {
     }
 
     /** Teller ett kall for brukeren, eller kaster {@link LimitExceededException} uten å telle. */
-    public void check(UUID userId) {
+    public synchronized void check(UUID userId) {
         long now = clock.millis();
+        while (!globalCalls.isEmpty() && now - globalCalls.peekFirst() >= DAY_MS) globalCalls.pollFirst();
+        // Reject global exhaustion before allocating per-account state for new identities.
+        if (globalCalls.size() >= globalPerDay) {
+            throw new LimitExceededException("AI-assistenten har nådd dagens grense for alle brukere. Prøv igjen senere i dag.",
+                    Math.max(1, (DAY_MS - (now - globalCalls.peekFirst()) + 999) / 1000));
+        }
+        if (calls.size() >= 10_000) {
+            calls.entrySet().removeIf(e -> e.getValue().isEmpty() || now - e.getValue().peekLast() >= DAY_MS);
+            if (!calls.containsKey(userId) && calls.size() >= 10_000) {
+                throw new LimitExceededException("AI-assistenten er midlertidig full. Prøv igjen senere.", 3600);
+            }
+        }
         Deque<Long> times = calls.computeIfAbsent(userId, u -> new ArrayDeque<>());
-        synchronized (times) {
-            while (!times.isEmpty() && now - times.peekFirst() >= DAY_MS) {
-                times.pollFirst();
-            }
-            long inHour = times.stream().filter(t -> now - t < HOUR_MS).count();
-            if (inHour >= perHour) {
-                long oldestInHour = times.stream().filter(t -> now - t < HOUR_MS).findFirst().orElse(now);
-                throw exceeded("timen", HOUR_MS - (now - oldestInHour));
-            }
-            if (times.size() >= perDay) {
-                throw exceeded("døgnet", DAY_MS - (now - times.peekFirst()));
-            }
-            // Kostnadsbrems for hele tjenesten: uten den kan noen registrere mange kontoer, som hver får sin kvote.
-            synchronized (globalCalls) {
-                while (!globalCalls.isEmpty() && now - globalCalls.peekFirst() >= DAY_MS) {
-                    globalCalls.pollFirst();
-                }
-                if (globalCalls.size() >= globalPerDay) {
-                    throw new LimitExceededException(
-                            "AI-assistenten har nådd dagens grense for alle brukere. Prøv igjen senere i dag.",
-                            Math.max(1, (DAY_MS - (now - globalCalls.peekFirst()) + 999) / 1000));
-                }
-                globalCalls.addLast(now);
-            }
-            times.addLast(now);
+        while (!times.isEmpty() && now - times.peekFirst() >= DAY_MS) {
+            times.pollFirst();
         }
-        if (calls.size() > 10_000) {
-            calls.entrySet().removeIf(e -> e.getValue().isEmpty());
+        long inHour = times.stream().filter(t -> now - t < HOUR_MS).count();
+        if (inHour >= perHour) {
+            long oldestInHour = times.stream().filter(t -> now - t < HOUR_MS).findFirst().orElse(now);
+            throw exceeded("timen", HOUR_MS - (now - oldestInHour));
         }
+        if (times.size() >= perDay) {
+            throw exceeded("døgnet", DAY_MS - (now - times.peekFirst()));
+        }
+        // Kostnadsbrems for hele tjenesten: uten den kan noen registrere mange kontoer, som hver får sin kvote.
+        globalCalls.addLast(now);
+        times.addLast(now);
     }
 
     private static LimitExceededException exceeded(String period, long waitMs) {

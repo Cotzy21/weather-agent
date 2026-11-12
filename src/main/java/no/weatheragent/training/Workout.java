@@ -53,6 +53,9 @@ public class Workout {
     @Column(name = "planned_id")
     private UUID plannedId;
 
+    @Column(name = "source", nullable = false, length = 16)
+    private String source = "MANUAL";
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -81,6 +84,7 @@ public class Workout {
     public void mergeDetails(JsonNode detailedContent, UUID clientId) {
         this.content = detailedContent;
         this.clientId = clientId;
+        this.source = "GARMIN";
     }
 
     /**
@@ -89,6 +93,7 @@ public class Workout {
      */
     public void absorbCsv(String csvTitle, com.fasterxml.jackson.databind.JsonNode csvContent) {
         this.title = csvTitle;
+        this.source = "GARMIN";
         if (content instanceof com.fasterxml.jackson.databind.node.ObjectNode merged) {
             var fields = csvContent.fields();
             while (fields.hasNext()) {
@@ -101,6 +106,20 @@ public class Workout {
     }
 
     public UUID getClientId() { return clientId; }
+    public String getSource() { return source; }
+
+    /** Import provenance is set by the server, never accepted from a client save request. */
+    Workout importedFromGarmin() {
+        source = "GARMIN";
+        return this;
+    }
+
+    /** Historical rows with uncertain provenance are deliberately excluded as well. */
+    boolean mayUseForAi() {
+        return "MANUAL".equals(source)
+                && (notes == null || !notes.toLowerCase(java.util.Locale.ROOT).contains("garmin"))
+                && content != null && !content.has("garminActivityId") && !content.has("garminFitClientId");
+    }
     public UUID getPlannedId() { return plannedId; }
     public UUID getId() { return id; }
     public UUID getUserId() { return userId; }

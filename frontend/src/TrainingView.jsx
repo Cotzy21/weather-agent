@@ -2,8 +2,11 @@ import Sheet from './Sheet.jsx'
 import { useState, useEffect } from 'react'
 import { createPlanAcceptor } from './planAcceptance.js'
 import Icon from './Icon.jsx'
+import ObservatoryHeading from './ObservatoryHeading.jsx'
 import { remainingPlansToday } from './todayPlans.js'
-import { authHeaders } from './supabase'
+import { authHeaders, supabase } from './supabase'
+import TrainingAiPermission from './TrainingAiPermission.jsx'
+import { accountHeadersFor } from './accountSession.js'
 import { apiUrl, readError, cachedGet, getCached } from './api'
 import MusclePicker from './MusclePicker'
 import { useReveal } from './anim'
@@ -21,7 +24,6 @@ import TrainingOnboarding from './TrainingOnboarding.jsx'
 import ThinkingText from './ThinkingText.jsx'
 import GarminImport from './GarminImport.jsx'
 import ExerciseTrends from './ExerciseTrends.jsx'
-import { useGarminImport } from './useGarminImport.js'
 import { loadLive, clearLive, newLive, newId, fromPlan } from './liveSession.js'
 import { workoutQueue, onPendingChange, setQueueOwner } from './offlineQueue.js'
 import { dayIndex, strengthVolume, localIso } from './trainingStats.js'
@@ -83,7 +85,6 @@ export default function TrainingView({ session }) {
   const [dragOver, setDragOver] = useState(null)
 
   // Garmin-import: CSV (alle økter) og FIT/ZIP (øvelser og vekter), lest på enheten.
-  const imp = useGarminImport({ onDone: () => Promise.all([loadWorkouts(), loadNextSets()]), lang })
 
   const [progressName, setProgressName] = useState('')
   const [progress, setProgress] = useState(null)
@@ -112,6 +113,7 @@ export default function TrainingView({ session }) {
 
   // «Ny»-arket (økt vs. plan) og om muskelvelgeren skal vises i byggeren.
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [garminNoticeOpen, setGarminNoticeOpen] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
   // Hvilket øvelsesfelt velgeren fyller: { bi, ei? } i byggeren, eller 'progress'.
   const [pickFor, setPickFor] = useState(null)
@@ -503,7 +505,7 @@ export default function TrainingView({ session }) {
     try {
       const res = await fetch(apiUrl('/api/trening/forslag'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        headers: { 'Content-Type': 'application/json', ...(await accountHeadersFor(session.user.id, () => supabase.auth.getSession())) },
         body: JSON.stringify({ focus, type: 'STYRKE', lang }),
       })
       if (!res.ok) throw new Error(await readError(res))
@@ -539,7 +541,7 @@ export default function TrainingView({ session }) {
     try {
       const res = await fetch(apiUrl('/api/trening/assistent'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        headers: { 'Content-Type': 'application/json', ...(await accountHeadersFor(session.user.id, () => supabase.auth.getSession())) },
         // Fold assistentens oppfølgingsspørsmål inn i innholdet som sendes tilbake,
         // ellers «glemmer» modellen hva den nettopp spurte om.
         body: JSON.stringify({
@@ -774,10 +776,9 @@ export default function TrainingView({ session }) {
 
       {mode === 'overview' && (
         <>
-          <div className="train-heading">
-            <h1 className="detail-title">{t('Trening')}</h1>
-            <button onClick={() => { setMode('progress'); window.scrollTo(0, 0) }}><Icon name="trend" size={18} />{t('Progresjon')}</button>
-          </div>
+          <ObservatoryHeading title={t('Trening')} scenic action={
+            <button className="observatory-heading-button" onClick={() => { setMode('progress'); window.scrollTo(0, 0) }}><Icon name="trend" size={18} />{t('Progresjon')}</button>
+          } />
           <section className="train-start" aria-label={t('Start styrkeøkt')}>
             <div><h2>{todayPlan?.title ?? t('Klar for dagens økt?')}</h2><p>{t(todayPlan ? 'Dagens plan. Logg settene underveis.' : 'Logg sett, repetisjoner og vekt underveis.')}</p></div>
             <button className="primary" onClick={() => todayPlan
@@ -835,7 +836,10 @@ export default function TrainingView({ session }) {
         </>
       )}
 
-      {mode === 'overview' && <details className="training-tools"><summary>{t('Importer fra Garmin')}</summary><GarminImport imp={imp} /></details>}
+      {mode === 'overview' && (
+        <button type="button" className="train-action" onClick={() => setGarminNoticeOpen(true)}>{t('Importer fra Garmin')}</button>
+      )}
+      {garminNoticeOpen && <GarminImport onClose={() => setGarminNoticeOpen(false)} />}
 
       {sheetOpen && (
         <Sheet className="sheet" label={t('Økter og planer')} onClose={() => setSheetOpen(false)} role="dialog">
@@ -858,12 +862,10 @@ export default function TrainingView({ session }) {
               <span className="sheet-text">{t('AI-treningsplan')}<small>{t('Flere økter i uka')}</small></span>
             </button>
             <p className="sheet-label">{t('Import')}</p>
-            <label className="sheet-item">
+            <button type="button" className="sheet-item" onClick={() => { setSheetOpen(false); setGarminNoticeOpen(true) }}>
               <span className="sheet-icon"><Icon name="import" /></span>
-              <span className="sheet-text">{t('Importer fra Garmin')}<small>{t('Garmin Connect → Aktiviteter → «Eksporter CSV»')}</small></span>
-              <input type="file" accept=".csv,text/csv" hidden
-                     onChange={(e) => { setSheetOpen(false); imp.runCsv(e.target.files[0]); e.target.value = '' }} />
-            </label>
+              <span className="sheet-text">{t('Importer fra Garmin')}</span>
+            </button>
 
         </Sheet>
       )}
@@ -884,6 +886,7 @@ export default function TrainingView({ session }) {
       {mode === 'ai-workout' && (
         <div className="ai-panel">
           <h1 className="detail-title">{t('AI-økt')}</h1>
+          <TrainingAiPermission userId={session.user.id}>
           <AiProfileSummary profile={profile} onEdit={() => setOnboarding(true)} />
           <p className="muted ai-intro">{t('Hva vil du trene i dag? Økta tilpasses historikken din.')}</p>
           <div className="ai-examples">
@@ -917,13 +920,15 @@ export default function TrainingView({ session }) {
               )}
             </div>
           )}
+          </TrainingAiPermission>
         </div>
       )}
 
       {mode === 'ai-plan' && (
       <div className="ai-panel">
+        <h1 className="detail-title">{t('AI-treningsplan')}</h1>
+        <TrainingAiPermission userId={session.user.id}>
         <div className="ai-panel-head">
-          <h1 className="detail-title">{t('AI-treningsplan')}</h1>
           <AiProfileSummary profile={profile} onEdit={() => setOnboarding(true)} />
           {aiMessages.length > 0 && (
             <button className="mini" onClick={resetChat} disabled={aiBusy || aiSaving}>{t('Ny samtale')}</button>
@@ -998,6 +1003,7 @@ export default function TrainingView({ session }) {
           </div>
         )}
 
+        </TrainingAiPermission>
       </div>
       )}
 

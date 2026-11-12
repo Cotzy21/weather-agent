@@ -63,6 +63,9 @@ public class UserDataEraser {
     /** Sletter alle rader som tilhører brukeren. Returnerer hvor mange rader som ble fjernet. */
     @Transactional
     public int eraseAll(UUID userId) {
+        // Commit revocation with erasure, even when removal of the Supabase identity later fails.
+        jdbc.update("insert into revoked_accounts(user_id, revoked_at) values (?, current_timestamp) "
+                + "on conflict (user_id) do update set revoked_at = excluded.revoked_at", userId);
         int rows = jdbc.update(
                 "delete from " + HABIT_LOGS + " where habit_id in (select id from habits where user_id = ?)", userId);
         for (OwnedTable t : OWNED_TABLES) {

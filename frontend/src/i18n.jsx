@@ -19,6 +19,13 @@ import { createContext, useContext, useEffect, useState } from 'react'
 const DEFAULT_LANG = 'en'
 
 const EN = {
+  'Garmin-import er satt på pause': 'Garmin import is paused',
+  'Søvn, puls, treningsøkter og andre målinger kan fortelle mye om helsen din. Importen er stengt mens vi gjør klar en løsning som beskytter disse dataene.': 'Sleep, heart rate, workouts and other measurements can reveal information about your health. Import is paused while we prepare a way to protect this data.',
+  'Nye importer': 'New imports',
+  'Du kan foreløpig ikke legge inn en Garmin-nøkkel eller sende Garmin-filer til Turvær.': 'You cannot currently enter a Garmin key or send Garmin files to Turvær.',
+  'Tidligere importer': 'Previous imports',
+  'Målinger fra tidligere importer ligger fortsatt på Turvær-kontoen. De har ikke ende-til-ende-kryptering. Du kan slette målingene under Restitusjon og importerte økter i treningsloggen.': 'Measurements from previous imports are still stored in your Turvær account. They are not end-to-end encrypted. You can delete measurements in Recovery and imported workouts in the training log.',
+  'Du kan fortsatt se eller slette målinger fra tidligere Garmin-importer.': 'You can still view or delete measurements from previous Garmin imports.',
   'AI bruker treningsprofilen, historikken og ønskene dine automatisk.': 'AI automatically uses your training profile, history and requests.',
   'Ønskene du skriver nå går foran profilens standardvalg.': 'Your current requests take priority over the profile defaults.',
   'Tilpass treningsprofil': 'Adjust training profile',
@@ -803,6 +810,8 @@ const EN = {
   'glass': 'glasses',
 
   // Konto (AuthView)
+  'Dataene dine er slettet og kontoen er sperret. Sletting av innloggingen forsøkes igjen automatisk.': 'Your data has been deleted and the account is blocked. Login removal will be retried automatically.',
+  'Noen lokale økter kunne ikke slettes. Tøm nettstedets lagring på denne enheten.': 'Some local workouts could not be deleted. Clear this site’s storage on this device.',
   'Konto': 'Account',
   'Supabase er ikke konfigurert ennå (mangler VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).':
       'Supabase is not configured yet (missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).',

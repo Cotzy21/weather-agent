@@ -46,7 +46,7 @@ class UserDataEraserTest {
     void doesNothingElseThanTheKnownDeletes() {
         eraser.eraseAll(USER);
 
-        verify(jdbc, times(1 + UserDataEraser.OWNED_TABLES.size())).update(anyString(), eq(USER));
+        verify(jdbc, times(2 + UserDataEraser.OWNED_TABLES.size())).update(anyString(), eq(USER));
         verifyNoMoreInteractions(jdbc);
     }
 

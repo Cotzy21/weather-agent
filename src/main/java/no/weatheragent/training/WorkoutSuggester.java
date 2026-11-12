@@ -302,7 +302,8 @@ public class WorkoutSuggester {
         String sleep = readiness.promptContext(userId)
                 + profiles.promptContext(userId)
                 + memory.promptContext(userId, LocalDate.now(ZoneId.of("Europe/Oslo")));
-        List<Workout> recent = repository.findTop8ByUserIdOrderByDateDescCreatedAtDesc(userId);
+        List<Workout> recent = repository.findTop8ByUserIdAndSourceOrderByDateDescCreatedAtDesc(userId, "MANUAL")
+                .stream().filter(Workout::mayUseForAi).toList();
         if (recent.isEmpty()) {
             return "Ingen tidligere økter logget." + sleep;
         }

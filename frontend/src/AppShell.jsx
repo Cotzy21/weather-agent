@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useI18n } from './i18n.jsx'
 import Icon from './Icon.jsx'
+import ObservatoryMark from './ObservatoryMark.jsx'
 import { DESTINATIONS } from './navigation.js'
 
 
@@ -41,26 +42,28 @@ export default function AppShell({ tab, onNavigate, session, theme, onToggleThem
 
   return <div className={`app app-shell ${collapsed ? 'nav-collapsed' : ''}`} data-tab={tab}>
     <a className="skip-link" href="#main-content">{t('Hopp til innhold')}</a>
-    {slow && <div className="wake-banner" role="status">{t('Vekker serveren … første innlasting kan ta opptil ett minutt.')}</div>}
     <aside className="app-sidebar" aria-label={t('Hovedmeny')}>
-      <button className="shell-brand" onClick={() => navigate('hjem')} aria-label="Turvær"><Icon name="mountain" size={26} /><span>Turvær</span></button>
+      <button className="shell-brand" onClick={() => navigate('hjem')} aria-label="Weather Agent"><ObservatoryMark /><span>Weather<br />Agent</span></button>
       <nav className="shell-nav" aria-label={t('Hovedmeny')}>{DESTINATIONS.map(navButton)}</nav>
       <div className="shell-utilities">{utilities}</div>
       <button className="shell-collapse" aria-label={t(collapsed ? 'Utvid menyen' : 'Minimer menyen')} onClick={() => setCollapsed(!collapsed)}><Icon name={collapsed ? 'chevron' : 'back'} size={18} /></button>
     </aside>
     <header className="mobile-header">
-      <button className="shell-brand" onClick={() => navigate('hjem')}><Icon name="mountain" size={24} /><span>Turvær</span></button>
+      <button className="shell-brand" onClick={() => navigate('hjem')} aria-label="Weather Agent"><ObservatoryMark /><span>Weather<br />Agent</span></button>
       <span className="mobile-location">{t(current?.label ?? (session ? 'Min konto' : 'Logg inn'))}</span>
       <button className="icon-button" aria-label={t(session ? 'Min konto' : 'Logg inn')} onClick={() => navigate('konto')} aria-current={tab === 'konto' ? 'page' : undefined}><Icon name="user" /></button>
     </header>
-    <main id="main-content" className={`main ${wide ? 'wide' : ''}`} tabIndex={-1} ref={main}>{children}</main>
+    <main id="main-content" className={`main ${wide ? 'wide' : ''}`} tabIndex={-1} ref={main}>
+      {slow && <div className="wake-banner" role="status">{t('Vekker serveren … første innlasting kan ta opptil ett minutt.')}</div>}
+      {children}
+    </main>
     <nav className="bottom-nav" aria-label={t('Hovedmeny')}>
       {PRIMARY.map(navButton)}
       <button ref={menuTrigger} className={`shell-nav-item ${moreSelected || menuOpen ? 'active' : ''}`} aria-haspopup="dialog" aria-expanded={menuOpen} aria-controls="more-navigation" onClick={() => setMenuOpen(true)}><Icon name="more" /><span>{t('Mer')}</span></button>
     </nav>
     <dialog id="more-navigation" ref={dialog} className="navigation-dialog" aria-labelledby="more-navigation-title" onCancel={() => setMenuOpen(false)} onClose={() => { setMenuOpen(false); if (document.activeElement === document.body) menuTrigger.current?.focus() }} onClick={(event) => { if (event.target === event.currentTarget) setMenuOpen(false) }}>
       <div className="navigation-dialog-inner">
-        <div className="dialog-heading"><h2 id="more-navigation-title">{t('Mer i Turvær')}</h2><button className="icon-button" autoFocus aria-label={t('Lukk menyen')} onClick={() => setMenuOpen(false)}><Icon name="close" /></button></div>
+        <div className="dialog-heading"><h2 id="more-navigation-title">Weather Agent</h2><button className="icon-button" autoFocus aria-label={t('Lukk menyen')} onClick={() => setMenuOpen(false)}><Icon name="close" /></button></div>
         <nav aria-label={t('Flere sider')}>{DESTINATIONS.slice(3).map(navButton)}</nav>
         <div className="dialog-utilities">{utilities}</div>
       </div>

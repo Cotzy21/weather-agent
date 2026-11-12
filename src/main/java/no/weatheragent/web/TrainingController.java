@@ -76,13 +76,15 @@ public class TrainingController {
     private final TrainingProfileService profiles;
     private final AiRateLimiter aiLimit;
     private final no.weatheragent.training.ExerciseMatchService exerciseMatch;
+    private final no.weatheragent.account.TrainingAiPermission aiPermission;
 
     public TrainingController(WorkoutService workouts, WorkoutSuggester suggester,
                               TrainingPlanService plans, no.weatheragent.training.TrainingPlanBatchService planBatches,
                               WorkoutImportService importer,
                               ReadinessService readiness, TrainingMemoryService memory,
                               TrainingProfileService profiles, AiRateLimiter aiLimit,
-                              no.weatheragent.training.ExerciseMatchService exerciseMatch) {
+                              no.weatheragent.training.ExerciseMatchService exerciseMatch,
+                              no.weatheragent.account.TrainingAiPermission aiPermission) {
         this.workouts = workouts;
         this.suggester = suggester;
         this.plans = plans;
@@ -93,6 +95,7 @@ public class TrainingController {
         this.profiles = profiles;
         this.aiLimit = aiLimit;
         this.exerciseMatch = exerciseMatch;
+        this.aiPermission = aiPermission;
     }
 
     /** Treningsminnet: liker / liker ikke / notater + vaner fra øktene. */
@@ -237,8 +240,10 @@ public class TrainingController {
     public SuggestionDto suggest(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SuggestionRequest request) {
         AiScopeGuard.training(request.focus(), request.lang(), false);
         AiScopeGuard.data(request.type(), AiScopeGuard.Scope.TRAINING, request.lang());
-        aiLimit.check(UUID.fromString(jwt.getSubject()));
-        Suggestion s = suggester.suggest(UUID.fromString(jwt.getSubject()), request.focus(), request.type(), request.lang());
+        UUID owner = UUID.fromString(jwt.getSubject());
+        aiPermission.require(owner, request.lang());
+        aiLimit.check(owner);
+        Suggestion s = suggester.suggest(owner, request.focus(), request.type(), request.lang());
         return SuggestionDto.from(s);
     }
 
@@ -251,9 +256,11 @@ public class TrainingController {
     public PlanSuggestionDto suggestPlan(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SuggestionRequest request) {
         AiScopeGuard.training(request.focus(), request.lang(), false);
         AiScopeGuard.data(request.type(), AiScopeGuard.Scope.TRAINING, request.lang());
-        aiLimit.check(UUID.fromString(jwt.getSubject()));
+        UUID owner = UUID.fromString(jwt.getSubject());
+        aiPermission.require(owner, request.lang());
+        aiLimit.check(owner);
         return PlanSuggestionDto.from(
-                suggester.suggestPlan(UUID.fromString(jwt.getSubject()), request.focus(), request.lang()));
+                suggester.suggestPlan(owner, request.focus(), request.lang()));
     }
 
     /**
@@ -275,12 +282,14 @@ public class TrainingController {
             throw new IllegalArgumentException("Samtalen må ende med en melding fra brukeren.");
         }
         AiScopeGuard.planData(request.currentPlan(), request.lang());
-        aiLimit.check(UUID.fromString(jwt.getSubject()));
+        UUID owner = UUID.fromString(jwt.getSubject());
+        aiPermission.require(owner, request.lang());
+        aiLimit.check(owner);
         List<ChatTurn> turns = request.messages().stream()
                 .map(m -> new ChatTurn(m.role(), m.content()))
                 .toList();
         return AssistantReplyDto.from(
-                suggester.chat(UUID.fromString(jwt.getSubject()), turns, request.currentPlan(), request.lang()));
+                suggester.chat(owner, turns, request.currentPlan(), request.lang()));
     }
 
     /** Lagre en plan i profilen - typisk et forslag brukeren likte. */
