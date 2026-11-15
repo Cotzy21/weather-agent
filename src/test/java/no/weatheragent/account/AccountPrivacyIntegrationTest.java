@@ -38,6 +38,8 @@ class AccountPrivacyIntegrationTest {
         }
         jdbc.execute("create table habit_logs(id uuid primary key, habit_id uuid references habits(id), note text)");
         jdbc.execute(Files.readString(Path.of("src/main/resources/db/migration/V21__account_revocation.sql")));
+        jdbc.execute("create trigger guard_account_write before insert or update on health_storage_consent "
+                + "for each row execute function guard_account_write('user_id')");
     }
 
     @AfterEach void cleanup() {
@@ -186,6 +188,62 @@ class AccountPrivacyIntegrationTest {
         erase();
         assertEquals(0, jdbc.queryForObject("select count(*) from user_settings", Integer.class));
         assertThrows(org.springframework.dao.DataAccessException.class, () -> permission.record(owner, version, true));
+    }
+
+    @Test void withdrawalErasesOnlyHealthDataAndPreventsNewWritesUntilExplicitGrant() throws Exception {
+        var consent = enableHealthConsent();
+        assertFalse(consent.get(owner).allowed());
+        assertThrows(org.springframework.dao.DataAccessException.class, () -> insert("workouts", "user_id", owner));
+        tx.executeWithoutResult(s -> consent.grant(owner, 1));
+        tx.executeWithoutResult(s -> consent.grant(other, 1));
+        insert("workouts", "user_id", owner);
+        insert("workouts", "user_id", other);
+        insert("saved_routes", "user_id", owner);
+        tx.executeWithoutResult(s -> consent.withdrawAndErase(owner));
+        assertFalse(consent.get(owner).allowed());
+        assertTrue(consent.get(owner).withdrawn());
+        assertTrue(consent.get(other).allowed());
+        assertEquals(other, jdbc.queryForObject("select user_id from workouts", UUID.class));
+        assertEquals(owner, jdbc.queryForObject("select user_id from saved_routes", UUID.class));
+        assertThrows(org.springframework.dao.DataAccessException.class, () -> insert("workouts", "user_id", owner));
+        String marker = consent.get(owner).lastWithdrawal();
+        tx.executeWithoutResult(s -> consent.grant(owner, 1));
+        assertTrue(consent.get(owner).allowed());
+        assertEquals(marker, consent.get(owner).lastWithdrawal());
+        insert("workouts", "user_id", owner);
+    }
+
+    @Test void staleRepeatableReadWriterCannotRestoreWorkoutAfterWithdrawal() throws Exception {
+        var consent = enableHealthConsent();
+        tx.executeWithoutResult(s -> consent.grant(owner, 1));
+        TransactionTemplate repeatable = new TransactionTemplate(new DataSourceTransactionManager(ds));
+        repeatable.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        var checked = new CountDownLatch(1);
+        var proceed = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var writer = executor.submit(() -> repeatable.executeWithoutResult(s -> {
+                assertTrue(consent.get(owner).allowed());
+                checked.countDown();
+                await(proceed);
+                insert("workouts", "user_id", owner);
+            }));
+            try {
+                assertTrue(checked.await(5, TimeUnit.SECONDS));
+                tx.executeWithoutResult(s -> consent.withdrawAndErase(owner));
+            } finally {
+                proceed.countDown();
+            }
+            var aborted = assertThrows(ExecutionException.class, () -> writer.get(5, TimeUnit.SECONDS));
+            assertInstanceOf(org.springframework.dao.DataAccessException.class, aborted.getCause());
+            assertEquals(0, jdbc.queryForObject("select count(*) from workouts", Integer.class));
+        }
+    }
+
+    private HealthStorageConsent enableHealthConsent() throws Exception {
+        jdbc.execute("drop table health_storage_consent");
+        jdbc.execute("alter table user_settings add column key varchar(40)");
+        jdbc.execute(Files.readString(Path.of("src/main/resources/db/migration/V23__health_storage_consent.sql")));
+        return new HealthStorageConsent(jdbc);
     }
 
     private static void await(CountDownLatch latch) {

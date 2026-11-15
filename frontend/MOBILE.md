@@ -74,3 +74,29 @@ overstyres med `APP_CORS_ALLOWED_ORIGINS` i produksjon: behold `capacitor://loca
 - **API-base:** relative `/api`-kall finnes ikke i appen; `VITE_API_BASE` (satt i `.env.native`) gjør at alle kall går til Render.
 - **Safe-area:** layouten bruker `env(safe-area-inset-*)` og `viewport-fit=cover`.
 - **Ikoner/splash:** kildebildene er `public/app-icon.svg` og `ios/App/App/Assets.xcassets/`. Bytt gjerne til et eget ikon senere.
+
+## Simulatorverifikasjon 12. november 2026
+
+Appen med Observatory-design og det nye konto- og personvernoppsettet ble
+bygget med Xcode 27 og Capacitor 8.5.3. Mobilbygget og Capacitor-synk bestod
+i en separat kopi. Det usignerte bygget ble installert og startet på iPhone
+17e-simulatoren med iOS 27.0. En etterkontroll viste at prosessen fortsatt
+kjørte. Denne runden verifiserte bygg og oppstart. Den verifiserte ikke
+nedlasting i WKWebView, sikker nøkkellagring eller en fysisk telefon.
+
+## Privat Garmin for utviklerbygg
+
+Standard iOS-bygg har ingen Garmin-nøkkelimport. For et privat utviklerbygg
+for egne Garmin-data, legg til `GARMIN_PERSONAL_OWNER` i **Swift Active
+Compilation Conditions** i Debug. Behold `DEBUG` som eksisterende vilkår.
+Velg Trening eller Restitusjon, åpne Garmin-dialogen, og velg **Åpne privat
+Garmin-lager**. Legg inn din egen nøkkel i den native dialogen og trykk
+**Hent aktiviteter på nytt**. Nøkkel og hemmeligheter skal ikke ligge i
+verken miljøfiler eller bygginnstillinger.
+
+Nøkkellagring er valgfri og krever en enhet med kode. Importerte sammendrag
+krypteres med AES-GCM, med egen enhetsbundet Keychain-nøkkel per lokal
+appkonto. Filer utelates fra sikkerhetskopiering. Ingen bakgrunnssynk.
+Dataene vises i den native dialogen. De sendes ikke gjennom JavaScript,
+AI, synk eller Weather Agent-backend. Bruk **Slett lokal nøkkel og
+aktiviteter** for opprydding. Dette sletter ikke selve nøkkelen hos Garmin.

@@ -1,6 +1,15 @@
 import UIKit
 import Capacitor
 
+final class WeatherBridgeViewController: CAPBridgeViewController {
+    override func capacitorDidLoad() {
+        super.capacitorDidLoad()
+        #if DEBUG && GARMIN_PERSONAL_OWNER
+        bridge?.registerPluginInstance(GarminOwnerPlugin())
+        #endif
+    }
+}
+
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
 
@@ -8,7 +17,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = scene as? UIWindowScene else { return }
         window = UIWindow(windowScene: windowScene)
-        window?.rootViewController = CAPBridgeViewController()
+        window?.rootViewController = WeatherBridgeViewController()
         window?.makeKeyAndVisible()
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
     }

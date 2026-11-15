@@ -59,7 +59,7 @@ export default function RecoveryView({ session }) {
   return (
     <div className="recovery" ref={revealRef}>
       <ObservatoryHeading title={t('Restitusjon')} />
-      <GarminInsights />
+      <GarminInsights userId={session?.user?.id} />
 
       {!report && <p className="muted" data-reveal>{t('Henter rapporten …')}</p>}
 

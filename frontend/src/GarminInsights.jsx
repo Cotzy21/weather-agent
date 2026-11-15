@@ -143,7 +143,7 @@ export function GarminNutritionSummary() {
   )
 }
 
-export default function GarminInsights() {
+export default function GarminInsights({ userId }) {
   const { t } = useI18n()
   const [range, setRange] = useState(30)
   const { data, error, refresh } = useDays(range)
@@ -155,7 +155,7 @@ export default function GarminInsights() {
           {[14, 30, 60, 90].map((days) => <option key={days} value={days}>{t('{n} dager', { n: days })}</option>)}
         </select></label>
       </div>
-      <GarminSync onChange={refresh} />
+      <GarminSync userId={userId} onChange={refresh} />
       {error && <p role="alert">{t(error)}</p>}
       {!data && !error && <p className="muted" role="status">{t('Laster …')}</p>}
       {data && !day && <p className="muted">{t('Importer Garmin-data for å se målinger og sammenhenger over tid.')}</p>}
@@ -165,7 +165,7 @@ export default function GarminInsights() {
   )
 }
 
-function GarminSync({ onChange }) {
+function GarminSync({ onChange, userId }) {
   const { t } = useI18n()
   const [noticeOpen, setNoticeOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -193,7 +193,7 @@ function GarminSync({ onChange }) {
       <summary>{t('Importer eller slett Garmin-målinger')}</summary>
       <p className="muted">{t('Du kan fortsatt se eller slette målinger fra tidligere Garmin-importer.')}</p>
       <button type="button" className="train-action" disabled={busy} onClick={() => setNoticeOpen(true)}>{t('Importer målinger')}</button>
-      {noticeOpen && <GarminImport onClose={() => setNoticeOpen(false)} />}
+      {noticeOpen && <GarminImport userId={userId} onClose={() => setNoticeOpen(false)} />}
       {deleted && <p role="status">{t('Garmin-målingene er slettet.')}</p>}
       {error && <p className="error" role="alert">{t(error)}</p>}
       {!confirmDelete && <button type="button" className="train-action" disabled={busy} onClick={() => setConfirmDelete(true)}>{t('Slett importerte målinger')}</button>}

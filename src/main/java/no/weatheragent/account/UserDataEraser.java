@@ -44,7 +44,8 @@ public class UserDataEraser {
             new OwnedTable("food_reports", "reporter_id"),
             new OwnedTable("custom_foods", "owner_id"),
             new OwnedTable("custom_meals", "user_id"),
-            new OwnedTable("saved_routes", "user_id"));
+            new OwnedTable("saved_routes", "user_id"),
+            new OwnedTable("health_storage_consent", "user_id"));
 
     private final JdbcTemplate jdbc;
 

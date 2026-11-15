@@ -7,6 +7,8 @@ import FoodModeration from './FoodModeration.jsx'
 import { fetchAccountExport, saveAccountExport } from './accountExport.js'
 import { accountHeadersFor } from './accountSession.js'
 import TrainingAiPermission from './TrainingAiPermission.jsx'
+import HealthStoragePermission from './HealthStoragePermission.jsx'
+import { erasePrivateGarmin } from './garminOwner.js'
 
 // Enkel konto-side: e-post/passord registrering + innlogging via Supabase,
 // eller utlogging hvis man allerede er innlogget. Innlogget bruker kan også slette kontoen sin (GDPR).
@@ -16,8 +18,6 @@ export default function AuthView({ session, reason, onOpenPrivacy, onDeleted }) 
   const [password, setPassword] = useState('')
   const [msg, setMsg] = useState(null)
   const [busy, setBusy] = useState(false)
-  // Samtykke kreves for å registrere seg: appen lagrer helseopplysninger (se personvernerklæringen).
-  const [consent, setConsent] = useState(false)
   const [confirmWord, setConfirmWord] = useState('')
   const [deleteError, setDeleteError] = useState(null)
   const [exporting, setExporting] = useState(false)
@@ -65,8 +65,10 @@ export default function AuthView({ session, reason, onOpenPrivacy, onDeleted }) 
       const result = await deleteAccount({ headers })
       // Serveren har slettet alt. Rydd også bort det som ligger igjen på enheten, og kast økter som venter på nett,
       // ellers ville de gjenopprettet dataene neste gang appen fikk nett.
-      let localCleanupFailed = false
-      try { await workoutQueue(authHeaders).discardForOwner(deletedUserId) } catch { localCleanupFailed = true }
+      const cleanups = await Promise.allSettled([
+        workoutQueue(authHeaders).discardForOwner(deletedUserId), erasePrivateGarmin(deletedUserId),
+      ])
+      const localCleanupFailed = cleanups.some(result => result.status === 'rejected')
       eraseLocalUserData(deletedUserId)
       onDeleted?.({ ...result, localCleanupFailed })
       try {
@@ -90,7 +92,9 @@ export default function AuthView({ session, reason, onOpenPrivacy, onDeleted }) 
 
         <section className="danger-zone">
           <h3>{t('Personvern og data')}</h3>
-          <TrainingAiPermission userId={session.user.id} account />
+          <HealthStoragePermission userId={session.user.id} account>
+            <TrainingAiPermission userId={session.user.id} account />
+          </HealthStoragePermission>
           <p>{lang === 'nb' ? 'Last ned en kopi av kontodataene dine. Filen kan inneholde sensitive helseopplysninger. Oppbevar den trygt.' : 'Download a copy of your account data. The file may contain sensitive health information. Keep it somewhere safe.'}</p>
           <button disabled={exporting || busy} onClick={exportData}>
             {lang === 'nb' ? (exporting ? 'Henter data …' : 'Last ned mine data') : (exporting ? 'Preparing data …' : 'Download my data')}
@@ -136,16 +140,10 @@ export default function AuthView({ session, reason, onOpenPrivacy, onDeleted }) 
       <div className="auth-form">
         <label className="auth-field" htmlFor="auth-email">{t('E-post')}<input id="auth-email" type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
         <label className="auth-field" htmlFor="auth-password">{t('Passord')}<input id="auth-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
-        <label className="consent">
-          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-          <span>
-            {t('Jeg samtykker til at helse- og treningsdata jeg legger inn lagres.')}{' '}
-            <button type="button" className="link-btn" onClick={onOpenPrivacy}>{t('Les personvernerklæringen')}</button>
-          </span>
-        </label>
+        <button type="button" className="link-btn" onClick={onOpenPrivacy}>{t('Les personvernerklæringen')}</button>
         <div className="auth-actions">
           <button className="primary" disabled={busy} onClick={() => submit('inn')}>{t('Logg inn')}</button>
-          <button disabled={busy || !consent} title={consent ? undefined : t('Kryss av samtykket for å registrere deg')}
+          <button disabled={busy}
                   onClick={() => submit('opp')}>{t('Registrer')}</button>
         </div>
         {msg && <p className="muted">{msg}</p>}

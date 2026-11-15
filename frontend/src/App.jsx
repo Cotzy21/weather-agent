@@ -8,6 +8,7 @@ import { useReveal } from './anim'
 import WeatherScene from './WeatherScene.jsx'
 import TerrainMasthead from './TerrainMasthead.jsx'
 import AppShell from './AppShell.jsx'
+import HealthStoragePermission from './HealthStoragePermission.jsx'
 import { DESTINATIONS } from './navigation.js'
 import './App.css'
 import './interfaceMotion.css'
@@ -320,6 +321,8 @@ export default function App() {
 
   const current = NAV.find((n) => n.id === tab)
   const locked = authReady && !session && current?.auth
+  const healthViews = { hjem: Dashboard, trening: TrainingView, kosthold: NutritionView, restitusjon: RecoveryView }
+  const HealthView = healthViews[tab]
 
   return (
     <AppShell tab={tab} onNavigate={go} session={session} theme={theme}
@@ -333,7 +336,10 @@ export default function App() {
             <AuthView session={null} onOpenPrivacy={() => go('personvern')}
                       reason={t('Logg inn for å bruke {feature}. Værsøket er åpent for alle.', { feature: t(current.label) })} />
           ) : (<>
-          {tab === 'hjem' && <Dashboard session={session} onNavigate={go} />}
+          {HealthView && session && <HealthStoragePermission key={session.user.id + ':' + tab}
+            userId={session.user.id} onOpenPrivacy={() => go('personvern')}>
+            <HealthView session={session} onNavigate={go} />
+          </HealthStoragePermission>}
           {tab === 'vaersok' && <VaersokView onPlan={planTrip} />}
           {tab === 'rute' && (
             <RoutePlanner
@@ -342,9 +348,6 @@ export default function App() {
               onClearTarget={() => setPlanTarget(null)}
             />
           )}
-          {tab === 'trening' && <TrainingView key={session?.user?.id ?? 'signed-out'} session={session} />}
-          {tab === 'kosthold' && <NutritionView session={session} />}
-          {tab === 'restitusjon' && <RecoveryView session={session} />}
           {tab === 'konto' && (
             <AuthView key={session?.user?.id ?? 'signed-out'} session={session} onOpenPrivacy={() => go('personvern')}
                       onDeleted={(r) => setNotice((r.loginRemoved

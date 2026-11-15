@@ -42,6 +42,7 @@ class UserDataEraserTableCoverageTest {
         // These tables are accessed through JDBC, without a JPA entity.
         entityTables.add("training_plan_batches");
         entityTables.add("garmin_daily_metrics");
+        entityTables.add("health_storage_consent");
 
         assertEquals(new TreeSet<>(UserDataEraser.coveredTables()), entityTables,
                 "UserDataEraser.OWNED_TABLES og entitetene i appen må være like");

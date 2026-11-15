@@ -9,7 +9,7 @@ const CONTACT = import.meta.env.VITE_CONTACT_EMAIL || ''
 const CONTENT = {
   nb: {
     title: 'Personvernerklæring',
-    updated: 'Sist oppdatert 12. november 2026',
+    updated: 'Sist oppdatert 15. november 2026',
     draft: 'Utkast: denne teksten gjennomgås av eieren før offentlig lansering.',
     sections: [
       ['Hvem er ansvarlig',
@@ -20,7 +20,7 @@ const CONTENT = {
           'Med konto lagrer vi e-postadressen din og passordet ditt (som en hash, hos innloggingstjenesten), og det du selv legger inn: treningsøkter, treningsplaner og treningsprofil (erfaring, mål, utstyr, skader og begrensninger), vekt, kalorimål og kroppsdata som alder, kjønn, vekt, høyde og aktivitetsnivå, måltider og matdagbok, kostpreferanser og allergier, vaner (for eksempel søvn og koffein), lagrede ruter, egne matvarer og måltider, og innstillinger.',
           'Mye av dette er helseopplysninger, som er en særlig kategori personopplysninger. Vi bruker dem bare til å gi deg funksjonene i appen, som progresjon, råd og treningsplaner.']],
       ['Rettslig grunnlag',
-        ['Vi behandler opplysningene dine på grunnlag av samtykket ditt (GDPR artikkel 6 nr. 1 bokstav a og artikkel 9 nr. 2 bokstav a). Lagring av opplysninger du legger inn ved bruk av helsefunksjonene og deling med trenings-AI er separate formål. Trenings-AI krever et eget aktivt samtykke. Du kan trekke tilbake dette samtykket under Konto, uten å miste treningsloggen. Forespørsler som allerede er sendt til AI-tjenesten kan ikke trekkes tilbake fra appen.']],
+        ['Samtykke til helselagring og samtykke til trenings-AI er to separate valg (GDPR artikkel 6 nr. 1 bokstav a og artikkel 9 nr. 2 bokstav a for helseopplysninger). Du kan opprette konto og bruke vær og ruter uten disse samtykkene. Under Konto kan du trekke samtykket til helselagring tilbake. Da slettes helsedataene fra den aktive databasen, mens innlogging og lagrede ruter beholdes. Eksport og kontosletting er fortsatt tilgjengelig. Trenings-AI krever et eget aktivt samtykke. Du kan trekke tilbake dette samtykket under Konto, uten å miste treningsloggen. Forespørsler som allerede er sendt til AI-tjenesten kan ikke trekkes tilbake fra appen.']],
       ['Hvem får opplysningene',
         ['Vi selger ikke opplysningene dine og viser ingen annonser. Disse tjenestene behandler data på våre vegne:',
           '• Supabase: database og innlogging.',
@@ -30,7 +30,7 @@ const CONTENT = {
           'Hvis du velger å hente varselet direkte fra Open-Meteo på forsiden, sender nettleseren koordinatene for byen du valgte. Open-Meteo ser IP-adressen din. Kontoopplysninger og innlogging sendes ikke.',
           'Matvarer du velger å dele offentlig, kan alle innloggede brukere se.']],
       ['Garmin-import',
-        ['Nye Garmin-importer er satt på pause. Tidligere importer kunne sende CSV-data, tolkede økter og målinger til serveren. Ved direkte import brukte serveren nøkkelen midlertidig. Tidligere lagrede data ligger fortsatt på kontoen uten ende-til-ende-kryptering. Du kan slette målinger under Restitusjon og importerte økter i treningsloggen.']],
+        ['Nye Garmin-importer er satt på pause. Tidligere importer kunne sende CSV-data, tolkede økter og målinger til serveren. Ved direkte import brukte serveren nøkkelen midlertidig. Tidligere lagrede data ligger fortsatt på kontoen uten ende-til-ende-kryptering. Du kan slette målinger under Restitusjon og importerte økter i treningsloggen. Et privat iOS-utviklerbygg har et separat lokalt Garmin-lager for eierens egne data. Nøkkelen sendes direkte til Garmin ved manuell henting. Lokale data og eventuell lagret nøkkel kan slettes fra Garmin-lageret.']],
       ['Lokal lagring i nettleseren',
         ['Appen bruker nettleserens lokale lagring til innlogging, språk, tema, en hurtigbuffer og økter som venter på nett. Disse lokale treningsdataene har foreløpig ikke egen kryptering i appen. Eksisterende serverdata er heller ikke ende-til-ende-kryptert. Vi bruker ingen sporings- eller markedsføringskapsler og ingen analyseverktøy.']],
       ['Hvor lenge vi lagrer',
@@ -46,7 +46,7 @@ const CONTENT = {
   },
   en: {
     title: 'Privacy policy',
-    updated: 'Last updated 12 November 2026',
+    updated: 'Last updated 15 November 2026',
     draft: 'Draft: the owner will review this text before the public launch.',
     sections: [
       ['Who is responsible',
@@ -57,7 +57,7 @@ const CONTENT = {
           'With an account we store your email address and your password (as a hash, at the login service), and what you enter yourself: workouts, training plans and training profile (experience, goals, equipment, injuries and limitations), weight, calorie goal and body data such as age, sex, weight, height and activity level, meals and food diary, diet preferences and allergies, habits (for example sleep and caffeine), saved routes, your own foods and meals, and settings.',
           'Much of this is health data, which is a special category of personal data. We only use it to provide the features of the app, such as progression, advice and training plans.']],
       ['Legal basis',
-        ['We process your information based on your consent (GDPR Article 6(1)(a) and Article 9(2)(a)). Storing information you enter when using health features and sharing with Training AI are separate purposes. Training AI requires a separate explicit opt-in. You can withdraw this permission under Account and keep your training log. The app cannot recall requests already sent to the AI service.']],
+        ['Health data storage and Training AI have separate consent choices (GDPR Article 6(1)(a) and Article 9(2)(a) for health information). You can create an account and use weather and routes without either permission. You can withdraw your storage consent under Account. This removes health data from the active database and keeps your login and saved routes. Export and account deletion remain available. Training AI requires a separate explicit opt-in. You can withdraw this permission under Account and keep your training log. The app cannot recall requests already sent to the AI service.']],
       ['Who receives the information',
         ['We do not sell your information and show no ads. These services process data on our behalf:',
           '• Supabase: database and login.',
@@ -67,7 +67,7 @@ const CONTENT = {
           'If you choose to fetch the forecast directly from Open-Meteo on the landing page, your browser sends the coordinates of the selected city. Open-Meteo sees your IP address. Account details and credentials are not sent.',
           'Foods you choose to share publicly can be seen by all logged-in users.']],
       ['Garmin import',
-        ['New Garmin imports are paused. Previous imports could send CSV data, parsed workouts and measurements to the server. For direct imports, the server used the key temporarily. Previously saved data remains in your account without end-to-end encryption. You can delete measurements in Recovery and imported workouts in the training log.']],
+        ['New Garmin imports are paused. Previous imports could send CSV data, parsed workouts and measurements to the server. For direct imports, the server used the key temporarily. Previously saved data remains in your account without end-to-end encryption. You can delete measurements in Recovery and imported workouts in the training log. A private iOS development build provides a separate local Garmin vault for the owner’s own data. The key is sent directly to Garmin on manual refresh. Local data and any remembered key can be erased in the vault.']],
       ['Local storage in the browser',
         ['The app uses the browser\'s local storage for login, language, theme, a cache and workouts waiting for a connection. These local training records do not yet have app-level encryption. Existing server data is not end-to-end encrypted either. We use no tracking or marketing cookies and no analytics tools.']],
       ['How long we keep it',

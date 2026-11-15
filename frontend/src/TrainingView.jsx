@@ -165,7 +165,7 @@ export default function TrainingView({ session }) {
     flush()
     window.addEventListener('online', flush)
     const timer = setInterval(flush, 60000)
-    return () => { off(); window.removeEventListener('online', flush); clearInterval(timer) }
+    return () => { setQueueOwner(null); off(); window.removeEventListener('online', flush); clearInterval(timer) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
@@ -839,7 +839,7 @@ export default function TrainingView({ session }) {
       {mode === 'overview' && (
         <button type="button" className="train-action" onClick={() => setGarminNoticeOpen(true)}>{t('Importer fra Garmin')}</button>
       )}
-      {garminNoticeOpen && <GarminImport onClose={() => setGarminNoticeOpen(false)} />}
+      {garminNoticeOpen && <GarminImport userId={session?.user?.id} onClose={() => setGarminNoticeOpen(false)} />}
 
       {sheetOpen && (
         <Sheet className="sheet" label={t('Økter og planer')} onClose={() => setSheetOpen(false)} role="dialog">
