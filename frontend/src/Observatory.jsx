@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import '@fontsource/poiret-one/latin-400.css'
 import { apiUrl } from './api.js'
-import { alignForecasts } from './forecastComparison.js'
+import { alignForecasts, fetchOpenMeteoDirect } from './forecastComparison.js'
 import './observatory.css'
 import Mark from './ObservatoryMark.jsx'
 
@@ -39,19 +39,44 @@ function Comparison() {
   const [metric, setMetric] = useState('temperatureC')
   const [index, setIndex] = useState(0)
   const [revision, setRevision] = useState(0)
+  const directRequest = useRef(null)
   useEffect(() => {
     const controller = new AbortController()
     fetch(apiUrl(`/api/vaer/sammenlign?place=${place}`), { signal: controller.signal })
       .then(async response => { if (!response.ok) throw new Error(); return response.json() })
       .then(data => { if (!controller.signal.aborted) setState({ data, loading: false }) })
       .catch(() => { if (!controller.signal.aborted) setState({ error: true, loading: false }) })
-    return () => controller.abort()
+    return () => {
+      controller.abort()
+      const direct = directRequest.current
+      directRequest.current = null
+      direct?.abort()
+    }
   }, [place, revision])
   const rows = alignForecasts(state.data)
   const selected = rows[Math.min(index, Math.max(0, rows.length - 1))]
   const unit = metric === 'temperatureC' ? '°C' : 'm/s'
   const difference = selected ? Math.abs(selected.met[metric] - selected.openMeteo[metric]) : null
   const retry = () => { setState({ loading: true }); setRevision(value => value + 1) }
+
+  async function tryDirect() {
+    directRequest.current?.abort()
+    const request = new AbortController()
+    directRequest.current = request
+    const data = state.data
+    setState({ data, loading: true })
+    const timeout = setTimeout(() => request.abort(), 10000)
+    try {
+      const openMeteo = await fetchOpenMeteoDirect(place, request.signal)
+      if (directRequest.current === request && !request.signal.aborted) {
+        setState({ data: { ...data, openMeteo }, direct: true })
+      }
+    } catch {
+      if (directRequest.current === request) setState({ data, directError: true })
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
 
   return <div className="obs-instrument" data-ui>
     <div className="obs-instrument-top">
@@ -67,7 +92,15 @@ function Comparison() {
     </div>
     {state.loading ? <div className="obs-chart-empty" role="status"><div className="obs-loader" /><p>Reading the sky from two sources…</p><small>The first request may take a moment.</small></div>
       : state.error ? <div className="obs-chart-empty" role="alert"><p>The forecast is taking a little longer.</p><button type="button" className="obs-text-button" onClick={retry}>Try again <Arrow /></button></div>
-        : !rows.length ? <div className="obs-chart-empty" role="status"><p>Both sources are needed for this comparison.</p><small>{!state.data?.met?.available ? 'MET Norway is currently unavailable. ' : ''}{!state.data?.openMeteo?.available ? 'Open-Meteo is currently unavailable.' : ''}</small><p>Please check again later.</p></div>
+        : !rows.length ? <div className="obs-chart-empty" role="status"><p>Both sources are needed for this comparison.</p>
+          {state.data?.met?.available && !state.data?.openMeteo?.available ? <>
+            <small>{state.directError ? 'Open-Meteo did not return forecast readings. You can try again.' : 'Open-Meteo is unavailable through our server. If you try it directly, Open-Meteo receives the selected city coordinates and your IP address.'}</small>
+            <button type="button" className="obs-text-button" onClick={tryDirect}>Try Open-Meteo directly <Arrow /></button>
+          </> : <>
+            <small>{!state.data?.met?.available ? 'MET Norway is currently unavailable.' : 'The sources did not return matching forecast hours.'}</small>
+            <button type="button" className="obs-text-button" onClick={retry}>Try again <Arrow /></button>
+          </>}
+        </div>
           : <>
             <ForecastPlot rows={rows} index={Math.min(index, rows.length - 1)} metric={metric} />
             <label className="obs-timeline"><span>Explore the hours <span>{clock(selected.time)} · Norway time</span></span><input type="range" min="0" max={rows.length - 1} value={Math.min(index, rows.length - 1)} onChange={event => setIndex(Number(event.target.value))} aria-label="Forecast hour" aria-valuetext={clock(selected.time)} /></label>
@@ -76,7 +109,7 @@ function Comparison() {
               <div><span className="obs-legend-open">Open-Meteo</span><strong>{number(selected.openMeteo[metric])}<small>{unit}</small></strong></div>
               <div className="obs-difference"><span>Difference at {clock(selected.time)}</span><strong>{number(difference)}<small>{unit}</small></strong></div>
             </div>
-            <p className="obs-data-note">Fetched {clock(state.data.fetchedAt)} · Up to 15-minute caching · Forecast values at matching times</p>
+            <p className="obs-data-note">{state.direct ? 'Open-Meteo fetched directly · MET fetched ' : 'Fetched '}{clock(state.data.fetchedAt)} · Forecast values at matching times</p>
             <details className="obs-values"><summary>See the hourly values</summary><div className="obs-table-wrap"><table><caption>{metric === 'temperatureC' ? 'Temperature in °C' : 'Wind speed in m/s'} · Europe/Oslo</caption><thead><tr><th>Time</th><th>MET Norway</th><th>Open-Meteo</th><th>Difference</th></tr></thead><tbody>{rows.map(row => <tr key={row.time}><th>{new Intl.DateTimeFormat('en-GB', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Oslo' }).format(new Date(row.time))}</th><td>{number(row.met[metric])}</td><td>{number(row.openMeteo[metric])}</td><td>{number(Math.abs(row.met[metric] - row.openMeteo[metric]))}</td></tr>)}</tbody></table></div></details>
           </>}
   </div>

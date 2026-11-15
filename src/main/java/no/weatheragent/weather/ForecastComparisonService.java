@@ -14,6 +14,7 @@ import java.util.function.Supplier;
 /** Two independently fetched sources, never substituted for one another. */
 @Service
 public class ForecastComparisonService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ForecastComparisonService.class);
     private static final Map<String, Location> PLACES = Map.of(
             "alesund", new Location("Ålesund", 62.4722, 6.1495),
             "bergen", new Location("Bergen", 60.3913, 5.3221),
@@ -49,8 +50,13 @@ public class ForecastComparisonService {
                     .sorted(java.util.Comparator.comparing(WeatherPoint::time))
                     .limit(25)
                     .map(p -> new Point(p.time(), p.temperatureC(), p.windSpeedMs())).toList();
+            if (points.isEmpty()) log.warn("Forecast comparison: {} returned no readings in the comparison window", name);
             return new Source(name, points, !points.isEmpty());
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            log.warn("Forecast comparison: {} returned HTTP {}", name, e.getStatusCode().value());
+            return new Source(name, List.of(), false);
         } catch (RestClientException e) {
+            log.warn("Forecast comparison: {} unavailable ({})", name, e.getClass().getSimpleName());
             return new Source(name, List.of(), false);
         }
     }

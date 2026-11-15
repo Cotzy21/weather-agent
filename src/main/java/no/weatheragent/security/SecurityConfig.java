@@ -39,7 +39,7 @@ public class SecurityConfig {
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: blob: https://cache.kartverket.no https://server.arcgisonline.com",
             "font-src 'self' data:",
-            "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+            "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.open-meteo.com",
             "worker-src 'self'",
             "manifest-src 'self'",
             "object-src 'none'",
